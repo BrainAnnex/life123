@@ -301,9 +301,9 @@ class RandomReactionNetwork:
 
         That is the plausible range for non-enzymatic small-molecule chemistry.  [TODO: FURTHER VERIFY]
 
-        So statistically:
-            ✔ You’ll get many moderate reactions
-            ✔ Some strongly exothermic/endothermic ones
+        So, statistically:
+            - You'll get many moderate reactions
+            - Some strongly exothermic/endothermic ones
 
         For a given elementary reaction, specified by its reactants and products,
         compute the Sum_i[v_i * H0_i] ,
@@ -424,7 +424,7 @@ class RandomReactionNetwork:
 
     def forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70., sigma=12.) -> float:
         """
-        Using the Brønsted–Evans–Polanyi relation (BEP),
+        Using the Brønsted-Evans-Polanyi relation (BEP),
         the forward activation Gibbs free energy ΔGf‡ is modeled by:
             ΔGf‡ = α ΔG + β + ϵ
         where
@@ -444,11 +444,11 @@ class RandomReactionNetwork:
         See: "Molecular Driving Forces - Statistical Thermodynamics", by Dill & Bromberg (2nd edn, 2011)
 
         :param delta_G: The reaction free energy ΔG, in kJ/mol
-        :param alpha:   The multiplicative parameter of the Brønsted–Evans–Polanyi relation (BEP) model
+        :param alpha:   The multiplicative parameter of the Brønsted-Evans-Polanyi relation (BEP) model
         :param beta:    The multiplicative parameter of the BEP model, in 70 kJ/mol
         :param sigma:   The standard deviation, in kJ/mol, of the Gaussian noise to add to the estimates
 
-        :return:        An estimate, based on the Brønsted–Evans–Polanyi relation (BEP),
+        :return:        An estimate, based on the Brønsted-Evans-Polanyi relation (BEP),
                             of a plausible forward activation free energy, in kJ/mol,
                             for the given reaction free energy ΔG
         """

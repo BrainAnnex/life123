@@ -5,7 +5,19 @@ from life123.visualization.colors import Colors
 from tests.utilities.comparisons import *
 
 
+########################  class Species  ########################
+
 def test_constructor_Species():
+
+    with pytest.raises(Exception):
+        Species(name="test")    # Missing `id` field
+
+    with pytest.raises(Exception):
+        Species(id=666)         # Not a string
+
+    with pytest.raises(Exception):
+        Species(id="   ")       # Empty string
+
 
     s = Species(id="test")
     assert s == Species(id='test', name='test', label='test', sort_order=0, diffusion_rate=None, charge=0, formula='',
@@ -31,6 +43,9 @@ def test_constructor_Species():
 
     with pytest.raises(Exception):
         Species(id="test", diffusion_rate="do I look like a rate??")
+
+    with pytest.raises(Exception):
+        Species(id="test", diffusion_rate=True)
 
     with pytest.raises(Exception):
         Species(id="test", categories=123)          # Bad value
@@ -63,25 +78,77 @@ def test_constructor_Species():
 
 
 
+def test_setattr():
+    s = Species(id="test", label="metK", name="my long name")
+
+    s.name = None
+
+    print(s)
+
+
+def test_clone():
+    s = Species(id="test", label="metK", categories=["protein", "enzyme"],
+                diffusion_rate=123, metadata={"compartment": "cytosol"})
+
+    s_2 = s.clone()
+    s_2.name = "new name"
+    s_2.diffusion_rate = 456
+    s_2.categories = ["reactant"]
+    s_2.metadata = {"purpose": "testing"}
+
+    # Not affected
+    assert s == Species(id='test', name='test', label='metK', sort_order=0, diffusion_rate=123, charge=0, formula='',
+                        ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                        categories=["protein", "enzyme"], metadata={"compartment": "cytosol"}, annotation='', plot_color='')
+
+    assert s_2 == Species(id='test', name='new name', label='metK', sort_order=0, diffusion_rate=456, charge=0, formula='',
+                         ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                         categories=["reactant"], metadata={"purpose": "testing"}, annotation='', plot_color='')
+
+
+    s_3 = s_2.clone(new_id="compound_x")
+    s_3.locus_tag = "0432"
+    s_3.metadata = {"source": "supplier A"}
+
+    # Not affected
+    assert s == Species(id='test', name='test', label='metK', sort_order=0, diffusion_rate=123, charge=0, formula='',
+                        ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                        categories=["protein", "enzyme"], metadata={"compartment": "cytosol"}, annotation='', plot_color='')
+
+    # Not affected
+    assert s_2 == Species(id='test', name='new name', label='metK', sort_order=0, diffusion_rate=456, charge=0, formula='',
+                         ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                         categories=["reactant"], metadata={"purpose": "testing"}, annotation='', plot_color='')
+
+    assert s_3 == Species(id='compound_x', name='new name', label='metK', sort_order=0, diffusion_rate=456, charge=0, formula='',
+                         ec_number='', cas_number='', chebi='', locus_tag='0432', molecular_weight=None,
+                         categories=["reactant"], metadata={"source": "supplier A"}, annotation='', plot_color='')
+
+
+    with pytest.raises(Exception):
+        s_3.clone(new_id=666)       # Not a string
+
+
+
 
 
 ########################  class SpeciesRegistry  ########################
 
 def test_constructor_SpeciesRegistry():
 
-    sr = SpeciesRegistry()
+    sr = SpeciesRegistry()      # Empty registry
     assert sr.by_id == {}
 
     with pytest.raises(Exception):
         SpeciesRegistry(id=["A", "B"], n_species=2)    # Passing too many args
 
 
-    # `ids` argument
+    # Using `id` argument
     with pytest.raises(Exception):
         SpeciesRegistry(id=123)    # Bad value
 
 
-    sr = SpeciesRegistry(id="X")
+    sr = SpeciesRegistry(id="X")    # A string
 
     assert sr.number_of_species() == 1
     assert sr.count == 1
@@ -90,8 +157,7 @@ def test_constructor_SpeciesRegistry():
                                     diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
-
-    sr = SpeciesRegistry(id=["X"])
+    sr = SpeciesRegistry(id=["X"])  # A list of strings
 
     assert sr.number_of_species() == 1
     assert sr.count == 1
@@ -114,12 +180,46 @@ def test_constructor_SpeciesRegistry():
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
 
-    # `species` argument
+    sr = SpeciesRegistry(id="X",
+                         name="my name", label="some label", locus_tag="0432")      # Additional named args
+
+    assert sr.number_of_species() == 1
+    assert sr.count == 1
+    assert len(sr.by_id) == 1
+    assert sr.by_id['X'] == Species(id='X', name='my name', label='some label', sort_order=0,
+                                    diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
+                                    locus_tag='0432', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+
+    sr = SpeciesRegistry(id=("X", "Y"),
+                         name=["name 1", "name 2"], label=("L1", "L2"), diffusion_rate=[8, 12])
+    assert sr.number_of_species() == 2
+    assert sr.count == 2
+    assert len(sr.by_id) == 2
+    assert list(sr.by_id.keys()) == ["X", "Y"]
+    assert sr.by_id['X'] == Species(id='X', name='name 1', label='L1', sort_order=0,
+                                    diffusion_rate=8, charge=0, formula='', ec_number='', cas_number='', chebi='',
+                                    locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+    assert sr.by_id['Y'] == Species(id='Y', name="name 2", label='L2', sort_order=1,
+                                    diffusion_rate=12, charge=0, formula='', ec_number='', cas_number='', chebi='',
+                                    locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+    with pytest.raises(Exception):
+        SpeciesRegistry(id=("X", "Y"), name=["name"])   # Mismatch in number of species
+
+
+    # Using `species` argument
     s1 = Species(id="X")
     s2 = Species(id="Y")
 
     with pytest.raises(Exception):
         SpeciesRegistry(species=123)    # Bad value
+
+    with pytest.raises(Exception):
+        SpeciesRegistry(species=s1, id="X")    # Passing too many args
+
+    with pytest.raises(Exception):
+        SpeciesRegistry(species=s1, n_species=1)        # Passing too many args
 
     sr = SpeciesRegistry(species=s1)
     assert sr.number_of_species() == 1
@@ -149,8 +249,11 @@ def test_constructor_SpeciesRegistry():
                                     diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
+    with pytest.raises(Exception):
+        SpeciesRegistry(species=s1, name="Overwritten") # Incompatible args
 
-    # `n_species` argument
+
+    # Using `n_species` argument
     with pytest.raises(Exception):
         SpeciesRegistry(n_species="X")
 
@@ -181,7 +284,7 @@ def test_constructor_SpeciesRegistry():
 
     # Test special arguments
     with pytest.raises(Exception):
-        SpeciesRegistry(diffusion_rate=11)      # Mismatched size
+        SpeciesRegistry(diffusion_rate=11)      # Lacking needed args
 
 
     sr = SpeciesRegistry(n_species=1, diffusion_rate=123)
@@ -189,8 +292,8 @@ def test_constructor_SpeciesRegistry():
                                     ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
                                     categories=[], metadata={}, annotation='', plot_color='')
 
-    sr = SpeciesRegistry(n_species=1, plot_color=['pink'])
-    assert sr.by_id['A'] == Species(id='A', name='A', label='A', sort_order=0, diffusion_rate=None, charge=0, formula='',
+    sr = SpeciesRegistry(n_species=1, plot_color=['pink'], label='my label')
+    assert sr.by_id['A'] == Species(id='A', name='A', label='my label', sort_order=0, diffusion_rate=None, charge=0, formula='',
                                     ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
                                     categories=[], metadata={}, annotation='', plot_color='pink')
 
@@ -408,25 +511,26 @@ def test_as_dataframe():
     result = sr.as_dataframe()
 
     expected_recordset = [
-                            {   'id': 'A', 'name': 'A', 'label': 'A', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
-                                'formula': '', 'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
+                            {   'id': 'A', 'name': 'A', 'label': 'A',
+                                'formula': '', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
+                                'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
                                 'molecular_weight': None, 'categories': [], 'metadata': {}, 'annotation': '', 'plot_color': ''
                             }
                          ]
     expected_df = pd.DataFrame(expected_recordset)
-    assert expected_df.equals(result)
+    assert expected_df.equals(result)       # NOTE: this test will fail if the order of the field definition in Species changes!
 
 
     sr.add_species(id="NAD", cas_number="53-84-9", categories=["enzyme"])
     result = sr.as_dataframe()
 
     expected_recordset = [
-                        {   'id': 'A', 'name': 'A', 'label': 'A', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
-                            'formula': '', 'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
+                        {   'id': 'A', 'name': 'A', 'label': 'A', 'formula': '', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
+                            'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
                             'molecular_weight': None, 'categories': [], 'metadata': {}, 'annotation': '', 'plot_color': ''
                         },
-                        {   'id': 'NAD', 'name': 'NAD', 'label': 'NAD', 'sort_order': 1, 'diffusion_rate': None, 'charge': 0,
-                            'formula': '', 'ec_number': '', 'cas_number': '53-84-9', 'chebi': '', 'locus_tag': '',
+                        {   'id': 'NAD', 'name': 'NAD', 'label': 'NAD', 'formula': '', 'sort_order': 1, 'diffusion_rate': None, 'charge': 0,
+                            'ec_number': '', 'cas_number': '53-84-9', 'chebi': '', 'locus_tag': '',
                             'molecular_weight': None, 'categories': ["enzyme"], 'metadata': {}, 'annotation': '', 'plot_color': ''
                         }
                      ]
@@ -437,12 +541,12 @@ def test_as_dataframe():
 
     result = sr.as_dataframe(sort=True)
     expected_recordset = [
-                        {   'id': 'NAD', 'name': 'NAD', 'label': 'NAD', 'sort_order': 1, 'diffusion_rate': None, 'charge': 0,
-                            'formula': '', 'ec_number': '', 'cas_number': '53-84-9', 'chebi': '', 'locus_tag': '',
+                        {   'id': 'NAD', 'name': 'NAD', 'label': 'NAD', 'formula': '', 'sort_order': 1, 'diffusion_rate': None, 'charge': 0,
+                            'ec_number': '', 'cas_number': '53-84-9', 'chebi': '', 'locus_tag': '',
                             'molecular_weight': None, 'categories': ["enzyme"], 'metadata': {}, 'annotation': '', 'plot_color': ''
                         },
-                        {   'id': 'A', 'name': 'A', 'label': 'A', 'sort_order': 3, 'diffusion_rate': None, 'charge': 0,
-                            'formula': '', 'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
+                        {   'id': 'A', 'name': 'A', 'label': 'A', 'formula': '', 'sort_order': 3, 'diffusion_rate': None, 'charge': 0,
+                            'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '',
                             'molecular_weight': None, 'categories': [], 'metadata': {}, 'annotation': '', 'plot_color': ''
                         }
                      ]     # Reversed order, with updated the `sort_order` of 'A`

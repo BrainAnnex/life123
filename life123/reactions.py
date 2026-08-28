@@ -42,7 +42,7 @@ class ReactionCommon:
 
         extract_chemicals_in_reaction()
 
-        extract_rxn_properties()     A dict
+        extract_rxn_properties()
 
         step_simulation()
     """
@@ -56,6 +56,12 @@ class ReactionCommon:
         self.temp = temp            # In Kelvins
 
 
+
+    """
+    The following methods are used the declare 
+    the functions that must be implemented by the sub-classes,
+    i.e. define an "interface"
+    """
 
     def describe(self, *args, **kwargs):
         # Return as a string, a user-friendly plain-text form of the reaction
@@ -92,10 +98,12 @@ class ReactionCommon:
         raise NotImplementedError("Subclasses must implement this")
 
 
+    def extract_rxn_properties(self, *args, **kwargs):
+        raise NotImplementedError("Subclasses must implement this")
+
+
     def step_simulation(self, *args, **kwargs):
         # Simulate the reaction over a specified time interval,
-        # using either the exact analytical solution, if available,
-        # or the "Forward Euler" approximation method
         raise NotImplementedError("Subclasses must implement this")
 
 

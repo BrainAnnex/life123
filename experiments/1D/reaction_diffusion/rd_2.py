@@ -47,7 +47,7 @@ check_version(LIFE123_VERSION)
 # with two chemicals `A` and `B`
 
 # %%
-chem_data = SpeciesRegistry(n_species=2, diffusion_rates=[2., 2.], plot_color=["turquoise", "green"])   # Names "A", "B" automatically assigned
+chem_data = SpeciesRegistry(n_species=2, diffusion_rate=[2., 2.], plot_color=["turquoise", "green"])   # Names "A", "B" automatically assigned
 
 bio = BioSim1D(n_bins=9, species_data=chem_data)
 

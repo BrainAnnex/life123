@@ -1,43 +1,80 @@
+# 4 classes: "Species", "SpeciesRegistry", "ChemicalAffinity" and "MacroMolecules"
+
+
+from __future__ import annotations      # To facilitate type annotations
 from dataclasses import dataclass, field, asdict
 from itertools import islice
+from typing import NamedTuple, Any
+from copy import deepcopy
 from life123.visualization.colors import Colors
-from typing import NamedTuple
 import string
 import numpy as np
 import pandas as pd
 
 
 
-@dataclass(slots=True)      # (slots=True) has the effect of prohibiting non-listed fields,
+@dataclass(slots=True)      # Note: (slots=True) has the effect of prohibiting non-listed fields,
                             #       and of making the class more efficient
 class Species:
     """
+    Data structure (python "dataclass") to contain information about a "species".
+
+    A "species" is, broadly speaking, a state variable used in the simulations.
+    It can represent:
+        molecules
+        complexes
+        conformations
+        etc.
+
+    In Life123, it's currently used only for molecules, and it's sometimes referred to as "a chemical"
+
+    Important: NOT to be confused with "biological species" (organisms)!
+
     EXAMPLE:
         Species(
             id="metK",
+            name="methionine adenosyltransferase",
+            label="metK",
             categories=["protein", "enzyme"],
+            locus_tag = "0432",
             molecular_weight=43000,
+            diffusion_rate=123,
             ec_number="2.5.1.6",
             metadata={"compartment": "cytosol"}
         )
+
+    Notes:
+        - The only required field is "id".
+        - If "name" or "label" aren't supplied, they get automatically made equal to the value in the `id` field
+        - The user should set whichever properties are needed for the simulation at hand (for example, `diffusion_rate`);
+          most of the properties (such as `ec_number`, `metadata`, etc) are generally OPTIONAL,
+          and primarily meant for optionally better documenting the species.
     """
-    id: str
-    name: str  = ""                                 # EXAMPLE: "methionine adenosyltransferase"
+    id: str                                         # REQUIRED string
+
+    name: str  = ""                                 # The full name.
+                                                    #   EXAMPLE: "methionine adenosyltransferase".
+                                                    #   If not provided, automatically made equal to the value in the `id` field
+
     label: str  = ""                                # Primarily for use in visualization;
-                                                    #   typically, a short version of the name, or a stand-in for it
+                                                    #   typically, a short version of the name, or a stand-in for it.
                                                     #   EXAMPLE: "metK"
+                                                    #   If not provided, automatically made equal to the value in the `id` field
+
+    formula: str = ""
+
     sort_order: float = 0                           # By default, zero-based order of registration
     diffusion_rate: float|None = None
     charge: int = 0
-    formula: str = ""
+
     ec_number: str = ""                             # EXAMPLE: "2.5.1.6"
     cas_number: str = ""                            # EXAMPLE: "53-84-9"
                                                     #   See: https://commonchemistry.cas.org
     chebi: str = ""
     locus_tag: str = ""                             # EXAMPLE: "0432"
     molecular_weight: float|None = None
-    categories: list = field(default_factory=list)  # EXAMPLE: ["protein", "enzyme"]
-    metadata: dict = field(default_factory=dict)    # A dict of any extra fields. EXAMPLE: {"compartment": "cytosol"}
+    categories: list[str] = field(default_factory=list)     # EXAMPLE: ["protein", "enzyme"]
+    metadata: dict[str, Any] = field(default_factory=dict)  # A dict of any extra fields. EXAMPLE: {"compartment": "cytosol"}
     annotation: str = ""                            # Freeform notes
     plot_color: str = ""                            # For available names, see colors.py
                                                     #   EXAMPLES: "darkorange" , "d07a19"
@@ -59,14 +96,17 @@ class Species:
         purine
     """
 
-    def __setattr__(self, name :str, value):
+    def __setattr__(self, name :str, value) -> None:
         """
-        Note: here we do validation, and set a few defaults,
-              both during instantiation as well as when modifying an existing Species
+        This is the function thru which all property assignments go (such as name="metK" or diffusion_rate=123),
+        both during instantiation as well as when modifying an existing Species
 
-        :param name:
+        Here we do validation, and set a few defaults.  Some properties get special treatment.
+
+        :param name:    EXAMPLES: "id" or "diffusion_rate"
+                            If it's "label" or "name", it gets special treatment
         :param value:
-        :return:
+        :return:        None
         """
         if (name == "label") or (name == "name"):
             # Special treatment for the properties (fields) "label" and "name"
@@ -79,7 +119,7 @@ class Species:
                     value = self.id         # Use the `id` value if missing
 
         else:
-            self._validate(field=name, value=value)
+            self._validate_field(field=name, value=value)
 
 
         # Carry out the actual setting of the property
@@ -87,7 +127,7 @@ class Species:
 
 
 
-    def _validate(self, field :str, value) -> None:
+    def _validate_field(self, field :str, value) -> None:
         """
         Note: "label" and "name" are handled separately; not here
 
@@ -95,15 +135,22 @@ class Species:
         :param value:
         :return:            None
         """
-        # TODO: no longer needed by SpeciesRegistry class; can now be moved into Species class
         # TODO: add more validation
 
         match field:
+            case "id":
+                # Acceptable values: non-empty string
+                if type(value) != str:
+                    raise TypeError(f"`{field}` must be a string; the value given ({value}) is of type {type(value)}")
+                if value.strip() == "":
+                    raise ValueError(f"`{field}` cannot be an empty string")
+
+
             case "diffusion_rate":
                 # Acceptable values: None, or a non-negative number (possibly Numpy)
                 if (value is not None):
-                    assert isinstance(value, (float, int, np.integer, np.floating)), \
-                        f"The value for `{field}` ({value}) is not a valid number; the value given is of type {type(value)}"
+                    if not isinstance(value, (float, int, np.integer, np.floating)) or isinstance(value, bool):     # Note: booleans would slip in under int!
+                        raise TypeError(f"The value for `{field}` ({value}) is not a valid number; the value given is of type {type(value)}")
 
                     assert value >= 0, \
                         f"`{field}` cannot be negative; the value given: {value}"
@@ -111,8 +158,26 @@ class Species:
 
             case "categories":
                 # Acceptable values: lists
-                assert type(value) == list, \
-                    f"`{field}` must be a list; the value given ({value}) is of type {type(value)}"
+                if not type(value) == list:
+                    raise TypeError(f"`{field}` must be a list; the value given ({value}) is of type {type(value)}")
+
+
+
+    def clone(self, new_id=None) -> Species:
+        """
+        Return a completely independent copy of this object,
+        including nested lists and dictionaries
+
+        :param new_id:  A string to assign as `id` to the clone
+        :return:        A Species dataclass that is a deep clone of the current object
+        """
+        #TODO: test
+        c =  deepcopy(self)
+        if new_id is not None:
+            c.id = new_id
+
+        return c
+
 
 
 
@@ -122,15 +187,17 @@ class Species:
 
 class SpeciesRegistry:
     """
-
+    Management of all the existing species
     """
+
     def __init__(self, id=None, species=None, n_species=None,
-                 diffusion_rates=None, plot_colors=None, **kwargs):
+                 **kwargs):
         """
 
         Note: all arguments are optional.  AT MOST, 1 of the following 3 may be passed
 
-        :param id:          [OPTIONAL] A string, or list or tuple of them.  The same value(s) will be used as id, name and label
+        :param id:          [OPTIONAL] A string, or list or tuple of them.
+                                The same value(s) will be used as name and label, unless `name` or `label` is passed as a separate argument (TODO: check)
 
         :param species:     [OPTIONAL] An object of type "Species", or a list or tuple of them.
                                 Their `sort_order` attributes will be modified, to be a zero-base auto-increment: 0, 1, 2, ...
@@ -138,25 +205,19 @@ class SpeciesRegistry:
         :param n_species:   [OPTIONAL] The desired number of species.  Their id's, names and labels are automatically
                                 assigned as: "A", "B", ..., "Z", "Z2", "Z3", ...
 
-        :param diffusion_rates: [OPTIONAL] OBSOLETE
-        :param plot_colors:     [OPTIONAL] OBSOLETE
 
-        :param **kwargs:        [OPTIONAL] Other named arguments.
-                                    Their names must match the property names of the class "Species".
-                                    If present, one of the 3 core arguments (`id` or `species` or `n_species`) must also be present
-                                    EXAMPLE: diffusion_rate=[5, 2], plot_color=["blue", "red"]
+        :param **kwargs:    [OPTIONAL] Only allowed if the argument `id` or `n_species` is passed.
+                                Other named arguments.
+                                Their names must match the property names of the dataclass "Species".
+                                The values can be single values, or lists or tuples;
+                                    the number of entries in each value must match the number of species
+                                EXAMPLE (for a single species): diffusion_rate=5, plot_color="blue", molecular_weight=43000, name="some long name"
+                                EXAMPLE (for 2 species): diffusion_rate=[5, 2], plot_color=["blue", "red"], label=("L1", "L2")
         """
-        # Raise Exception if any of the obsolete arguments are being used
-        assert diffusion_rates is None, \
-            "SpeciesRegistry() instantiation: argument `diffusion_rates` is obsolete; use the singular `diffusion_rate` instead"
+        self.count = 0                          # Species registration index
 
-        assert plot_colors is None, \
-            "SpeciesRegistry() instantiation: argument `plot_colors` is obsolete; use the singular `plot_color` instead"
-
-
-        self.count = 0                      # Species registration index
-
-        self.by_id: dict[str, Species] = {} # Species classes indexed by `id`.  dict[str, Species]   EXAMPLE:
+        self.by_id: dict[str, Species] = {}     # Species classes indexed by `id`.  dict[str, Species]
+        # EXAMPLE:
         """
         {
             "A":    Species(id="A", name="my chem", label="A", "notes="example", ...
@@ -228,11 +289,17 @@ class SpeciesRegistry:
         # Process any other named arguments that might be present
         #print('kwargs: ', kwargs)           # EXAMPLE: {'diffusion_rate': [123], 'plot_color': ['red']}
 
+        if len(kwargs) == 0:
+            return      # No named arguments were passed; nothing else to do
+
         number_species = self.number_of_species()
         if number_species == 0:
             assert len(kwargs) == 0, \
                 f"SpeciesRegistry(): you cannot pass special arguments {kwargs} , unless you also pass one of " \
-                f"the 3 core arguments (`id` or `species` or `n_species`)"
+                f"the arguments (`id` or `n_species`)"
+
+        assert species is None, \
+            f"SpeciesRegistry(): you cannot pass special arguments {kwargs} if you are also supplying the argument `species`"
 
         for k, v in kwargs.items():
             #print(f"key: {k} -> value: {v}")    # EXAMPLE: key: plot_color -> value: ('blue', 'turquoise')
@@ -242,7 +309,7 @@ class SpeciesRegistry:
 
             assert len(v) == number_species, \
                 f"SpeciesRegistry() instantiation: the number of elements in the special argument `{k}` ({len(v)}) " \
-                f"doesn't match the requested number of species ({number_species})"
+                f"doesn't match the number of species ({number_species})"
 
             self.set_all_values(field=k, values=v)
 
