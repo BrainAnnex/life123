@@ -181,6 +181,9 @@ class ReactionCommon:
         EXAMPLE: for reaction  A + E -> 2P + Q + E
         it would return {"A": -1, "P": 2, "Q": 1, "E": 0}
 
+        Those signed coefficients ν_i, given a set of species X_i,
+        allow the reaction to be expressed as : ∑i ν_i X_i = 0
+
         :return:    A dictionary mapping the id's of the species in this reaction
                         to their SIGNED stoichiometric coefficients in this reaction
         """
@@ -196,6 +199,42 @@ class ReactionCommon:
             coeffs[species] = coeffs.get(species, 0) + c    # Accumulate the sum of the stoichiometric coefficients for this species
 
         return coeffs
+
+
+
+    def get_reaction_vector(self) -> {}:
+        """
+        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
+        we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
+        as:  y' - y
+
+        The component of (y′ − y) corresponding to species s is  y′_s − y_s,
+        i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
+        and its stoichiometric coefficient in the reactant complex y (the left-hand side of the equation).
+        This difference is the net number of molecules of s
+        produced with each occurrence of the reaction y → y′.
+
+        ~~~
+        EXAMPLE: for reaction  A + E -> 2P + Q + E
+                 the reactant complex y is:     A + E
+                 while product complex y′ is:   2P + Q + E
+                 and the corresponding reaction vector y′ - y is:  2P + Q - A
+                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
+        ~~~
+
+        :return:    The non-zero components of the reaction vector,
+                        written as a dict mapping of species id to its component value
+        """
+        # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
+        # omitting all terms with a zero value
+        d = {k:v
+                for k,v in self.get_signed_stoichiometric_coefficients().items()
+                if v != 0}
+
+        return d
+
+
+
 
 
 

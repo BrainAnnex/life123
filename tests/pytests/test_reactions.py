@@ -65,6 +65,23 @@ def test_get_signed_stoichiometric_coefficients():
 
 
 
+def test_get_reaction_vector():
+    rxn = ReactionUnimolecular(reactant="R", product="P")
+    assert rxn.get_reaction_vector() == {"R": -1, "P": 1}
+
+    rxn = ReactionSynthesis(reactants=("R", "S"), product="P")
+    assert rxn.get_reaction_vector() == {"R": -1, "S": -1, "P": 1}
+
+    rxn = ReactionDecomposition(reactant="R", products=("P", "Q"))
+    assert rxn.get_reaction_vector() == {"R": -1, "P": 1, "Q": 1}
+
+    rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
+    assert rxn.get_reaction_vector() == {"S": -1, "P": 1}
+
+    rxn = ReactionGeneric(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"])
+    assert rxn.get_reaction_vector() == {"A": -2, "B":- 2, "P": 3, "Q": 1}
+
+
 
 
 
