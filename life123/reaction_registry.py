@@ -233,7 +233,7 @@ class ReactionRegistry:
         """
         rxn = self.get_reaction(rxn_index)
 
-        name_set = rxn.extract_chemicals_in_reaction()
+        name_set = rxn.extract_species_in_reaction()
 
         index_set = {self.species_data.get_species_index(name) for name in name_set}
 
@@ -614,7 +614,7 @@ class ReactionRegistry:
         #self.active_enzymes = set()
 
         for rxn in self.reaction_list:
-            involved_chemicals = rxn.extract_chemicals_in_reaction()
+            involved_chemicals = rxn.extract_species_in_reaction()
             involved_chemicals = involved_chemicals - {rxn.catalyst}        # Set difference
             self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
             #if rxn.catalyst is not None:
@@ -837,7 +837,7 @@ class ReactionRegistry:
             # Process all the PRODUCTS of this reaction
             products = rxn.extract_products()
             for term in products:
-                species_name = rxn.extract_chem_label(term)
+                species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
 
                 # Add each product to the graph as a node (if not already present)
@@ -855,7 +855,7 @@ class ReactionRegistry:
             # Process all the REACTANTS of this reaction
             reactants = rxn.extract_reactants()
             for term in reactants:
-                species_name = rxn.extract_chem_label(term)
+                species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-34"
 
                 # Add each reactant to the graph as a node (if not already present)

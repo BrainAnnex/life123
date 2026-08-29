@@ -2,7 +2,9 @@
 
 
 from __future__ import annotations      # To facilitate type annotations
-from dataclasses import dataclass, field, asdict
+
+
+from dataclasses import dataclass, field, fields, asdict
 from itertools import islice
 from typing import NamedTuple, Any
 from copy import deepcopy
@@ -52,11 +54,11 @@ class Species:
     """
     id: str                                         # REQUIRED string
 
-    name: str  = ""                                 # The full name.
+    name: str | None = None                         # The full name.
                                                     #   EXAMPLE: "methionine adenosyltransferase".
                                                     #   If not provided, automatically made equal to the value in the `id` field
 
-    label: str  = ""                                # Primarily for use in visualization;
+    label: str | None = None                        # Primarily for use in visualization;
                                                     #   typically, a short version of the name, or a stand-in for it.
                                                     #   EXAMPLE: "metK"
                                                     #   If not provided, automatically made equal to the value in the `id` field
@@ -73,11 +75,7 @@ class Species:
     chebi: str = ""
     locus_tag: str = ""                             # EXAMPLE: "0432"
     molecular_weight: float|None = None
-    categories: list[str] = field(default_factory=list)     # EXAMPLE: ["protein", "enzyme"]
-    metadata: dict[str, Any] = field(default_factory=dict)  # A dict of any extra fields. EXAMPLE: {"compartment": "cytosol"}
-    annotation: str = ""                            # Freeform notes
-    plot_color: str = ""                            # For available names, see colors.py
-                                                    #   EXAMPLES: "darkorange" , "d07a19"
+    categories: list[str] = field(default_factory=list)
     """
     EXAMPLES of categories:   
         small_molecule
@@ -96,30 +94,61 @@ class Species:
         purine
     """
 
+    metadata: dict[str, Any] = field(default_factory=dict)  # A dict of any extra fields. EXAMPLE: {"compartment": "cytosol"}
+    annotation: str = ""                                    # Freeform notes
+    plot_color: str = ""                                    # For available names, see colors.py
+                                                            #       EXAMPLES: "darkorange" , "d07a19"
+
+
+    # PRIVATE fields
+    _initialized: bool = field(init=False, default=False, repr=False)   # Indicative of whether the construction of this dataclass
+                                                                        # has been completed; not included by print() statements
+
+
+
+    def __post_init__(self) -> None:
+        """
+        Automatically invoked by the constructor, just before it terminates
+
+        :return: None
+        """
+        if (self.name is None) or (self.name.strip() == ""):
+            self.name = self.id
+
+        if (self.label is None) or (self.label.strip() == ""):
+            self.label = self.id
+
+        self._validate_all()
+        object.__setattr__(self, "_initialized", True)
+
+
+
+    def _validate_all(self) -> None:
+        """
+        Validate all the class properties in turn
+
+        :return:    None
+        """
+        for f in fields(self):
+            self._validate_field(f.name, getattr(self, f.name))
+
+
+
     def __setattr__(self, name :str, value) -> None:
         """
         This is the function thru which all property assignments go (such as name="metK" or diffusion_rate=123),
-        both during instantiation as well as when modifying an existing Species
+        BOTH during instantiation as well as when modifying an existing `Species` object.
 
         Here we do validation, and set a few defaults.  Some properties get special treatment.
 
         :param name:    EXAMPLES: "id" or "diffusion_rate"
-                            If it's "label" or "name", it gets special treatment
         :param value:
         :return:        None
         """
-        if (name == "label") or (name == "name"):
-            # Special treatment for the properties (fields) "label" and "name"
-            if (value is None):
-                value = self.id             # Use the `id` value if missing
-            else:
-                assert type(value)==str, \
-                    f"The field '{name}', if specified, must be a string; the value given ({value}) is of type {type(value)}"
-                if value.strip() == "":     # Detect if blank
-                    value = self.id         # Use the `id` value if missing
-
-        else:
-            self._validate_field(field=name, value=value)
+        if getattr(self, "_initialized", False):
+            # This is only executed in cases of post-construction mutations (for example, setting: s.label="L", where s is an existing Species object);
+            # and NOT executed at construction-time (for example: s = Species(id="s_1", label="L")
+            self._validate_field(name, value)
 
 
         # Carry out the actual setting of the property
@@ -127,39 +156,51 @@ class Species:
 
 
 
-    def _validate_field(self, field :str, value) -> None:
+    def _validate_field(self, field_name :str, field_value) -> None:
         """
-        Note: "label" and "name" are handled separately; not here
 
-        :param field:
-        :param value:
+        :param field_name:
+        :param field_value:
         :return:            None
         """
         # TODO: add more validation
 
-        match field:
-            case "id":
+        match field_name:
+            case "id" | "name" | "label":
                 # Acceptable values: non-empty string
-                if type(value) != str:
-                    raise TypeError(f"`{field}` must be a string; the value given ({value}) is of type {type(value)}")
-                if value.strip() == "":
-                    raise ValueError(f"`{field}` cannot be an empty string")
+                if type(field_value) != str:
+                    raise TypeError(f"`{field_name}` must be a string; the value given ({field_value}) is of type {type(field_value)}")
+                if field_value.strip() == "":
+                    raise ValueError(f"`{field_name}` cannot be an empty string")
 
 
             case "diffusion_rate":
                 # Acceptable values: None, or a non-negative number (possibly Numpy)
-                if (value is not None):
-                    if not isinstance(value, (float, int, np.integer, np.floating)) or isinstance(value, bool):     # Note: booleans would slip in under int!
-                        raise TypeError(f"The value for `{field}` ({value}) is not a valid number; the value given is of type {type(value)}")
+                if (field_value is not None):
+                    if not isinstance(field_value, (float, int, np.integer, np.floating)) or isinstance(field_value, bool):     # Note: booleans would slip in under int!
+                        raise TypeError(f"The value for `{field_name}` ({field_value}) is not a valid number; the value given is of type {type(field_value)}")
 
-                    assert value >= 0, \
-                        f"`{field}` cannot be negative; the value given: {value}"
+                    assert field_value >= 0, \
+                        f"`{field_name}` cannot be negative; the value given: {field_value}"
 
 
             case "categories":
                 # Acceptable values: lists
-                if not type(value) == list:
-                    raise TypeError(f"`{field}` must be a list; the value given ({value}) is of type {type(value)}")
+                if not type(field_value) == list:
+                    raise TypeError(f"`{field_name}` must be a list; the value given ({field_value}) is of type {type(field_value)}")
+
+
+
+    def to_dict(self) -> dict:
+        """
+        Return a dictionary form of the dataclass.
+        Private fields are omitted
+
+        :return:    A dictionary populated with the public fields of this data class
+        """
+        d = asdict(self)
+        del d["_initialized"]   # Ditch the private field
+        return d
 
 
 
@@ -171,7 +212,6 @@ class Species:
         :param new_id:  A string to assign as `id` to the clone
         :return:        A Species dataclass that is a deep clone of the current object
         """
-        #TODO: test
         c =  deepcopy(self)
         if new_id is not None:
             c.id = new_id
@@ -315,7 +355,11 @@ class SpeciesRegistry:
 
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """
+
+        :return:
+        """
         msg = """This is on object of type life123.species_registry.SpeciesRegistry
                  To display is, use the function as_recordset() or as_dataframe()
                  EXAMPLE:   my_species_registry.as_dataframe()
@@ -391,7 +435,6 @@ class SpeciesRegistry:
         :return:    A list of strings with the species id's,
                         in their registered index order
         """
-        # TODO: this is to replace the old get_all_labels()
         return list(self.by_id)     # The dictionary keys as a list
 
 
@@ -539,7 +582,8 @@ class SpeciesRegistry:
         recordset = []
         # Loop over values in the dictionary self.by_id
         for v in self.by_id.values():
-            d = asdict(v)
+            d = v.to_dict()
+
             recordset.append(d)
 
         return recordset
@@ -749,7 +793,7 @@ class SpeciesRegistry:
 
 
 
-    #############  PRIVATE  #############
+    #################  PRIVATE  #################
 
     def _generate_generic_names(self, n :int) -> [str]:
         """
@@ -768,6 +812,7 @@ class SpeciesRegistry:
                                                                 #      28 to ["Z2", "Z3"], etc.
 
         return letters + alphanumeric
+
 
 
 

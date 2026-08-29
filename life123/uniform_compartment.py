@@ -1323,7 +1323,7 @@ class UniformCompartment:
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         """
         # Get the SET of the chemical labels of all the chemicals appearing in this reaction
-        chem_labels = rxn.extract_chemicals_in_reaction()   # EXAMPLE: {"B", "F", "D"}
+        chem_labels = rxn.extract_species_in_reaction()   # EXAMPLE: {"B", "F", "D"}
 
         conc_dict = {}
         for label in chem_labels:
@@ -1375,7 +1375,7 @@ class UniformCompartment:
         # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = rxn.extract_chem_label(r)
+            species_name = rxn.extract_species(r)
             species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
@@ -1391,7 +1391,7 @@ class UniformCompartment:
         # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
         for p in products:
             # Unpack data from the reactant r
-            species_name = rxn.extract_chem_label(p)
+            species_name = rxn.extract_species(p)
             species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
@@ -1412,7 +1412,7 @@ class UniformCompartment:
             #print(f"    Macromolecule count:")
 
 
-        #assert len(increment_dict_single_rxn) == len(rxn.extract_chemicals_in_reaction())
+        #assert len(increment_dict_single_rxn) == len(rxn.extract_species_in_reaction())
 
         return (increment_dict_single_rxn, rxn_rate)
 
@@ -2419,7 +2419,7 @@ class UniformCompartment:
                                 EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
         rxn = self.reaction_data.get_reaction(rxn_index)            # Look up the requested reaction
-        chem_labels = list(rxn.extract_chemicals_in_reaction()) # List of the chemicals in the requested reaction
+        chem_labels = list(rxn.extract_species_in_reaction()) # List of the chemicals in the requested reaction
         return rxn.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
 
 

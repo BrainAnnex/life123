@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
 from life123.visualization.colors import Colors
+from dataclasses import asdict
 from tests.utilities.comparisons import *
 
 
@@ -22,6 +23,9 @@ def test_constructor_Species():
     s = Species(id="test")
     assert s == Species(id='test', name='test', label='test', sort_order=0, diffusion_rate=None, charge=0, formula='',
                         ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+    assert s._initialized == True   # Private field that normally doesn't show up
+
 
     s = Species(id="metK", name="methionine adenosyltransferase", label="MK", molecular_weight=43000, categories=["protein", "enzyme"],
                 ec_number="2.5.1.6", diffusion_rate=123,
@@ -81,9 +85,40 @@ def test_constructor_Species():
 def test_setattr():
     s = Species(id="test", label="metK", name="my long name")
 
-    s.name = None
+    with pytest.raises(Exception):
+        s.name = None                           # Bad value
 
-    print(s)
+    with pytest.raises(Exception):
+        s.name = "    "                         # Bad value
+
+
+    s.name = "revised name"
+    assert s == Species(id='test', name='revised name', label='metK', sort_order=0, diffusion_rate=None, charge=0, formula='',
+                        ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+
+    with pytest.raises(Exception):
+        s.label = None                           # Bad value
+
+    with pytest.raises(Exception):
+        s.label = "    "                         # Bad value
+
+    s.label = "L4"
+    assert s == Species(id='test', name='revised name', label='L4', sort_order=0, diffusion_rate=None, charge=0, formula='',
+                        ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+
+
+def test_to_dict():
+    s = Species(id="test", label="metK", categories=["protein", "enzyme"],
+                diffusion_rate=123, metadata={"compartment": "cytosol"})
+    result = s.to_dict()
+    assert result == {'id': 'test', 'name': 'test', 'label': 'metK', 'formula': '',
+                      'sort_order': 0, 'diffusion_rate': 123, 'charge': 0,
+                       'ec_number': '', 'cas_number': '', 'chebi': '', 'locus_tag': '', 'molecular_weight': None,
+                       'categories': ['protein', 'enzyme'], 'metadata': {'compartment': 'cytosol'},
+                       'annotation': '', 'plot_color': ''}
+
 
 
 def test_clone():
@@ -622,20 +657,16 @@ def test_set_update():
                                           categories=["protein", "enzyme"], metadata={}, annotation='', plot_color='plum')
 
     with pytest.raises(Exception):
-        sr.update(species_id="B", name={"a": 1})     # Bad value
-
-    sr.update(species_id="B", name="      ")    # Missing value; the `id` is used instead
-    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
-                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
-                                          categories=["protein", "enzyme"], metadata={}, annotation='', plot_color='plum')
+        sr.update(species_id="B", name={"a": 1})    # Bad value
 
     with pytest.raises(Exception):
-        sr.update(species_id="B", label=1234)     # Bad value
+        sr.update(species_id="B", name="      ")    # Bad value
 
-    sr.update(species_id="B", label="      ")    # Missing value; the `id` is used instead
-    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
-                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
-                                          categories=["protein", "enzyme"], metadata={}, annotation='', plot_color='plum')
+    with pytest.raises(Exception):
+        sr.update(species_id="B", label=1234)       # Bad value
+
+    with pytest.raises(Exception):
+        sr.update(species_id="B", label="      ")    # Bad value
 
     with pytest.raises(Exception):
         sr.update(species_id="B")   # Missing arguments
@@ -677,28 +708,24 @@ def test_set_value():
                                           categories=[], metadata={}, annotation='', plot_color='plum')
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="name", value={"a": 1})     # Bad value
-
-    sr.set_value(species_id="B", field="name", value="      ")    # Missing value; the `id` is used instead
-    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
-                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
-                                          categories=[], metadata={}, annotation='', plot_color='plum')
+        sr.set_value(species_id="B", field="name", value={"a": 1})      # Bad value
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="label", value=1234)     # Bad value
+        sr.set_value(species_id="B", field="name", value="      ")      # Bad value
 
-    sr.set_value(species_id="B", field="label", value="      ")    # Missing value; the `id` is used instead
-    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
-                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
-                                          categories=[], metadata={}, annotation='', plot_color='plum')
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="B", field="label", value=1234)         # Bad value
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="B", field="label", value="      ")     # Bad value
 
 
     sr.set_value(species_id="A", field="diffusion_rate", value=None)    # None is a legit value to use
     assert sr.get_value(species_id="A", field="diffusion_rate") is None
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="A", field="Impostor", value=666)           # Field doesn't exist in Species
-
+        sr.set_value(species_id="A", field="Impostor", value=666)       # Field doesn't exist in Species
 
 
 

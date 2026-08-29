@@ -22,7 +22,7 @@ class ReactionCommon:
     Individual reactions classes need to provide the following methods:
 
         extract_stoichiometry()
-        extract_chem_label()
+        extract_species()
 
         reaction_details()
         extract_intermediate()
@@ -40,7 +40,7 @@ class ReactionCommon:
         extract_product_labels()
         extract_products()
 
-        extract_chemicals_in_reaction()
+        extract_species_in_reaction()
 
         extract_rxn_properties()
 
@@ -93,8 +93,8 @@ class ReactionCommon:
         raise NotImplementedError("Subclasses must implement this")
 
 
-    def extract_chemicals_in_reaction(self, *args, **kwargs):
-        # Return a SET of the labels of ALL the chemicals appearing in this reaction
+    def extract_species_in_reaction(self, *args, **kwargs):
+        # Return a SET of the id's of ALL the species appearing in this reaction
         raise NotImplementedError("Subclasses must implement this")
 
 
@@ -111,7 +111,7 @@ class ReactionCommon:
 
     def reaction_details(self, rxn_properties :dict) -> str:
         """
-        Return a string with some details about the parameters of this reaction,
+        Format and return a string with some details about the parameters of this reaction,
         contained in the passed dictionary
 
         :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
@@ -158,7 +158,7 @@ class ReactionCommon:
                             f"the passed value was {term}")
 
 
-    def extract_chem_label(self, term :(int, str)) -> str:
+    def extract_species(self, term :(int, str)) -> str:
         """
         Return the label of the chemical species, from a reaction "TERM"
 
@@ -168,10 +168,34 @@ class ReactionCommon:
         try:
             return term[1]
         except Exception:
-            raise Exception(f"extract_chem_label(): the argument must be a pair consisting of an integer and a string; "
+            raise Exception(f"extract_species(): the argument must be a pair consisting of an integer and a string; "
                             f"the passed value was {term}")
 
 
+
+    def get_signed_stoichiometric_coefficients(self) -> {}:
+        """
+        Return the sums of all the stoichiometric coefficients for each species in this reaction.
+        The reactants get negative values, and the products positive ones
+
+        EXAMPLE: for reaction  A + E -> 2P + Q + E
+        it would return {"A": -1, "P": 2, "Q": 1, "E": 0}
+
+        :return:    A dictionary mapping the id's of the species in this reaction
+                        to their SIGNED stoichiometric coefficients in this reaction
+        """
+        reactants = self.extract_reactants()
+        products = self.extract_products()
+
+        coeffs = {}
+
+        for c, species in reactants:
+            coeffs[species] = coeffs.get(species, 0) - c    # Accumulate the sum of the stoichiometric coefficients for this species
+
+        for c, species in products:
+            coeffs[species] = coeffs.get(species, 0) + c    # Accumulate the sum of the stoichiometric coefficients for this species
+
+        return coeffs
 
 
 
@@ -210,7 +234,7 @@ class ReactionElementary(ReactionCommon):
 
         self.kF = kF                # Forward rate constant
         self.kR = kR                # Reverse rate constant
-        self.K = None               # Forward–reverse rate constant ratio (Kinetic parameter ratio)
+        self.K = None               # Equilibrium constant (if it exists)
 
         # Process the kinetic  data
         self.equilibrium_constant_from_kinetic_data(kF=kF, kR=kR) # This will set self.K if possible
@@ -239,6 +263,7 @@ class ReactionElementary(ReactionCommon):
         """
         True for Elementary reactions
         (and, more generally, for any reaction that follows mass-action kinetics)
+        If any of the arguments is None, derive it - if possible - from the other 2 ones
 
         :param K:   The reaction's equilibrium constant
         :param kF:  The forward reaction's reaction rate constant
@@ -247,7 +272,7 @@ class ReactionElementary(ReactionCommon):
         """
         #print(f"In equilibrium_constant_from_kinetic_data() : K={K}, kF={kF}, kR={kR}")
         if (self.K is None) and (kF is not None) and (kR is not None) and (not np.allclose(self.kR, 0)):
-            self.K = kF / kR
+            self.K = kF / kR    # Kinetic parameter ratio
             return
 
         if (self.kR is None) and (kF is not None) and (K is not None):
@@ -265,8 +290,8 @@ class ReactionElementary(ReactionCommon):
         from the other one and the given equilibrium constant K.
         If all values already exist, and an inconsistency is detected, an Exception will be raised.
 
-        Note: the reaction's equilibrium constant and its kinetic rate constants are
-              in the relationship K = kF / kR for any
+        Note: the elementary reaction's equilibrium constant and its kinetic rate constants are
+              in the relationship K = kF / kR for kR != 0
               (and, more generally, for any reaction that follows mass-action kinetics)
 
         :param K:   The reaction's equilibrium constant
@@ -295,9 +320,9 @@ class ReactionElementary(ReactionCommon):
         Create a dictionary with the numerical properties of the given reaction
         (skipping any lists or None values)
         Possible values include:
-            forward and reverse reaction rates, ΔH, ΔS, ΔG, K (equilibrium constant)
+            forward and reverse reaction rates (kR and kR, respectively), ΔH, ΔS, ΔG, K (equilibrium constant)
 
-        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.1305052750387, 'K': 1.5}
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.130505, 'K': 1.5}
         """
         properties = {}
 
@@ -379,7 +404,7 @@ class ReactionElementary(ReactionCommon):
         or None if there's no intermediate
         :return:
         """
-        return None   # There are no intermediates
+        return None   # There are no intermediates for elementary reactions
 
 
 
@@ -448,7 +473,7 @@ class ReactionUnimolecular(ReactionElementary):
         Return a list of pairs with details of the reactants of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.reactant)]
 
@@ -478,7 +503,7 @@ class ReactionUnimolecular(ReactionElementary):
         Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.product)]
 
@@ -493,11 +518,11 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
-    def extract_chemicals_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the labels of ALL the chemicals appearing in this reaction
+        Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the labels of the chemicals involved in this reaction
+        :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
         return {self.reactant, self.product}
@@ -649,7 +674,7 @@ class ReactionUnimolecular(ReactionElementary):
 
 class ReactionSynthesis(ReactionElementary):
     """
-    Bimolecular reactions of type A + B <-> P,
+    Bimolecular elementary reactions of type R + S <-> P,
     of first order for each participating chemical.
     """
 
@@ -721,7 +746,7 @@ class ReactionSynthesis(ReactionElementary):
         Return a list of pairs with details of the reactants of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         if self.reactant_1 != self.reactant_2:
             return [(1, self.reactant_1) , (1, self.reactant_2)]
@@ -757,7 +782,7 @@ class ReactionSynthesis(ReactionElementary):
         Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.product)]
 
@@ -772,11 +797,11 @@ class ReactionSynthesis(ReactionElementary):
 
 
 
-    def extract_chemicals_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the labels of ALL the chemicals appearing in this reaction
+        Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the labels of the chemicals involved in this reaction
+        :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
         return {self.reactant_1, self.reactant_2, self.product}
@@ -955,7 +980,7 @@ class ReactionSynthesis(ReactionElementary):
 
 class ReactionDecomposition(ReactionElementary):
     """
-    Bimolecular reactions of type A <-> B + C
+    Bimolecular elementary reactions of type R <-> P + Q
     of first order for each participating chemical.
     """
 
@@ -1025,7 +1050,7 @@ class ReactionDecomposition(ReactionElementary):
         Return a list of pairs with details of the reactants of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.reactant)]
 
@@ -1058,7 +1083,7 @@ class ReactionDecomposition(ReactionElementary):
         Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         if self.product_1 != self.product_2:
             return [(1, self.product_1), (1, self.product_2)]
@@ -1079,11 +1104,11 @@ class ReactionDecomposition(ReactionElementary):
 
 
 
-    def extract_chemicals_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the labels of ALL the chemicals appearing in this reaction
+        Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the labels of the chemicals involved in this reaction
+        :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
         return {self.reactant, self.product_1, self.product_2}
@@ -1380,7 +1405,7 @@ class ReactionEnzyme(ReactionCommon):
         (including the enzyme)
         Each pair contains stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.substrate), (1, self.enzyme)]
 
@@ -1421,7 +1446,7 @@ class ReactionEnzyme(ReactionCommon):
         Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return [(1, self.product), (1, self.enzyme)]
 
@@ -1436,12 +1461,11 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-    def extract_chemicals_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the labels of ALL the chemicals appearing in this reaction,
-        including enzyme and intermediate
+        Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the labels of the chemicals involved in this reaction
+        :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
         return {self.enzyme, self.substrate, self.intermediate, self.product}
@@ -1723,8 +1747,8 @@ class ReactionGeneric(ReactionCommon):
 
               It's equally acceptable to use LISTS in lieu of tuples for the pairs
 
-        :param reactants:   A list of terms that are either chemicals labels (with implied stoichiometry 1),
-                                or pairs (stoichiometry coefficient , chemical label).
+        :param reactants:   A list of terms that are either species id's (with implied stoichiometry 1),
+                                or pairs (stoichiometry coefficient , species id).
                                 If not a list, it will first get turned into one
         :param products:    A list of terms that are either chemicals labels (with implied stoichiometry 1),
                                 or pairs (stoichiometry coefficient , chemical label).
@@ -1818,7 +1842,7 @@ class ReactionGeneric(ReactionCommon):
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
-                enzyme_list.append(self.extract_chem_label(reactant))
+                enzyme_list.append(self.extract_species(reactant))
 
         number_enzymes = len(enzyme_list)
 
@@ -1931,7 +1955,7 @@ class ReactionGeneric(ReactionCommon):
         Return a list of pairs with details of the reactants of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return self.reactants
 
@@ -1952,7 +1976,7 @@ class ReactionGeneric(ReactionCommon):
         Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
-        :return:    A list of pairs of the form (stoichiometry, chemical label)
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
         return self.products
 
@@ -1981,12 +2005,12 @@ class ReactionGeneric(ReactionCommon):
 
 
 
-    def extract_chemicals_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the labels of ALL the chemicals appearing in this reaction
+        Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the labels of ALL the chemicals involved in this reaction
-                    Note: being a set, it's NOT in any particular order
+        :return:    A SET of the id's of the species involved in this reaction
+                        Note: being a set, it's NOT in any particular order
         """
         return set(self.extract_reactant_labels()) | set(self.extract_product_labels())   # Union of sets
 
@@ -2002,7 +2026,7 @@ class ReactionGeneric(ReactionCommon):
         """
         # TODO: investigate if there's a chance of repeat
         reactants = self.extract_reactants()
-        reactant_names = [self.extract_chem_label(r) for r in reactants]
+        reactant_names = [self.extract_species(r) for r in reactants]
 
         return reactant_names
 
@@ -2017,7 +2041,7 @@ class ReactionGeneric(ReactionCommon):
         """
         # TODO: investigate if there's a chance of repeat
         products = self.extract_products()
-        product_names = [self.extract_chem_label(r) for r in products]
+        product_names = [self.extract_species(r) for r in products]
 
         return product_names
 
@@ -2108,10 +2132,10 @@ class ReactionGeneric(ReactionCommon):
             "reaction_quotient(): the reaction quotient can only be computed when the reaction follows the 'standard rate law'; " \
             "consider a call to set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)"
 
-        reactant_data = [(self.extract_stoichiometry(r), self.extract_chem_label(r))
+        reactant_data = [(self.extract_stoichiometry(r), self.extract_species(r))
                          for r in self.reactants]
 
-        product_data = [(self.extract_stoichiometry(p), self.extract_chem_label(p) )
+        product_data = [(self.extract_stoichiometry(p), self.extract_species(p))
                                for p in self.products]
 
         return ReactionKinetics.compute_reaction_quotient(reactant_data=reactant_data,
@@ -2253,8 +2277,8 @@ class ReactionGeneric(ReactionCommon):
         delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 
-        reactants = self.extract_reactants() # A list of pairs of the form (stoichiometry, chemical label))
-        products = self.extract_products()   # A list of pairs of the form (stoichiometry, chemical label))
+        reactants = self.extract_reactants() # A list of pairs of the form (stoichiometry coefficient, species id))
+        products = self.extract_products()   # A list of pairs of the form (stoichiometry coefficient, species id))
 
 
         """
@@ -2265,7 +2289,7 @@ class ReactionGeneric(ReactionCommon):
         # The reactants DECREASE based on the quantity delta_rxn
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = self.extract_chem_label(r)
+            species_name = self.extract_species(r)
             #if species_name == self.catalyst:
                 #print(f"*** SKIPPING reactant CATALYST {species_name} in reaction")
                 #continue    # Skip if r is a catalyst for this reaction
@@ -2280,7 +2304,7 @@ class ReactionGeneric(ReactionCommon):
         # The reaction products INCREASE based on the quantity delta_rxn
         for p in products:
             # Unpack data from the reactant r
-            species_name = self.extract_chem_label(p)
+            species_name = self.extract_species(p)
             #if species_name == self.catalyst:
                 #print(f"*** SKIPPING product CATALYST {species_name} in reaction")
                 #continue    # Skip if p is a catalyst for this reaction
@@ -2300,7 +2324,7 @@ class ReactionGeneric(ReactionCommon):
             #print(f"    Macromolecule count:")
         '''
 
-        assert len(increment_dict_single_rxn) == len(self.extract_chemicals_in_reaction())  # TODO: temp test
+        assert len(increment_dict_single_rxn) == len(self.extract_species_in_reaction())  # TODO: temp test
 
         return (increment_dict_single_rxn, rxn_rate)
 
@@ -2338,22 +2362,22 @@ class ReactionGeneric(ReactionCommon):
         r1, r2 = reactants
         p1, p2 = products
 
-        A0 = conc_dict.get(self.extract_chem_label(r1))
+        A0 = conc_dict.get(self.extract_species(r1))
         assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                               f"concentration of the reactant `{self.extract_chem_label(r1)}` was not provided"
+                               f"concentration of the reactant `{self.extract_species(r1)}` was not provided"
 
-        B0 = conc_dict.get(self.extract_chem_label(r2))
+        B0 = conc_dict.get(self.extract_species(r2))
         assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                               f"concentration of the reactant `{self.extract_chem_label(r2)}` was not provided"
+                               f"concentration of the reactant `{self.extract_species(r2)}` was not provided"
 
 
-        C0 = conc_dict.get(self.extract_chem_label(p1))
+        C0 = conc_dict.get(self.extract_species(p1))
         assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                               f"concentration of the produce `{self.extract_chem_label(p1)}` was not provided"
+                               f"concentration of the produce `{self.extract_species(p1)}` was not provided"
 
-        D0 = conc_dict.get(self.extract_chem_label(p2))
+        D0 = conc_dict.get(self.extract_species(p2))
         assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                               f"concentration of the produce `{self.extract_chem_label(p2)}` was not provided"
+                               f"concentration of the produce `{self.extract_species(p2)}` was not provided"
 
 
 
@@ -2364,8 +2388,8 @@ class ReactionGeneric(ReactionCommon):
 
         # eq_dict contains the keys "A", "B", "P", "Q";
         # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
-        return  {self.extract_chem_label(r1): eq_dict["A"], self.extract_chem_label(r2): eq_dict["B"],
-                 self.extract_chem_label(p1): eq_dict["P"], self.extract_chem_label(p2): eq_dict["Q"]}
+        return  {self.extract_species(r1): eq_dict["A"], self.extract_species(r2): eq_dict["B"],
+                 self.extract_species(p1): eq_dict["P"], self.extract_species(p2): eq_dict["Q"]}
 
 
 
@@ -2398,7 +2422,7 @@ class ReactionGeneric(ReactionCommon):
         formula_list = []
         for t in eqn_side:
             stoichiometry = self.extract_stoichiometry(t)
-            species_name = self.extract_chem_label(t)
+            species_name = self.extract_species(t)
 
             if stoichiometry == 1:
                 term = species_name
