@@ -49,8 +49,8 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id="A",
-                     diffusion_rate=600.)
+chem_data = SpeciesRegistry(ids="A",
+                            diffusion_rate=600.)
 
 bio = BioSim1D(n_bins=100, species_data=chem_data)
 
@@ -101,8 +101,8 @@ bio.visualize_system()
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id="A",
-                     diffusion_rate=600.)
+chem_data = SpeciesRegistry(ids="A",
+                            diffusion_rate=600.)
 
 bio = BioSim1D(n_bins=100, species_data=chem_data)
 
@@ -161,8 +161,8 @@ bio.visualize_system()
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id="A",
-                     diffusion_rate=600.)
+chem_data = SpeciesRegistry(ids="A",
+                            diffusion_rate=600.)
 
 bio = BioSim1D(n_bins=100, species_data=chem_data)
 

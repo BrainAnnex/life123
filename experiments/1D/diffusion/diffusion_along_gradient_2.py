@@ -49,7 +49,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
-chem_data = SpeciesRegistry(id="A", diffusion_rate=3.)
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=3.)
 bio = BioSim1D(n_bins=200, species_data=chem_data)
 
 bio.set_uniform_concentration(chem_label="A", conc=150.)

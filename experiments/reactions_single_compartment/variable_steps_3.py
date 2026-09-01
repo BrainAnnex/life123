@@ -57,7 +57,7 @@ import numpy as np
 
 # %%
 # Initialize the system.  
-chem_data = SpeciesRegistry(id=["EXTRA 1", "U", "EXTRA 2", "X", "S", "EXTRA 3"])
+chem_data = SpeciesRegistry(ids=["EXTRA 1", "U", "EXTRA 2", "X", "S", "EXTRA 3"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
@@ -126,7 +126,7 @@ dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["U", "X", "S", "E"])
+chem_data = SpeciesRegistry(ids=["U", "X", "S", "E"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1), "E"], products=["U", "E"],

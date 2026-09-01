@@ -21,6 +21,8 @@ class Species:
     """
     Data structure (python "dataclass") to contain information about a "species".
 
+    Mutable bundle of knowledge about a species: the field `id` is its identity.
+
     A "species" is, broadly speaking, a state variable used in the simulations.
     It can represent:
         molecules
@@ -227,16 +229,18 @@ class Species:
 
 class SpeciesRegistry:
     """
-    Management of all the existing species
+    Management of all the existing species.
+
+    It acts as a namespace for the Species id's, and enforces their uniqueness within the collection.
     """
 
-    def __init__(self, id=None, species=None, n_species=None,
+    def __init__(self, ids=None, species=None, n_species=None,
                  **kwargs):
         """
 
         Note: all arguments are optional.  AT MOST, 1 of the following 3 may be passed
 
-        :param id:          [OPTIONAL] A string, or list or tuple of them.
+        :param ids:         [OPTIONAL] A string, or list or tuple of them.
                                 The same value(s) will be used as name and label, unless `name` or `label` is passed as a separate argument (TODO: check)
 
         :param species:     [OPTIONAL] An object of type "Species", or a list or tuple of them.
@@ -276,7 +280,7 @@ class SpeciesRegistry:
 
         # Determine which arguments, if any, aren't None
         passed_arg_values = [arg
-                             for arg in (id, species, n_species) if arg is not None]
+                             for arg in (ids, species, n_species) if arg is not None]
 
         #if len(passed_arg_values) == 0:
         #    return      # All the arguments are None; nothing else to do
@@ -287,15 +291,15 @@ class SpeciesRegistry:
 
 
         # `id` argument
-        if id is not None:
-            if type(id) == str:
-                id = [id]
+        if ids is not None:
+            if type(ids) == str:
+                ids = [ids]
             else:
-                assert (type(id) == list) or (type(id) == tuple), \
+                assert (type(ids) == list) or (type(ids) == tuple), \
                     f"SpeciesRegistry() instantiation: the `id` argument, if provided, must be a string, list or tuple"
 
-            for id in id:
-                self.add_species(id=id)
+            for species_id in ids:
+                self.add_species(id=species_id)
 
 
         # `species` argument
@@ -320,10 +324,10 @@ class SpeciesRegistry:
             assert (type(n_species) == int) and (n_species > 0), \
                 f"SpeciesRegistry() instantiation: the `n_species` argument, if provided, must be a positive integer"
 
-            id = self._generate_generic_names(n_species)     # Generates the strings "A", "B", ..., "Z", "Z2", "Z3", ...
+            ids = self._generate_generic_names(n_species)     # Generates the strings "A", "B", ..., "Z", "Z2", "Z3", ...
 
-            for id in id:
-                self.add_species(id=id)
+            for species_id in ids:
+                self.add_species(id=species_id)
 
 
         # Process any other named arguments that might be present
@@ -380,12 +384,28 @@ class SpeciesRegistry:
     #####################################################################################################
 
 
+    def species_exists(self, id :str) -> bool:
+        """
+
+        :param id:  String with a unique value to identify a species
+        :return:    True if found; otherwise, False
+        """
+        assert type(id) == str, \
+                f"species_exists(): the argument `id` must be a string; it is of type {type(id)}"
+
+        s = self.by_id.get(id)
+
+        return False if s is None else True
+
+
+
     def get_species(self, id :str) -> Species:
         """
         Retrieve, and return, the species with the given id
 
         :param id:  String with a unique value to identify a species
-        :return:    An object of type "Species"
+        :return:    An object of type "Species", if found;
+                        otherwise, raise an Exception
         """
         s = self.by_id.get(id)
 
@@ -626,7 +646,8 @@ class SpeciesRegistry:
 
     def add_species(self, id :str, skip_duplicates=False, **kwargs) -> Species|None:
         """
-        Register a new species, with an id and (optionally) any of the parameters listed for the class Species,
+        Register a new species, with an `id`
+        and (optionally) any of the parameters listed for the class Species,
         such as name, label, annotation, diffusion_rate, ec_number, etc.
 
             - a color value used for this chemical species in visualizations
@@ -650,7 +671,7 @@ class SpeciesRegistry:
             f"add_species(): the argument `id` must be a string; it is of type {type(id)}"
 
         if id in self.by_id:
-            # Duplicate is detected
+            # Duplicate `id` is detected
             if skip_duplicates:
                 return None
             else:

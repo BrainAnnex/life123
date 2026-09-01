@@ -59,8 +59,8 @@ check_version(LIFE123_VERSION)
 # The enzyme `E`, typically a large molecule, is given a relatively sall diffusion rate (not too important,
 # because of our initial condition later, of `E` already uniformly diffused)
 # We'll let the simulator estimate a diffusion rate constant for `EU` (so, passing None for now)
-chem_data = SpeciesRegistry(id=["U", "L",  "E", "EU", "P",  "UP"],
-                            diffusion_rate=[200., 250., 80.,  0, 120.,   90.],        # The diffusion rate of `U` will later be increased in scenario 2
+chem_data = SpeciesRegistry(ids=["U", "L", "E", "EU", "P", "UP"],
+                            diffusion_rate=[200., 250., 80.,  0, 120.,   90.],  # The diffusion rate of `U` will later be increased in scenario 2
                             plot_color=["red", "green", "violet", "darkturquoise", "pink", "black"])
 
 rxns = ReactionRegistry(species_data=chem_data)

@@ -62,7 +62,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system; NOTE: Diffusion not applicable (just 1 bin)
-chem_data = SpeciesRegistry(id=["A", "B"], plot_color=['turquoise', 'green'])
+chem_data = SpeciesRegistry(ids=["A", "B"], plot_color=['turquoise', 'green'])
 
 bio = BioSim1D(n_bins=1, species_data=chem_data)
 

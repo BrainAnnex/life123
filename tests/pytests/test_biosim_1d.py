@@ -22,7 +22,7 @@ def test_constructor():
         BioSim1D(n_bins=3)      # At least one more arg is needed
 
 
-    chem_data = SpeciesRegistry(id="A")
+    chem_data = SpeciesRegistry(ids="A")
 
     bio = BioSim1D(n_bins=5, species_data=chem_data)
     #bio.describe_state()
@@ -35,7 +35,7 @@ def test_constructor():
 
 
     # New test
-    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     bio = BioSim1D(n_bins=15, species_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins == 15

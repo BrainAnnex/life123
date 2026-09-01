@@ -61,7 +61,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # # PART 1. Accurate numerical solution
 
 # %%
-chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
+chem_data = SpeciesRegistry(ids=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme

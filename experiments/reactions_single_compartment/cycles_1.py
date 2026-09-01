@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["A", "B", "C", "E_high", "E_low"])
+chem_data = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
 
 # Reaction A <-> B, mostly in forward direction (favored energetically)
 # Note: all reactions in this experiment have 1st-order kinetics for all species

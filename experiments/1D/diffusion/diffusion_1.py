@@ -48,7 +48,7 @@ check_version(LIFE123_VERSION)
 # with a single non-zero bin concentration of the single chemical `A`, near the left edge of the system
 
 # %%
-chem_data = SpeciesRegistry(id="A", diffusion_rate=0.1)     # If you want to assign a default color, pass arg:  plot_color=["SOME_COLOR_NAME"]
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=0.1)     # If you want to assign a default color, pass arg:  plot_color=["SOME_COLOR_NAME"]
 
 bio = BioSim1D(n_bins=10, species_data=chem_data)
 

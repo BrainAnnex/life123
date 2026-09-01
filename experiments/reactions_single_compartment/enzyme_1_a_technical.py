@@ -75,7 +75,7 @@ GraphicLog.config(filename=log_file,
 # # Revisit Part 1 of experiment `enzyme_1_a`, but WITHOUT making use of native support for enzymatic reactions
 
 # %%
-chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
+chem_data = SpeciesRegistry(ids=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme

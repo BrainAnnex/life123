@@ -2,7 +2,6 @@ import pytest
 import pandas as pd
 from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
 from life123.visualization.colors import Colors
-from dataclasses import asdict
 from tests.utilities.comparisons import *
 
 
@@ -175,24 +174,15 @@ def test_constructor_SpeciesRegistry():
     assert sr.by_id == {}
 
     with pytest.raises(Exception):
-        SpeciesRegistry(id=["A", "B"], n_species=2)    # Passing too many args
+        SpeciesRegistry(ids=["A", "B"], n_species=2)    # Passing too many args
 
 
     # Using `id` argument
     with pytest.raises(Exception):
-        SpeciesRegistry(id=123)    # Bad value
+        SpeciesRegistry(ids=123)    # Bad value
 
 
-    sr = SpeciesRegistry(id="X")    # A string
-
-    assert sr.number_of_species() == 1
-    assert sr.count == 1
-    assert len(sr.by_id) == 1
-    assert sr.by_id['X'] == Species(id='X', name='X', label='X', sort_order=0,
-                                    diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
-                                    locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
-
-    sr = SpeciesRegistry(id=["X"])  # A list of strings
+    sr = SpeciesRegistry(ids="X")    # A string
 
     assert sr.number_of_species() == 1
     assert sr.count == 1
@@ -201,8 +191,17 @@ def test_constructor_SpeciesRegistry():
                                     diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
+    sr = SpeciesRegistry(ids=["X"])  # A list of strings
 
-    sr = SpeciesRegistry(id=("X", "Y"))
+    assert sr.number_of_species() == 1
+    assert sr.count == 1
+    assert len(sr.by_id) == 1
+    assert sr.by_id['X'] == Species(id='X', name='X', label='X', sort_order=0,
+                                    diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
+                                    locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+
+    sr = SpeciesRegistry(ids=("X", "Y"))
     assert sr.number_of_species() == 2
     assert sr.count == 2
     assert len(sr.by_id) == 2
@@ -215,7 +214,7 @@ def test_constructor_SpeciesRegistry():
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
 
-    sr = SpeciesRegistry(id="X",
+    sr = SpeciesRegistry(ids="X",
                          name="my name", label="some label", locus_tag="0432")      # Additional named args
 
     assert sr.number_of_species() == 1
@@ -226,7 +225,7 @@ def test_constructor_SpeciesRegistry():
                                     locus_tag='0432', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
 
-    sr = SpeciesRegistry(id=("X", "Y"),
+    sr = SpeciesRegistry(ids=("X", "Y"),
                          name=["name 1", "name 2"], label=("L1", "L2"), diffusion_rate=[8, 12])
     assert sr.number_of_species() == 2
     assert sr.count == 2
@@ -240,7 +239,7 @@ def test_constructor_SpeciesRegistry():
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
     with pytest.raises(Exception):
-        SpeciesRegistry(id=("X", "Y"), name=["name"])   # Mismatch in number of species
+        SpeciesRegistry(ids=("X", "Y"), name=["name"])   # Mismatch in number of species
 
 
     # Using `species` argument
@@ -251,10 +250,13 @@ def test_constructor_SpeciesRegistry():
         SpeciesRegistry(species=123)    # Bad value
 
     with pytest.raises(Exception):
-        SpeciesRegistry(species=s1, id="X")    # Passing too many args
+        SpeciesRegistry(species=s1, ids="X")    # Passing too many args
 
     with pytest.raises(Exception):
-        SpeciesRegistry(species=s1, n_species=1)        # Passing too many args
+        SpeciesRegistry(species=s1, n_species=1)    # Passing too many args
+
+    with pytest.raises(Exception):
+        SpeciesRegistry(ids=["X", "X"])         # Duplicate id's
 
     sr = SpeciesRegistry(species=s1)
     assert sr.number_of_species() == 1
@@ -285,7 +287,7 @@ def test_constructor_SpeciesRegistry():
                                     locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
     with pytest.raises(Exception):
-        SpeciesRegistry(species=s1, name="Overwritten") # Incompatible args
+        SpeciesRegistry(species=s1, name="Overwritten")     # Incompatible args
 
 
     # Using `n_species` argument
@@ -333,14 +335,33 @@ def test_constructor_SpeciesRegistry():
                                     categories=[], metadata={}, annotation='', plot_color='pink')
 
     with pytest.raises(Exception):
-        SpeciesRegistry(id="X", diffusion_rate=[1, 2])      # Mismatched size
+        SpeciesRegistry(ids="X", diffusion_rate=[1, 2])      # Mismatched size
 
-    sr = SpeciesRegistry(id=["X", "Y"], diffusion_rate=[1, 2])
+    sr = SpeciesRegistry(ids=["X", "Y"], diffusion_rate=[1, 2])
     assert sr.get_all_values(field="diffusion_rate") == [1, 2]
 
-    sr = SpeciesRegistry(id=("X", "Y"), diffusion_rate=[1, 2], plot_color=("blue", "turquoise"))
+    sr = SpeciesRegistry(ids=("X", "Y"), diffusion_rate=[1, 2], plot_color=("blue", "turquoise"))
     assert sr.get_all_values(field="diffusion_rate") == [1, 2]
     assert sr.get_all_values(field="plot_color") == ["blue", "turquoise"]
+
+
+
+def test_species_exists():
+
+    sr = SpeciesRegistry()
+
+    assert not sr.species_exists("A")
+
+    with pytest.raises(Exception):
+        sr.species_exists(id=123)      # `id` isn't a string
+
+    sr.add_species(id="A")
+    assert sr.species_exists("A")
+    assert not sr.species_exists("B")
+
+    sr.add_species(id="B")
+    assert sr.species_exists("A")
+    assert sr.species_exists("B")
 
 
 
@@ -776,62 +797,62 @@ def test_assign_colors():
     # Make a note of the first 3 default colors
     default_col_1, default_col_2, default_col_3 = Colors.assign_default_colors(3)
 
-    sr = SpeciesRegistry(id="A")
+    sr = SpeciesRegistry(ids="A")
     sr.set_value(species_id="A", field="plot_color", value="red")
     result = sr.assign_colors("A")
     assert result == ["red"]
     assert sr.get_value(species_id="A", field="plot_color") == "red"
 
-    sr = SpeciesRegistry(id="A")
+    sr = SpeciesRegistry(ids="A")
     result = sr.assign_colors(["A"])
     assert result == [default_col_1]
     assert sr.get_value(species_id="A", field="plot_color") == default_col_1   # Was made into a permanent assignment
 
 
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(ids=["A", "B"])
     sr.set_all_values(field="plot_color", values=["red", "blue"])
     result = sr.assign_colors(["A", "B"])
     assert result == ["red", "blue"]
     assert sr.get_all_values(field="plot_color") == ["red", "blue"]
 
-    sr = SpeciesRegistry(id="A")
+    sr = SpeciesRegistry(ids="A")
     sr.set_value(species_id="A", field="plot_color", value="red")
     sr.add_species(id="B")
     result = sr.assign_colors(["A", "B"])
     assert result == ["red", default_col_1]
     assert sr.get_all_values(field="plot_color") == ["red", default_col_1]
 
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(ids=["A", "B"])
     sr.set_value(species_id="B", field="plot_color", value="yellow")
     result = sr.assign_colors(["A", "B"])
     assert result == [default_col_1, "yellow"]
     assert sr.get_all_values(field="plot_color") == [default_col_1, "yellow"]
 
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(ids=["A", "B"])
     result = sr.assign_colors(["A", "B"])
     assert result == [default_col_1, default_col_2]
     assert sr.get_all_values(field="plot_color") == [default_col_1, default_col_2]
 
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(ids=["A", "B"])
     result = sr.assign_colors()
     assert result == [default_col_1, default_col_2]
     assert sr.get_all_values(field="plot_color") == [default_col_1, default_col_2]
 
-    sr = SpeciesRegistry(id=["A", "B", "C"])
+    sr = SpeciesRegistry(ids=["A", "B", "C"])
     sr.set_value(species_id="A", field="plot_color", value="red")
     sr.set_value(species_id="C", field="plot_color", value="yellow")
     result = sr.assign_colors(["A", "B", "C"])
     assert result == ["red", default_col_1, "yellow"]
     assert sr.get_all_values(field="plot_color") == ["red", default_col_1, "yellow"]
 
-    sr = SpeciesRegistry(id=["A", "B", "C", "D", "E"])
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D", "E"])
     result = sr.assign_colors(["B", "C", "D"])
     assert result == [default_col_1, default_col_2, default_col_3]
     assert sr.get_value(species_id="B", field="plot_color") == default_col_1
     assert sr.get_value(species_id="C", field="plot_color") == default_col_2
     assert sr.get_value(species_id="D", field="plot_color") == default_col_3
 
-    sr = SpeciesRegistry(id=["A", "B", "C", "D", "E"])
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D", "E"])
     sr.set_value(species_id="B", field="plot_color", value="red")
     sr.set_value(species_id="D", field="plot_color", value="yellow")
     result = sr.assign_colors(["B", "C", "D"])
@@ -890,7 +911,7 @@ def test_instantiate_macromolecules():
 
 
 def test_get_macromolecules():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
 
@@ -908,7 +929,7 @@ def test_get_macromolecules():
 
 
 def test_get_binding_sites():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
 
@@ -937,7 +958,7 @@ def test_get_binding_sites():
 
 
 def test_get_binding_sites_and_ligands():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     chem_data = MacroMolecules(sr)
 
@@ -966,7 +987,7 @@ def test_get_binding_sites_and_ligands():
 
 
 def test_get_ligand_name():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
 
@@ -998,7 +1019,7 @@ def test_get_binding_site_affinity():
 
 
 def test_show_binding_affinities():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
 
@@ -1011,7 +1032,7 @@ def test_show_binding_affinities():
 
 
 def test_set_binding_site_affinity():
-    sr = SpeciesRegistry(id=["A", "B", "ZZZ", "M1", "M2", "M3"])
+    sr = SpeciesRegistry(ids=["A", "B", "ZZZ", "M1", "M2", "M3"])
 
     mm = MacroMolecules(species_registry=sr)
 
@@ -1053,7 +1074,7 @@ def test_set_binding_site_affinity():
 
 
 def test_reset_macromolecule():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
 
@@ -1071,7 +1092,7 @@ def test_reset_macromolecule():
 
 
 def test_clear_macromolecules():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
 
     mm = MacroMolecules(sr)
     mm.set_binding_site_affinity("M1", site_number=1, ligand="A", Kd=2.3)

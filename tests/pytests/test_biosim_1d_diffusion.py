@@ -16,7 +16,7 @@ from life123 import CollectionArray
 
 def test_diffuse_step_1():
     # Test with just 1 bin
-    chem_data = SpeciesRegistry(id="A", diffusion_rate=20.)
+    chem_data = SpeciesRegistry(ids="A", diffusion_rate=20.)
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
@@ -206,7 +206,7 @@ def test_diffuse_1():
 
 
 def test_diffuse_2():
-    chem_data = SpeciesRegistry(id="A")
+    chem_data = SpeciesRegistry(ids="A")
     bio = BioSim1D(n_bins=1, species_data=chem_data)
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
@@ -222,7 +222,7 @@ def test_diffuse_2():
 def test_diffuse_3():
     n_bins=5
 
-    chem_data = SpeciesRegistry(id="A")
+    chem_data = SpeciesRegistry(ids="A")
     bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
     with pytest.raises(Exception):
@@ -361,7 +361,7 @@ def test_diffuse_7():
     delta_x = 2
     algorithm = None    # This corresponds to a 3+1 stencil, explicit method
 
-    chem_data = SpeciesRegistry(diffusion_rate=[diffusion_rate], id="A")
+    chem_data = SpeciesRegistry(diffusion_rate=[diffusion_rate], ids="A")
 
     bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
@@ -420,7 +420,7 @@ def test_diffuse_8():
     delta_x = 2
     algorithm = "5_1_explicit"  # A 5+1 stencil, explicit method
 
-    chem_data = SpeciesRegistry(id="A", diffusion_rate=diffusion_rate)
+    chem_data = SpeciesRegistry(ids="A", diffusion_rate=diffusion_rate)
 
     bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 

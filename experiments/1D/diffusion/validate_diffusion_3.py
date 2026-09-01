@@ -52,7 +52,7 @@ n_bins = 5000
 delta_x = 2       # Note that the number of bins also define the fraction of the sine wave cycle in each bin
 
 # %%
-chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, id="A")
+chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, ids="A")
 
 # %%
 

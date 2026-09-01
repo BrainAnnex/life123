@@ -42,7 +42,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id="A", diffusion_rate=10.)
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=10.)
 
 bio = BioSim1D(n_bins=200, species_data=chem_data)
 

@@ -29,7 +29,7 @@ def show_standard_units(quantity_name :str) -> str:
                                 or None if not present
     """
     # TODO: synchronize to the rest of the module
-    MAPPING = {"delta_G": "kJ/mol", "delta_H": "kJ/mol", "delta_S": "J/(mol·K)"}
+    MAPPING = {"delta_G": "kJ/mol", "delta_H": "kJ/mol", "delta_S": "J/(mol·K)", "temp": "K"}
     return MAPPING.get(quantity_name)
 
 

@@ -26,7 +26,6 @@ class ReactionCommon:
 
         reaction_details()
         extract_intermediate()
-        extract_rxn_properties()
         set_thermodynamic_data()
         extract_forward_rate()
         extract_reverse_rate()
@@ -137,7 +136,7 @@ class ReactionCommon:
         if self.temp:
             details.append(f"Temp = {convert(self.temp, from_unit=K, to_unit=C):,.4g} C")          # EXAMPLE: "Temp = 25 C"
 
-        if details:
+        if details:     # If there is any data
             description = "  (" + ' | '.join(details) + ")"   # EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol)"
 
         return description
@@ -236,19 +235,40 @@ class ReactionCommon:
 
 
 
+###################################################################################################################
+
+class ReactionOneStep(ReactionCommon):
+    """
+    Any reaction, elementary or not, that is being modeled as happening in just 1 step,
+    i.e. with no intermediaries.
+
+    Typically NOT instantiated by the user.
+    """
+
+    def __init__(self, reversible=True, **kwargs):
+        """
+        :param reversible:  [OPTIONAL] Boolean indicating whether the reaction is reversible.  Default: True
+        """
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+        self.reversible = reversible
+
+
+
 
 
 ###################################################################################################################
 
 
-class ReactionElementary(ReactionCommon):
+class ReactionElementary(ReactionOneStep):
     """
     Base class for all reactions that can be modeled kinetically as happening in 1 step
     (i.e. with no intermediaries).
 
     Typically NOT instantiated by the user.
     """
-    def __init__(self, reversible=True, kF=None, kR=None,
+
+    def __init__(self,  kF=None, kR=None,
                  delta_H=None, delta_S=None, delta_G=None, **kwargs):
         """
         :param reversible:  [OPTIONAL] Boolean indicating whether the reaction is reversible.  Default: True
@@ -262,8 +282,6 @@ class ReactionElementary(ReactionCommon):
         """
 
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
-
-        self.reversible = reversible
 
         if not self.reversible:
             assert not kR, \
@@ -301,7 +319,10 @@ class ReactionElementary(ReactionCommon):
     def equilibrium_constant_from_kinetic_data(self, K=None, kF=None, kR=None) -> None:
         """
         True for Elementary reactions
-        (and, more generally, for any reaction that follows mass-action kinetics)
+        and, more generally, for any reaction that follows mass-action kinetics;
+        i.e. forward rate = kF * Prod{[c_i]^v_i} , with i ranging over the reactants,
+        and  reverse rate = kR * Prod{[c_j]^v_j} , with j ranging over the products.
+
         If any of the arguments is None, derive it - if possible - from the other 2 ones
 
         :param K:   The reaction's equilibrium constant
@@ -359,7 +380,9 @@ class ReactionElementary(ReactionCommon):
         Create a dictionary with the numerical properties of the given reaction
         (skipping any lists or None values)
         Possible values include:
-            forward and reverse reaction rates (kR and kR, respectively), ΔH, ΔS, ΔG, K (equilibrium constant)
+            - forward and reverse reaction rates (kR and kR, respectively)
+            - ΔH, ΔS, ΔG,
+            - K (equilibrium constant)
 
         :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.130505, 'K': 1.5}
         """
@@ -1728,7 +1751,7 @@ class ReactionEnzyme(ReactionCommon):
 
 ###################################################################################################################
 
-class ReactionGeneric(ReactionCommon):
+class ReactionGeneric(ReactionOneStep):
     """
     Data about a generic SINGLE reaction of the most general type,
     with arbitrary number of reactants and products,
@@ -1764,7 +1787,7 @@ class ReactionGeneric(ReactionCommon):
     """
 
     def __init__(self, reactants :str|list, products :str|list,
-                 reversible=True, kF=None, kR=None,
+                 kF=None, kR=None,
                  delta_H=None, delta_S=None, delta_G=None,
                  kinetic_rate_function=ReactionKinetics.compute_rate_mass_action_kinetics,
                  **kwargs):
@@ -1825,7 +1848,7 @@ class ReactionGeneric(ReactionCommon):
                                     # EXAMPLES:  ReactionKinetics.compute_rate_mass_action_kinetics  (the generalized "standard rate law")
                                     #            ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
 
-        self.reversible = reversible
+
         self.kF = kF                # Forward rate constant
         self.kR = kR                # Reverse rate constant
         self.delta_H = delta_H

@@ -72,7 +72,7 @@ GraphicLog.config(filename=log_file,
 # # PART 1. Accurate numerical solution
 
 # %%
-chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
+chem_data = SpeciesRegistry(ids=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme

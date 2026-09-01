@@ -48,8 +48,8 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["A", "B", "C"], diffusion_rate=[50., 50., 1.],   # `A` and `B` diffuse fast; `C` diffuses slowly
-                     plot_color=["red", "blue", "purple"])                   # Color choice is a reminder that red + blue = purple
+chem_data = SpeciesRegistry(ids=["A", "B", "C"], diffusion_rate=[50., 50., 1.],  # `A` and `B` diffuse fast; `C` diffuses slowly
+                            plot_color=["red", "blue", "purple"])                   # Color choice is a reminder that red + blue = purple
 
 # %%
 bio = BioSim1D(n_bins=7, species_data=chem_data)

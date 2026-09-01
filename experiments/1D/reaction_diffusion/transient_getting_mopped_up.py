@@ -51,8 +51,8 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the chemical data
-chem_data = SpeciesRegistry(id=["A", "B", "C"], diffusion_rate=[100., 80., 120.],
-                     plot_color=["red", "turquoise", "green"])
+chem_data = SpeciesRegistry(ids=["A", "B", "C"], diffusion_rate=[100., 80., 120.],
+                            plot_color=["red", "turquoise", "green"])
 
 rxns = ReactionRegistry(species_data=chem_data)
 

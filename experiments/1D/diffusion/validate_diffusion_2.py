@@ -53,7 +53,7 @@ check_version(LIFE123_VERSION)
 # We'll be considering just 1 chemical species, "A"
 diffusion_rate = 10.
 
-chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, id="A")
+chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, ids="A")
 
 # %%
 

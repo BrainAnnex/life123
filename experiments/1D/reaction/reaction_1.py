@@ -49,7 +49,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["A", "B"])              # Diffusion NOT taken into account
+chem_data = SpeciesRegistry(ids=["A", "B"])              # Diffusion NOT taken into account
 bio = BioSim1D(n_bins=3, species_data=chem_data)       # We'll specify the reactions later
 
 bio.set_uniform_concentration(chem_label="A", conc=10.)   # Same across all bins

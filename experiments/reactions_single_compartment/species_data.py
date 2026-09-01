@@ -147,7 +147,7 @@ sr_2.add_species("Y", annotation="need to re-test")
 
 # %%
 # A SpeciesRegistry can also be started with lists/tuples of data
-rome_cocktail = SpeciesRegistry(id=["S", "P", "Q", "R"], molecular_weight=[1200, 600, 2900, 1500], annotation=["Senatus",  "Populusque", None, "Romanus"])
+rome_cocktail = SpeciesRegistry(ids=["S", "P", "Q", "R"], molecular_weight=[1200, 600, 2900, 1500], annotation=["Senatus", "Populusque", None, "Romanus"])
 rome_cocktail.as_dataframe()
 
 # %%

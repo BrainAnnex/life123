@@ -90,7 +90,7 @@ k1_forward = 18.
 k1_reverse = 100.
 
 # %%
-chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
+chem_data = SpeciesRegistry(ids=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme

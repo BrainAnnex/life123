@@ -48,7 +48,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 # Initialize the system
-sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
 
 
 # %% [markdown]

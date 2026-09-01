@@ -41,7 +41,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id="A", diffusion_rate=0.1)
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=0.1)
 bio = BioSim1D(n_bins=9, species_data=chem_data)
 
 # Start out with a pulse in bins near the *left* and the *right* endpoints.  

@@ -73,7 +73,7 @@ def test_explain_time_advance():
 
 
 def test__delta_names():
-    chem_data = SpeciesRegistry(id=["A", "B", "X"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "X"])
     diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_names() == ["Delta A", "Delta B", "Delta X"]
@@ -81,7 +81,7 @@ def test__delta_names():
 
 
 def test__delta_conc_dict():
-    chem_data = SpeciesRegistry(id=["A", "B", "X"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "X"])
     diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_conc_dict(np.array([10, 20, 30])) == \
@@ -93,7 +93,7 @@ def test__delta_conc_dict():
 
 
 def test_save_diagnostic_rxn_data():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "X"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
@@ -194,7 +194,7 @@ def test_save_diagnostic_rxn_data():
 
 
 def test_save_diagnostic_aborted_rxns():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "X"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
@@ -226,7 +226,7 @@ def test_save_diagnostic_aborted_rxns():
 
 
 def test_get_diagnostic_rxn_data():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "X"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
@@ -329,7 +329,7 @@ def test_get_diagnostic_rxn_data():
 
 
 def test_stoichiometry_checker():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxns = ReactionRegistry(species_data=chem_data)
 
     diag = Diagnostics(reactions=rxns)

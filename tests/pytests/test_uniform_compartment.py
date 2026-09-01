@@ -8,7 +8,7 @@ from life123.species_registry import MacroMolecules
 
 def test_constructor():
     names = ["A", "B", "C"]
-    chem_data = SpeciesRegistry(id=names)
+    chem_data = SpeciesRegistry(ids=names)
 
     with pytest.raises(Exception):
         UniformCompartment(species_data=chem_data, names=names)
@@ -46,7 +46,7 @@ def test_constructor():
 
 def test_set_conc():
     #TODO: test the snapshot argument
-    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     uc = UniformCompartment(species_data=chem_data)
 
     with pytest.raises(Exception):
@@ -79,7 +79,7 @@ def test_set_conc():
 
 
 def test_get_system_conc():
-    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     uc = UniformCompartment(species_data=chem_data)
     uc.set_conc(conc=(10., 20., 30.))
 
@@ -89,7 +89,7 @@ def test_get_system_conc():
 
 
 def test_get_chem_conc():
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
     uc = UniformCompartment(species_data=chem_data)
     uc.set_conc(conc=(10., 20.))
 
@@ -101,7 +101,7 @@ def test_get_chem_conc():
 
 
 def test_get_conc_dict():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxn = UniformCompartment(species_data=chem_data)
     rxn.set_conc(conc=(100, 200, 300, 400))
 
@@ -153,7 +153,7 @@ def test_specify_steps():
 def test_single_compartment_react():
 
     # Test based on experiment "cycles_1"
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "E_high", "E_low"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Unimolecular reaction A <-> B, mostly in forward direction (favored energetically)
@@ -432,7 +432,7 @@ def test_single_compartment_react_variable_steps_1():
     # Based on experiment "variable_steps_1"
 
     # Initialize the system
-    chem_data = SpeciesRegistry(id=["U", "X", "S"])
+    chem_data = SpeciesRegistry(ids=["U", "X", "S"])
 
     rxns = ReactionRegistry(species_data=chem_data)
 
@@ -478,7 +478,7 @@ def test_single_compartment_correct_neg_conc():
     # Based on "Run 3" of experiment "negative_concentrations_1
 
     # Initialize the system
-    chem_data = SpeciesRegistry(id=["U", "X", "S"])
+    chem_data = SpeciesRegistry(ids=["U", "X", "S"])
 
     rxns = ReactionRegistry(species_data=chem_data)
 
@@ -523,7 +523,7 @@ def test_single_compartment_correct_neg_conc():
 
 
 def test__fetch_concs_for_rnx():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(species_data=chem_data)
     rxns = uc.get_reactions()
 
@@ -554,7 +554,7 @@ def test__fetch_concs_for_rnx():
 
 
 def test_is_in_equilibrium():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(species_data=chem_data)
 
     # Reaction 0 : A <-> B
@@ -591,7 +591,7 @@ def test_is_in_equilibrium():
 
 
 def test_reaction_in_equilibrium():
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(species_data=chem_data)
 
     # Reaction 0 : A <-> B
@@ -682,7 +682,7 @@ def test_set_temp():
 
 
 def test_set_macromolecules():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
     mm = MacroMolecules(sr)
 
     mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
@@ -727,7 +727,7 @@ def test_set_macromolecules():
 
 
 def test_get_occupancy():
-    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
     mm = MacroMolecules(sr)
 
     uc = UniformCompartment(species_data=sr, macromolecules=mm)
@@ -755,7 +755,7 @@ def test_get_occupancy():
 
 
 def test_set_occupancy():
-    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
     mm = MacroMolecules(sr)
 
     rxn = UniformCompartment(species_data=sr, macromolecules=mm)
@@ -787,7 +787,7 @@ def test_set_occupancy():
 
 
 def test_update_occupancy():
-    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
     chem_data = MacroMolecules(sr)
 
     chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)

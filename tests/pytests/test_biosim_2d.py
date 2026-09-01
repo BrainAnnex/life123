@@ -23,7 +23,7 @@ def test_constructor():
         BioSim2D(x_bins=3, y_bins=5)      # At least one more arg is needed
 
 
-    chem_data = SpeciesRegistry(id="A")
+    chem_data = SpeciesRegistry(ids="A")
     bio = BioSim2D(x_bins=3, y_bins=5, species_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins_x == 3
@@ -35,7 +35,7 @@ def test_constructor():
 
 
     # New test
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
     bio = BioSim2D(x_bins=3, y_bins=5, species_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins_x == 3
@@ -70,16 +70,16 @@ def test_constructor():
 
 
 def test_system_size():
-    bio = BioSim2D(x_bins=3, y_bins=5, species_data=SpeciesRegistry(id="A"))
+    bio = BioSim2D(x_bins=3, y_bins=5, species_data=SpeciesRegistry(ids="A"))
     assert bio.system_size() == (3,5)
 
-    bio = BioSim2D(x_bins=9, y_bins=9, species_data=SpeciesRegistry(id=["A", "B"]))
+    bio = BioSim2D(x_bins=9, y_bins=9, species_data=SpeciesRegistry(ids=["A", "B"]))
     assert bio.system_size() == (9,9)
 
 
 
 def test_set_bin_conc():
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 
     bio.set_bin_conc(bin_address=(0,2), chem_label="A", conc=0.2)
@@ -111,7 +111,7 @@ def test_set_bin_conc():
 
 
 def test_set_bin_conc_all_species():
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 
     bio.set_bin_conc_all_species(bin_address=(0,2), conc_list=[0.02, 1.02])
@@ -135,7 +135,7 @@ def test_set_bin_conc_all_species():
 
 
 def test_set_species_conc():
-    chem_data = SpeciesRegistry(id=["A"])
+    chem_data = SpeciesRegistry(ids=["A"])
     bio = BioSim2D(x_bins=2, y_bins=3, species_data=chem_data)   # 2 rows and 3 columns
     conc_matrix = [[50, 80, 20], [10, 60, 0]]
 
@@ -182,7 +182,7 @@ def test_set_species_conc():
 #########################################################################
 
 def test_react():
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
 
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 
@@ -211,7 +211,7 @@ def test_react():
 
 
 def test_reaction_step():
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
 
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 

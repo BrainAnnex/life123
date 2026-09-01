@@ -43,7 +43,7 @@ check_version(LIFE123_VERSION)
 # ## Prepare the initial system
 
 # %%
-chem_data = SpeciesRegistry(id="A", diffusion_rate=0.1)
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=0.1)
 
 conc_list=[10,13,17,21,25,28,30,38,42,55,65,47,35,32,27,23,20,17,14,8,3,10,16,18,
            20,25,30,35,40,65,85,115,150,92,73,69,65,50,42,36,20,45,50,55,69,82,95,

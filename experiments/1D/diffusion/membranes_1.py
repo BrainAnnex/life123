@@ -47,7 +47,7 @@ check_version(LIFE123_VERSION)
 # with a single non-zero bin concentration of the single chemical `A`, near the left edge of the system
 
 # %%
-chem_data = SpeciesRegistry(id=["A", "B"], plot_color=["turquoise", "green"])
+chem_data = SpeciesRegistry(ids=["A", "B"], plot_color=["turquoise", "green"])
 
 bio = BioSim1D(n_bins=21, species_data=chem_data)
 

@@ -99,7 +99,7 @@ class UniformCompartment:
             self.reaction_data = reactions
         else:           # reactions is None
             if species_data is None:
-                self.species_data = SpeciesRegistry(id=names)      # It's ok if names is None
+                self.species_data = SpeciesRegistry(ids=names)      # It's ok if names is None
             else:
                 assert names is None,\
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"

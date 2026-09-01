@@ -34,7 +34,7 @@ def test_extract_stoichiometry():
 
 
 
-def test_extract_chem_label():
+def test_extract_species():
     rxn = ReactionCommon()
     term = (2, "A")
     assert rxn.extract_species(term) == "A"

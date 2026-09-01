@@ -47,7 +47,7 @@ import plotly.express as px
 
 # %%
 # Initialize the system
-chem1 = SpeciesRegistry(id=["A", "B"])
+chem1 = SpeciesRegistry(ids=["A", "B"])
 
 # Reaction A <-> B , without catalysis (slow forward rate, relative to what we'll see in Part 2)
 chem1.add_reaction(reactants="A", products="B",
@@ -96,7 +96,7 @@ dynamics1.is_in_equilibrium()
 
 # %%
 # Initialize the system
-chem2 = SpeciesRegistry(id=["A", "B", "L"])
+chem2 = SpeciesRegistry(ids=["A", "B", "L"])
 
 chem2.add_macromolecules("M1")
 

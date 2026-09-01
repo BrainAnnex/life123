@@ -5,6 +5,8 @@ from life123.units import standardize_units
 
 class ThermoDynamics:
     """
+    General thermodynamic knowledge / calculations.
+
     Manage the Thermodynamics aspects of reactions:
     changes in Gibbs Free Energy, Enthalpy, Entropy - and how
     they relate to equilibrium constant, at a given temperature.
@@ -127,7 +129,7 @@ class ThermoDynamics:
         """
         Given the system temperature, and any combination of thermodynamic data,
         verify the consistency of the given data,
-        derive whatever is missing and can be derived
+        and derive whatever is missing and can be derived
 
         :param temp:    System's temperature, in degree Kelvins
         :param K:       [OPTIONAL] The reaction's equilibrium constant
@@ -169,7 +171,7 @@ class ThermoDynamics:
             else:  # If already present (passed as argument), make sure that the two match!
                 assert np.allclose(delta_G_derived, delta_G), \
                     f"extract_thermodynamic_data(): inconsistency between the value of Delta_G ({delta_G_derived}) " \
-                    f"derived from enthalpy/entropy, and the its value ({delta_G}) passed as argument or derived from K"
+                    f"derived from enthalpy/entropy/temperature, and the its value ({delta_G}) passed as argument or derived from K"
 
 
         if delta_G is not None:

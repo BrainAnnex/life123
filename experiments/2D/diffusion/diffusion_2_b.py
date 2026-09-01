@@ -41,7 +41,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Prepare the initial system, with two concentration pulses, at almost-opposite ends of the system, with the same diffusion rate coefficient
-chem_data = SpeciesRegistry(id=["A", "B"], diffusion_rate=[0.05, 0.05])
+chem_data = SpeciesRegistry(ids=["A", "B"], diffusion_rate=[0.05, 0.05])
 
 bio = BioSim2D(x_bins=7, y_bins=10, species_data=chem_data)  # 3 more rows, compared to experiment `diffusion_2_a`
 

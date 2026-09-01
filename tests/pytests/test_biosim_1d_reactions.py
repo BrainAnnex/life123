@@ -8,7 +8,7 @@ from life123 import BioSim1D
 
 
 def test_initialization():
-    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, species_data=chem_data)
 
     bio.reactions.add_reaction(reactants=["A", "B"], products="C", kF=8., kR=2.)
@@ -19,7 +19,7 @@ def test_initialization():
 
 def test_reaction_step_1():
     # Based on experiment "reaction1"
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
     bio = BioSim1D(n_bins=3, species_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
@@ -40,7 +40,7 @@ def test_reaction_step_1():
 
 def test_reaction_step_1b():
     # Based on experiment "reaction1"
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
     bio = BioSim1D(n_bins=3, species_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
@@ -78,7 +78,7 @@ def test_reaction_step_1b():
 
 def test_react_1():
     # Based on experiment "reaction2"
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -100,7 +100,7 @@ def test_react_1():
 
 def test_react_2():
     # Based on experiment "reaction3"
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -126,7 +126,7 @@ def test_react_2():
 
 def test_react_3():
     # Based on experiment "reaction4"
-    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -154,7 +154,7 @@ def test_react_3():
 
 def test_react_4():
     # Based on experiment "reaction5"
-    chem_data = SpeciesRegistry(id=["A", "C", "D"])
+    chem_data = SpeciesRegistry(ids=["A", "C", "D"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -180,7 +180,7 @@ def test_react_4():
 
 def test_react_5():
     # Based on experiment "reaction6"
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -212,7 +212,7 @@ def test_react_5():
 
 def test_react_6():
     # Based on experiment "reaction7"
-    chem_data = SpeciesRegistry(id=["A", "B"])
+    chem_data = SpeciesRegistry(ids=["A", "B"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
@@ -239,7 +239,7 @@ def test_react_6():
 
 def test_react_7():
     # Based on experiment "reaction8"
-    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E"])
+    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E"])
 
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 

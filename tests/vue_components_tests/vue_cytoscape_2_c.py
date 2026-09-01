@@ -26,7 +26,7 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 
 
 # Instantiate the simulator and specify the chemicals
-chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E"],
+chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E"],
                             diffusion_rate=[0.1, 0.2, 0.3, 0.4, 0.5])
 
 dynamics = UniformCompartment(species_data=chem_data)

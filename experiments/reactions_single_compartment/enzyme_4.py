@@ -59,7 +59,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["S","E","ES","P"], plot_color=["cyan","violet","red","green"])
+chem_data = SpeciesRegistry(ids=["S", "E", "ES", "P"], plot_color=["cyan", "violet", "red", "green"])
 
 chem_data.all_chemicals()
 

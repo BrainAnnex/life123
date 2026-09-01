@@ -54,7 +54,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
+chem_data = SpeciesRegistry(ids=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
 
 # %%
 uc = UniformCompartment(species_data=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation

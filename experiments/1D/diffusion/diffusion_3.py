@@ -48,7 +48,7 @@ check_version(LIFE123_VERSION)
 # `B` diffuses much faster than `A`
 
 # %%
-chem_data = SpeciesRegistry(id=["A", "B"], diffusion_rate=[0.1, 2.], plot_color=["turquoise", "green"])
+chem_data = SpeciesRegistry(ids=["A", "B"], diffusion_rate=[0.1, 2.], plot_color=["turquoise", "green"])
 
 bio = BioSim1D(n_bins=9, species_data=chem_data)
 

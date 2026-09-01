@@ -49,7 +49,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = SpeciesRegistry(id=["U", "X", "D"])
+chem_data = SpeciesRegistry(ids=["U", "X", "D"])
 
 # Reaction U <-> 2D , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants="U", products=[(2, "D", 1)],

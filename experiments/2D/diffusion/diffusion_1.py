@@ -46,7 +46,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
-chem_data = SpeciesRegistry(id="A", diffusion_rate=0.02)
+chem_data = SpeciesRegistry(ids="A", diffusion_rate=0.02)
 
 bio = BioSim2D(x_bins=8, y_bins=5, species_data=chem_data)
 
