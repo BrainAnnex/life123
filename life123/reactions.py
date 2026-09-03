@@ -33,10 +33,10 @@ class ReactionCommon:
 
         describe()
 
-        extract_reactant_labels()
+        extract_reactant_ids()
         extract_reactants()
 
-        extract_product_labels()
+        extract_product_ids()
         extract_products()
 
         extract_species_in_reaction()
@@ -74,11 +74,11 @@ class ReactionCommon:
         raise NotImplementedError("Subclasses must implement this")
 
 
-    def extract_reactant_labels(self, *args, **kwargs):
+    def extract_reactant_ids(self, *args, **kwargs):
         # Return the list of the labels of ALL the reactants of this reaction
         raise NotImplementedError("Subclasses must implement this")
 
-    def extract_product_labels(self, *args, **kwargs):
+    def extract_product_ids(self, *args, **kwargs):
         # Return the list of the labels of ALL the products of this reaction
         raise NotImplementedError("Subclasses must implement this")
 
@@ -520,7 +520,7 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
-    def extract_reactant_labels(self) -> [str]:
+    def extract_reactant_ids(self) -> [str]:
         """
         Return the list of ALL the reactant labels in this reaction
 
@@ -550,7 +550,7 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
-    def extract_product_labels(self) -> [str]:
+    def extract_product_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the products of this reaction
 
@@ -790,7 +790,7 @@ class ReactionSynthesis(ReactionElementary):
 
 
 
-    def extract_reactant_labels(self) -> [str]:
+    def extract_reactant_ids(self) -> [str]:
         """
         Return the list of ALL the reactant labels in this reaction
 
@@ -829,7 +829,7 @@ class ReactionSynthesis(ReactionElementary):
 
 
 
-    def extract_product_labels(self) -> [str]:
+    def extract_product_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the products of this reaction
 
@@ -1097,7 +1097,7 @@ class ReactionDecomposition(ReactionElementary):
 
 
 
-    def extract_reactant_labels(self) -> [str]:
+    def extract_reactant_ids(self) -> [str]:
         """
         Return the list of ALL the reactant labels in this reaction
 
@@ -1127,7 +1127,7 @@ class ReactionDecomposition(ReactionElementary):
 
 
 
-    def extract_product_labels(self) -> [str]:
+    def extract_product_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the products of this reaction
 
@@ -1450,7 +1450,7 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-    def extract_reactant_labels(self) -> [str]:
+    def extract_reactant_ids(self) -> [str]:
         """
         Return the list of ALL the reactant labels in this reaction,
         (including the enzyme)
@@ -1492,7 +1492,7 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-    def extract_product_labels(self) -> [str]:
+    def extract_product_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the products of this reaction,
         (including the enzyme)
@@ -2074,11 +2074,11 @@ class ReactionGeneric(ReactionOneStep):
         :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
-        return set(self.extract_reactant_labels()) | set(self.extract_product_labels())   # Union of sets
+        return set(self.extract_reactant_ids()) | set(self.extract_product_ids())   # Union of sets
 
 
 
-    def extract_reactant_labels(self) -> [str]:
+    def extract_reactant_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the reactant in this reaction,
         (including any catalysts, if applicable).
@@ -2093,7 +2093,7 @@ class ReactionGeneric(ReactionOneStep):
         return reactant_names
 
 
-    def extract_product_labels(self) -> [str]:
+    def extract_product_ids(self) -> [str]:
         """
         Return the list of the labels of ALL the reaction products,
         (including any catalysts, if applicable)

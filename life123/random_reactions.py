@@ -222,13 +222,13 @@ class RandomReactionNetwork:
         product_set = set(products)
 
         for rxn in self.reaction_data.reaction_list:
-            if set(rxn.extract_reactant_labels()) == reactant_set \
-                    and set(rxn.extract_product_labels()) == product_set:
+            if set(rxn.extract_reactant_ids()) == reactant_set \
+                    and set(rxn.extract_product_ids()) == product_set:
                 return True
 
             # Check the reverse reaction as well
-            if set(rxn.extract_reactant_labels()) == product_set \
-                    and set(rxn.extract_product_labels()) == reactant_set:
+            if set(rxn.extract_reactant_ids()) == product_set \
+                    and set(rxn.extract_product_ids()) == reactant_set:
                 return True
 
         return False

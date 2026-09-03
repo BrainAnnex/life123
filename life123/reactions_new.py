@@ -1,6 +1,6 @@
 from __future__ import annotations      # To facilitate type annotations
 import numpy as np
-from typing import Union, Set, Tuple, Mapping
+from typing import Set, Mapping
 from dataclasses import dataclass, field, fields, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
@@ -14,7 +14,8 @@ from life123.units import show_standard_units, convert, K, C
 class Stoichiometry:
     """
     Mapping species `id` to its signed stoichiometric coefficient,
-    for all species in the reaction
+    for all species in the reaction.
+    Reaction reagents have negative signs, and products have positive signs.
     (including species that have a net coefficient of zero, such as catalysts that appear on both sides)
     """
     coefficients: Mapping[str, int]
@@ -41,6 +42,19 @@ class Stoichiometry:
         zero_count     = sum(v == 0 for v in values)
 
         return (negative_count, positive_count, zero_count)
+
+
+
+    def to_dict(self) -> dict:
+        """
+        Return a dictionary form of the stoichiometry.
+
+        :return:    A dictionary with the mapping of the species id's
+                    to their signed stoichiometric coefficients
+        """
+        d = asdict(self)
+        return d.get("coefficients")
+
 
 
 
@@ -74,31 +88,56 @@ class Kinetics:
         if parameters is None:
             parameters = {}
 
-        if law == "mass action":
-            if parameters.get("reversible") is None:
-                parameters["reversible"] = True      # Set  default
-
-            kF = parameters.get("kF")
-            kR = parameters.get("kR")
-
-            parameters["kF"] = kF   # Might be None
-            parameters["kR"] = kR   # Might be None
-
-            if parameters.get("reversible"):
-                # If we have a reversible reaction that follows mass-action kinetics
-                if (kF is not None) and (kR is not None) and (not np.allclose(kR, 0)):
-                    parameters["K"] = kF / kR    # Kinetic parameter ratio
-
-            else:
-                # If we have an IR-reversible reaction that follows mass-action kinetics
-                assert not parameters.get("kR"), \
-                    f"Irreversible reactions with mass-action kinetics " \
-                    f"cannot have a value for the reverse rate constant (kR = {parameters.get('kR')})"
-                parameters["kR"] = 0
-
 
         self.law = law
-        self.parameters = parameters
+        self.kinetic_rate_function = None
+        self.parameters = {}
+
+        self.set_parameters(parameters)
+
+
+
+    def set_parameters(self, parameters :dict) -> None:
+        """
+
+        :param parameters:
+        :return:            None
+        """
+        if parameters is None:
+            parameters = {}
+
+
+        if self.law == "mass action":
+
+            # TODO: validate that only "kR" and/or "kF" were passed
+            kF = parameters.get("kF", self.parameters.get("kF"))    # Over-write if passed
+            kR = parameters.get("kR", self.parameters.get("kR"))    # Over-write if passed
+            K = None
+
+            if kF is None:
+                kF = 0
+
+            if kR is None:
+                kR = 0
+
+            if np.allclose(kR, 0):
+                reversible = False
+            else:
+                reversible = True
+
+            if reversible:
+                # If we have a reversible reaction that follows mass-action kinetics
+                if (kF is not None) and (kR is not None) and (not np.allclose(kR, 0)):
+                    K = kF / kR    # Kinetic parameter ratio
+            else:
+                # If we have an IR-reversible reaction that follows mass-action kinetics
+                assert not kR, \
+                    f"Irreversible reactions with mass-action kinetics " \
+                    f"cannot have a value for the reverse rate constant (kR = {kR})"
+                kR = 0
+
+
+            self.parameters = {"kF": kF, "kR": kR, "reversible": reversible, "K": K}
 
 
 
@@ -149,15 +188,18 @@ class Kinetics:
         kF = self.parameters.get("kF")
         kR = self.parameters.get("kR")
 
-        if (kR is None) and (kF is not None):
-            self.parameters["kR"] = kF / K
+        if (not kR) and (kF is not None) and (not np.allclose(K, 0)):
+            kR = kF / K
+            self.parameters["kR"] = kR
+            if not np.allclose(kR, 0):
+                self.parameters["reversible"] = True
             return
 
-        if (kF is None) and (kR is not None):
+        if (not kF) and (kR is not None):
             self.parameters["kF"] = K * kR
             return
 
-        if (kF is not None) and (kR is not None):
+        if (kF is not None) and (kR is not None) and (not np.allclose(kR, 0)):
             assert np.allclose(K, kF / kR), \
                 f"set_rate_constants_from_equilibrium_constant(): values for kR ({kR}) and kR ({kR}) already exist, " \
                 f"and are inconsistent with the passed value of K ({K})"
@@ -175,6 +217,29 @@ class Kinetics:
             return "TBA"        # TODO: FIX!
 
         return None
+
+
+
+    def set_rate_function(self, f) -> None:
+        """
+        Set the function used to estimate the reaction rate (aka "velocity"),
+        at the start of the time step.
+
+        :param f:   A function that takes the following args:
+                        reactant_terms :[(int, str)]
+                        product_terms :[(int, str)],
+                        kF :float, kR :float,
+                        conc_dict :dict
+                    and return a float
+                    EXAMPLE:  ReactionKinetics.compute_rate_mass_action_kinetics
+                              # Generalized "standard rate law"
+
+        :return:    None
+        """
+        self.kinetic_rate_function = f
+
+
+
 
 
 
@@ -247,10 +312,11 @@ class Reaction:
 
     """
 
-    def __init__(self, reactants :str|list|tuple, products :str|list|tuple, species_registry :SpeciesRegistry, name=None,
-                       active=True,
-                       delta_H=None, delta_S=None, temp=None,
-                       kinetics_type=None, kinetic_parameters=None):
+    def __init__(self, reactants :str|list|tuple, products :str|list|tuple,
+                 species_registry :SpeciesRegistry, name=None, autoregister_species=False,
+                 active=True,
+                 delta_H=None, delta_S=None, temp=None,
+                 kinetics_type=None, kinetic_parameters=None):
         """
 
         :param reactants:   A list/tuple of terms that are either species id's (with implied stoichiometry 1),
@@ -260,6 +326,7 @@ class Reaction:
                                 or pairs (stoichiometry coefficient , chemical label).
                                 If not a list, it will first get turned into one
         :param species_registry:
+        :pamar auto_register_species:
 
         :param active:
 
@@ -282,21 +349,21 @@ class Reaction:
                                     #   mapping species `id` to its signed stoichiometric coefficient,
                                     #   for all species in the reaction
 
-        self.analytic_solution_family = None
+        self.analytic_solution_family = None    # Available values: "ONE_TO_ONE", "ONE_TO_TWO", "TWO_TO_ONE"
         self.elementary = None
         self.reaction_category = None
 
 
-        assert reactants is not None, "ReactionGeneric(): the argument `reactants` is a required one; it can't be None"
+        assert reactants is not None, "Reaction() instantiation: the argument `reactants` is a required one"
         if type(reactants) == str:
             reactants = [reactants]
 
-        assert products is not None, "ReactionGeneric(): the argument `products` is a required one; it can't be None"
+        assert products is not None, "Reaction() instantiation: the argument `products` is a required one"
         if type(products) == str:
             products = [products]
 
 
-        # Normalize the elements of each list to be (int, str) pairs
+        # Normalize the elements of each list to be (int, str) pairs; i.e. turn any single string "X" into the pair (1, "X")
         reactant_list = [(1, r) if type(r) == str else r
                             for r in reactants]   # A list of pairs
         product_list =  [(1, p) if type(p) == str else p
@@ -308,22 +375,33 @@ class Reaction:
             f"Same reactant and product complexes: \"{self._standard_form_chem_eqn(reactant_list)}\""
 
 
-        # Verify that all the species in the reaction are registered ones
+        # Check whether all the species in the reaction are registered ones
         for _, s_id in reactant_list:
-            assert species_registry.species_exists(s_id), \
-                f"No species with id \"{s_id}\" exists in the species registry"
+            if not species_registry.species_exists(s_id):
+                if autoregister_species:
+                    species_registry.add_species(id=s_id)
+                else:
+                    raise Exception(f'No species with id "{s_id}" exists in the species registry')
 
         for _, s_id in product_list:
-            assert species_registry.species_exists(s_id), \
-                f"No species with id \"{s_id}\" exists in the species registry"
+            if not species_registry.species_exists(s_id):
+                if autoregister_species:
+                    species_registry.add_species(id=s_id)
+                else:
+                    raise Exception(f'No species with id "{s_id}" exists in the species registry')
 
 
-        self.reactants = reactant_list
-        self.products = product_list
-
-
-        c = self.get_signed_stoichiometric_coefficients()
+        c = self.get_signed_stoichiometric_coefficients(reactants=reactant_list, products=product_list)
         self.stoichiometry = Stoichiometry(c)
+
+
+        # TODO: move to a separate function
+        # EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
+        #   would lead to self.reactants = [(2, "A"), (2, "B"), (1, "E")]
+        #              and self.products = [(3, "P"), (1, "E")]
+        self.reactants = [(-v, k) for k,v in c.items() if v < 0] + [(1, k) for k,v in c.items() if v == 0]
+        self.products =  [(v, k)  for k,v in c.items() if v > 0] + [(1, k) for k,v in c.items() if v == 0]
+
 
 
 
@@ -337,11 +415,11 @@ class Reaction:
         self.kinetics = Kinetics(law=kinetics_type, parameters=kinetic_parameters)
 
 
-        self.reaction_type = self._determine_reaction_type()
-        print(f"detected reaction type `{self.reaction_type}`")
+        #self.reaction_type = self._determine_reaction_type()
+        #print(f"detected reaction type `{self.reaction_type}`")
 
         self.reaction_category = self._determine_reaction_category()
-        print(f"detected reaction category `{self._determine_reaction_category}`")
+        #print(f"detected reaction category `{self.reaction_category}`")
 
 
         self.analytic_solution_family = self._determine_analytic_solution_family()
@@ -396,13 +474,27 @@ class Reaction:
         if c > 0:
             return "Enzymatic"
 
-        if r == 1 and p == 1:
+        # TODO: switch to using signed terms
+        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type A <-> B               {"A": -1, "B": 1}
             return "Unimolecular rearrangement/isomerization"
 
-        if r == 1 and p == 2:
+        if (r == 1 and self.reactants[0][0] == 1) \
+                and (p == 2 and self.products[0][0] == 1  and self.products[1][0] == 1):
+            # Reaction is of the type A <-> B + C           {"A": -1, "B": 1, "C": 1}
             return "Unimolecular decomposition"
 
-        if r == 2 and p == 1:
+        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 2):
+            # Reaction is of the type A <-> 2 B             {"A": -1, "B": 2}
+            return "Unimolecular decomposition"
+
+        if (r == 2 and self.reactants[0][0] == 1 and self.reactants[1][0] == 1) \
+            and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type A + B <-> C           {"A": -1, "B": -1, "C": 1}
+            return "Bimolecular synthesis"
+
+        if (r == 1 and self.reactants[0][0] == 2) and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type 2 A <-> C             {"A": -2, "C": 1}
             return "Bimolecular synthesis"
 
         return "General one-step"
@@ -450,7 +542,7 @@ class Reaction:
 
 
 
-    def get_signed_stoichiometric_coefficients(self) -> dict:
+    def get_signed_stoichiometric_coefficients(self, reactants :list[tuple], products :list[tuple]) -> dict:
         """
         Return the sums of all the stoichiometric coefficients for each species in this reaction.
         The reactants get negative values, and the products positive ones
@@ -464,12 +556,13 @@ class Reaction:
         :return:    A dictionary mapping the id's of the species in this reaction
                         to their SIGNED stoichiometric coefficients in this reaction
         """
+        # TODO: maybe move to class Stoichiometry (and turn it from dataclass to regular class)
         coeffs = {}
 
-        for c, species in self.reactants:
+        for c, species in reactants:        # Example: (2, "A")
             coeffs[species] = coeffs.get(species, 0) - c    # Accumulate the sum of the stoichiometric coefficients for this species
 
-        for c, species in self.products:
+        for c, species in products:         # Example: (1, "P")
             coeffs[species] = coeffs.get(species, 0) + c    # Accumulate the sum of the stoichiometric coefficients for this species
 
         return coeffs
@@ -501,8 +594,9 @@ class Reaction:
         """
         # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
         # omitting all terms with a zero value
+        # TODO: don't recompute the coefficients; just extract them from the saved value!
         d = {k:v
-                for k,v in self.get_signed_stoichiometric_coefficients().items()
+                for k,v in self.get_signed_stoichiometric_coefficients(reactants=self.reactants, products=self.products).items()
                 if v != 0}
 
         return d
@@ -582,7 +676,7 @@ class Reaction:
             if self.elementary:
                 rxn_description += "Elementary "
 
-            rxn_description += self.reaction_category + "\n       "
+            rxn_description += self.reaction_category + " reaction\n       "
 
             rxn_properties = self.extract_rxn_properties()     # A dict
             rxn_description += self.format_reaction_details(rxn_properties)
@@ -591,6 +685,360 @@ class Reaction:
 
 
         return "TBA" # TODO: expand
+
+
+
+    def extract_reactant_ids(self) -> [str]:
+        """
+        Return the list of ALL the reactant id's in this reaction
+        (including any catalysts, if applicable)
+
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
+        """
+        return [t[1] for t in self.reactants]
+
+
+    def extract_reactants(self) -> list[(int, str)]:
+        """
+        Return a list of pairs with details of the reactants of the given reaction,
+        incl. their stoichiometry and species id
+
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
+        """
+        return self.reactants
+
+
+    def extract_reactants_formula(self) -> str:
+        """
+        Return a string with a user-friendly form of the left (reactants) side of the reaction formula
+        (aka the reactant "complex")
+
+        :return:    A string with the left (reactant) side of the reaction formula
+        """
+        return self._standard_form_chem_eqn(self.reactants)
+
+
+
+    def extract_product_ids(self) -> [str]:
+        """
+        Return the list of ALL the product id's in this reaction
+        (including any catalysts, if applicable)
+
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
+        """
+        return [t[1] for t in self.products]
+
+
+    def extract_products(self) -> list[(int, str)]:
+        """
+        Return a list of pairs with details of the products of the given reaction,
+        incl. their stoichiometry and species id
+
+        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
+        """
+        return self.products
+
+
+    def extract_products_formula(self) -> str:
+        """
+        Return a string with a user-friendly form of the right (products) side of the reaction formula
+        (aka the product "complex")
+
+        :return:    A string with the right (product) side of the reaction formula
+        """
+        return self._standard_form_chem_eqn(self.products)
+
+
+
+    def extract_species_in_reaction(self) -> Set[str]:
+        """
+        Return a SET of the id's of ALL the species appearing in this reaction
+
+        :return:    A SET of the id's of the species involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        return set(self.extract_reactant_ids()) | set(self.extract_product_ids())   # Union of sets
+
+
+
+    def reaction_quotient(self, conc, explain=False) -> np.double | tuple[np.double, str]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction.
+
+        Note: this implementation only covers reactions that have "mass action" kinetics
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical labels
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        assert self.kinetics.law == "mass action", \
+            "reaction_quotient(): only implemented for reactions that have \"mass action\" kinetics"
+
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.reactants,
+                                                        product_data=self.products,
+                                                        conc=conc, explain=explain)
+
+
+
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
+        """
+        For the specified concentrations of the chemicals in the generic reaction,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_dict:   A dict mapping specie id's to their concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+
+        if self.kinetics.law == "mass action":
+            return ReactionKinetics.compute_rate_elementary(reactants = self.extract_reactant_ids(),
+                                                            products = self.extract_product_ids(),
+                                                            kF = self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                            reversible=self.kinetics.parameters["reversible"],
+                                                            conc_dict=conc_dict)
+
+        function_to_call = self.kinetics.rate_function
+        assert function_to_call is not None, \
+            f"determine_reaction_rate(): no kinetic rate function was provide for the reaction `{self.describe(concise=True)}` isn't set; " \
+            f"make sure to first call set_rate_function()"
+        #print(f"determine_reaction_rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
+
+        return function_to_call(reactant_terms=self.reactants, product_terms=self.products,
+                                kF = self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                conc_dict=conc_dict)                        # Carry out the function call
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
+        """
+        Simulate the generic reaction, over the specified time interval.
+        The forward Euler method is used
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentrations won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :param exact:       Only available if this reaction type has a known analytical solution
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn     The mapping of chemical labels
+                                                                    to their concentration CHANGES
+                                                                    during this step
+                                - rxn_rate                      The reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
+        """
+        # TODO: move out of this modules
+        increment_dict_single_rxn = {}      # The keys are the species id's,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+
+        if exact:
+            if self.analytic_solution_family == "ONE_TO_ONE":
+                r = self.reactants[0][1]           # EXAMPLE: "R"
+                p = self.products[0][1]            # EXAMPLE: "P"
+
+                R0 = conc_dict[r]
+                P0 = conc_dict[p]
+                # Compute the respective increments of R0 and P0
+                if self.kinetics.parameters["reversible"]:
+                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                                                     A0=R0, P0=P0, t=delta_time, incremental=True)
+                else:
+                    delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kinetics.parameters["kF"],
+                                                                                       A0=R0, P0=P0, t=delta_time, incremental=True)
+
+                # Work out the stoichiometry for all the species
+                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+                return (increment_dict_single_rxn, rxn_rate)
+            else:
+                raise Exception("step_simulation(): no exact analytical solution is available for this reaction type")
+
+
+
+        # If we get thus far, exact=False
+
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
+        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
+
+
+        reactants = self.reactants      # A list of pairs of the form (stoichiometry coefficient, species id))
+        products = self.products        # A list of pairs of the form (stoichiometry coefficient, species id))
+
+
+        """
+        Determine the concentration adjustments as a result of this reaction step, 
+        for this individual reaction being considered
+        """
+
+        # The reactants DECREASE based on the quantity delta_rxn
+        for stoichiometry, species_id in reactants:         # Unpack data from each reactant
+            delta_conc = stoichiometry * (- delta_rxn)      # Increment to this reactant from the reaction being considered
+
+            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
+
+
+        # The reaction products INCREASE based on the quantity delta_rxn
+        for stoichiometry, species_id in products:      # Unpack data from each product
+            delta_conc = stoichiometry * delta_rxn      # Increment to this reaction product from the reaction being considered
+
+            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
+
+
+        assert len(increment_dict_single_rxn) == len(self.extract_species_in_reaction())  # TODO: temporary check to eventually drop
+
+        return (increment_dict_single_rxn, rxn_rate)
+
+
+
+    def find_equilibrium_conc(self, conc_dict :dict) -> dict:
+        """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the species in this reaction,
+        given their initial concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param conc_dict:   A dict mapping species id's to their initial concentrations,
+                                for all the species involved in this reaction
+                                EXAMPLE:  {"X": 4.3, "Y": 1.5, "F": 31.6, "G": 3.6}
+
+        :return:            A dict mapping the above chemical id's to their equilibrium concentrations
+        """
+        reactants = self.reactants
+        products = self.products
+
+        if self.kinetics.law != "mass action":
+            assert self.kinetics.kinetic_rate_function == ReactionKinetics.compute_rate_first_order, \
+                "find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
+                "it's only implemented when the kinetic rate function is `ReactionKinetics.compute_rate_first_order` \n" \
+                "if that's the case, make sure to first invoke:   set_rate_function(ReactionKinetics.compute_rate_first_order)"
+
+            # To conform with ReactionKinetics.compute_equilibrium_conc,
+            # we'll express the reaction in the form aA + bB <-> bC + dD
+
+            assert len(reactants) == 2, \
+                f"find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
+                f"this function is only implemented for case with 2 reactants (we have {len(reactants)})"
+
+            assert len(products) == 2, \
+                f"find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
+                f"this function is only implemented for case with 2 products (we have {len(products)})"
+
+            r1, r2 = reactants      # Each value is a pair (stoichiometry coefficient, species id)
+            p1, p2 = products       # Each value is a pair (stoichiometry coefficient, species id)
+
+            A0 = conc_dict.get(r1[1])
+            assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the reactant `{r1[1]}` was not provided"
+
+            B0 = conc_dict.get(r2[1])
+            assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the reactant `{r2[1]}` was not provided"
+
+
+            C0 = conc_dict.get(p1[1])
+            assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the product `{p1[1]}` was not provided"
+
+            D0 = conc_dict.get(p2[1])
+            assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the product `{p2[1]}` was not provided"
+
+
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                                            a=r1[0], b=r2[0],
+                                                                            p=p1[0], q=p1[0],
+                                                                            A0=A0, B0=B0, P0=C0, Q0=D0)
+
+            # eq_dict contains the keys "A", "B", "P", "Q";
+            # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+            return  {r1[1]: eq_dict["A"], r2[1]: eq_dict["B"],
+                     p1[1]: eq_dict["P"], p2[1]: eq_dict["Q"]}
+
+
+        # If we get thus far, we have mass-action kinetics
+        assert len(reactants) <= 2, \
+                f"find_equilibrium_conc(): for reactions that exhibit mass-action kinetics, " \
+                f"it's only implemented when there are no more than 2 reactants (number of reactants is {len(reactants)})"
+        assert len(products) <= 2, \
+                f"find_equilibrium_conc(): for reactions that exhibit mass-action kinetics, " \
+                f"it's only implemented when there are no more than 2 products (number of products is {len(products)})"
+
+
+        # To conform with ReactionKinetics.compute_equilibrium_conc,
+        # we'll express the reaction in the form   a A + b B <-> c C + d D
+
+        # TODO: maybe switch to using signed coefficients
+
+        name_map = {}
+
+        a, A = reactants[0]
+        name_map["A"] = A
+        A0 = conc_dict.get(A)
+        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                       f"concentration of the reactant `{A}` was not provided"
+
+        if len(reactants) > 1:
+            b, B = reactants[1]
+            name_map["B"] = B
+            B0 = conc_dict.get(B)
+            assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the reactant `{B}` was not provided"
+        else:
+            b = 0
+            B0 = None
+
+
+        c, C = products[0]
+        name_map["P"] = C
+        C0 = conc_dict.get(C)
+        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the product `{C}` was not provided"
+
+        if len(products) > 1:
+            d, D = products[1]
+            name_map["Q"] = D
+            D0 = conc_dict.get(D)
+            assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                   f"concentration of the product `{D}` was not provided"
+        else:
+            d = 0
+            D0 = None
+
+        #print("name_map", name_map)
+        #print(f"a: {a} | b: {b} | c: {c} | d: {d}")
+        #print(f"A0: {A0} | B0: {B0} | C0: {C0} | D0: {D0}")
+        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                                        a=a, b=b, p=c, q=d,
+                                                                        A0=A0, B0=B0, P0=C0, Q0=D0)
+        #print("eq_dict", eq_dict)
+
+        # eq_dict contains the keys "A", "B", "P", "Q";
+        # Translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+        converted_dict = {}
+        for k, v in eq_dict.items():
+            converted_name = name_map[k]
+            converted_dict[converted_name] = v
+
+        return converted_dict
+
+
 
 
 
@@ -646,13 +1094,27 @@ class Reaction:
         if c > 0:      # If enzymes were involved
             return None
 
-        if r == 1 and p == 1:
+        # TODO: switch to using signed terms
+        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type A <-> B               {"A": -1, "B": 1}
             return "ONE_TO_ONE"
 
-        if r == 1 and p == 2:
+        if (r == 1 and self.reactants[0][0] == 1) \
+                and (p == 2 and self.products[0][0] == 1  and self.products[1][0] == 1):
+            # Reaction is of the type A <-> B + C           {"A": -1, "B": 1, "C": 1}
             return "ONE_TO_TWO"
 
-        if r == 2 and p == 1:
+        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 2):
+            # Reaction is of the type A <-> 2 B             {"A": -1, "B": 2}
+            return "ONE_TO_TWO"
+
+        if (r == 2 and self.reactants[0][0] == 1 and self.reactants[1][0] == 1) \
+            and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type A + B <-> C           {"A": -1, "B": -1, "C": 1}
+            return "TWO_TO_ONE"
+
+        if (r == 1 and self.reactants[0][0] == 2) and (p == 1 and self.products[0][0] == 1):
+            # Reaction is of the type 2 A <-> C             {"A": -2, "C": 1}
             return "TWO_TO_ONE"
 
         return None

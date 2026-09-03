@@ -722,7 +722,7 @@ class ReactionKinetics:
         Determine the equilibrium concentrations that would be eventually reached
         by the chemicals participating in a reversible reaction of the form:
             a A + b B <-> p P + q Q
-        whose kinetics are (hypothetically) FIRST ORDER in each of the chemicals
+        whose kinetics are (hypothetically) FIRST ORDER in each of the species
         (some of the terms may be missing),
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
@@ -733,7 +733,7 @@ class ReactionKinetics:
         If the reaction isn't elementary, kF will be a composite "kF effective"; likewise for kR.
 
         CAUTION: since all reaction orders are expected to be 1,
-                 if any of stoichiometry coefficients of the involved chemicals aren't 1,
+                 if any of stoichiometry coefficients of the involved species aren't 1,
                  then it's a scenario of "generalized kinetics"
                  (non-mass-action with respect to the stoichiometry)
 
@@ -741,27 +741,27 @@ class ReactionKinetics:
                concentrations approximate the activities of ideal dilute solutions
 
         :param kF:  The reaction's forward rate constant.
-                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the chemicals),
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the species),
                         then this value will be a composite "kF effective"
         :param kR:  The reaction's reverse rate constant.
-                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the chemicals),
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the species),
                         then this value will be a composite "kR effective"
 
-        :param a:   The stoichiometry coefficient of chemical A in the reaction (typically 1)
-        :param A0:  The initial concentration of chemical A
-        :param b:   [OPTIONAL] The stoichiometry coefficient of chemical B in the reaction;
+        :param a:   The stoichiometry coefficient of species A in the reaction (typically 1)
+        :param A0:  The initial concentration of species A
+        :param b:   [OPTIONAL] The stoichiometry coefficient of species B in the reaction;
                         if not present, accept the default value of zero
-        :param B0:  [OPTIONAL] The initial concentration of chemical B;
+        :param B0:  [OPTIONAL] The initial concentration of species B;
                         if not present, accept the default None
-        :param p:   The stoichiometry coefficient of product chemical `P` in the reaction (typically 1)
-        :param P0:  The initial concentration of the product chemical `P`
-        :param q:   [OPTIONAL] The stoichiometry coefficient of chemical D in the reaction;
+        :param p:   The stoichiometry coefficient of product species `P` in the reaction (typically 1)
+        :param P0:  The initial concentration of the product species `P`
+        :param q:   [OPTIONAL] The stoichiometry coefficient of species D in the reaction;
                         if not present, accept the default value of zero
-        :param Q0:  [OPTIONAL] The initial concentration of chemical B;
+        :param Q0:  [OPTIONAL] The initial concentration of species `Q``;
                         if not present, accept the default value
 
         :return:    A dictionary of the equilibrium concentrations of the
-                        chemicals involved in the specified reaction;
+                        species involved in the specified reaction;
                         only the applicable entries will be present
                         EXAMPLES:
                             {'A': 24.0, 'B': 36.0, 'P': 1.8, 'Q': 0.3}
@@ -769,7 +769,7 @@ class ReactionKinetics:
         """
         '''
         For (hypothetical) reactions of the form aA + bB <-> cC + dD  
-        that are FIRST-ORDER in all chemicals, and with the given initial condition,
+        that are FIRST-ORDER in all species, and with the given initial condition,
         the equilibrium equation needs to equate the reaction's forward and reverse rates 
         after the reaction has advanced by m moles 
         (which consumes reagents in proportion to their stoichiometric coefficients, and 
@@ -802,7 +802,7 @@ class ReactionKinetics:
         
         (where alpha, beta and gamma are as computed below), and then solved for m.  
         In case of two solution for the quadratic, we'll pick the one that
-        leads to physically-possible results (non-negative concentrations of all the chemicals.)
+        leads to physically-possible results (non-negative concentrations of all the species.)
         '''
         assert kR is not None, \
             "compute_equilibrium_conc_first_order(): a value must be passed for argument `kR` (currently None)"
@@ -865,7 +865,7 @@ class ReactionKinetics:
         """
         Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
         for the reaction with the specified parameters,
-        given the concentrations of chemicals involved in the reaction.
+        given the concentrations of species involved in the reaction.
 
         EXAMPLE: use reactant_data=[(2, "A"), (1, "B")] and product_data=["C"] ,
                  for a reaction of the form 2 A + B <-> C ,

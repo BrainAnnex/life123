@@ -2359,12 +2359,12 @@ class UniformCompartment:
             # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
 
-            reactants = rxn.extract_reactant_labels()
+            reactants = rxn.extract_reactant_ids()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
 
-            products = rxn.extract_product_labels()
+            products = rxn.extract_product_ids()
             for species_name in products:
                 if species_name not in reactants:           # Don't report the same concentration twice!
                     s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"

@@ -221,7 +221,7 @@ def test_describe_ReactionUnimolecular():
 
 def test_extract_reactant_labels_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
-    assert rxn.extract_reactant_labels() == ["A"]
+    assert rxn.extract_reactant_ids() == ["A"]
 
 def test_extract_reactants_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
@@ -235,7 +235,7 @@ def test_extract_reactants_formula_ReactionUnimolecular():
 
 def test_extract_product_labels_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
-    assert rxn.extract_product_labels() == ["B"]
+    assert rxn.extract_product_ids() == ["B"]
 
 def test_extract_products_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
@@ -247,7 +247,7 @@ def test_extract_products_formula_ReactionUnimolecular():
 
 
 
-def test_extract_chemicals_in_reaction_ReactionUnimolecular():
+def test_extract_species_in_reaction_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
     assert rxn.extract_species_in_reaction() == {"A", "B"}
 
@@ -363,15 +363,15 @@ def test_find_equilibrium_conc_ReactionUnimolecular():
 
 def test_extract_reactant_labels_ReactionSynthesis():
     rxn = ReactionSynthesis(reactants=["A", "B"], product="C")
-    assert rxn.extract_reactant_labels() == ["A", "B"]
+    assert rxn.extract_reactant_ids() == ["A", "B"]
 
     rxn = ReactionSynthesis(reactants=["R", "R"], product="C")
-    assert rxn.extract_reactant_labels() == ["R"]
+    assert rxn.extract_reactant_ids() == ["R"]
 
 
-def test_extract_product_labels_ReactionSynthesis():
+def test_extract_product_ids_ReactionSynthesis():
     rxn = ReactionSynthesis(reactants=["A", "B"], product="C")
-    assert rxn.extract_product_labels() == ["C"]
+    assert rxn.extract_product_ids() == ["C"]
 
 
 def test_extract_chemicals_in_reaction_ReactionSynthesis():
@@ -446,15 +446,15 @@ def test_find_equilibrium_conc_ReactionSynthesis():
 
 def test_extract_reactant_labels_ReactionDecomposition():
     rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
-    assert rxn.extract_reactant_labels() == ["A"]
+    assert rxn.extract_reactant_ids() == ["A"]
 
 
 def test_extract_product_labels_ReactionDecomposition():
     rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
-    assert rxn.extract_product_labels() == ["B", "C"]
+    assert rxn.extract_product_ids() == ["B", "C"]
 
     rxn = ReactionDecomposition(reactant="A", products=["F", "F"])
-    assert rxn.extract_product_labels() == ["F"]
+    assert rxn.extract_product_ids() == ["F"]
 
 
 def test_extract_chemicals_in_reaction_ReactionDecomposition():
@@ -560,12 +560,12 @@ def test_initialize_ReactionEnzyme():
 
 def test_extract_reactant_labels_ReactionEnzyme():
     rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
-    assert rxn.extract_reactant_labels() == ["S", "E"]
+    assert rxn.extract_reactant_ids() == ["S", "E"]
 
 
 def test_extract_product_labels_ReactionEnzyme():
     rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
-    assert rxn.extract_product_labels() == ["P", "E"]
+    assert rxn.extract_product_ids() == ["P", "E"]
 
 
 def test_extract_chemicals_in_reaction_ReactionEnzyme():
@@ -850,32 +850,32 @@ def test_extract_rxn_properties_ReactionGeneric():
 
 def test_extract_reactant_labels_ReactionGeneric():
     rxn = ReactionGeneric(reactants="A", products="B")
-    assert rxn.extract_reactant_labels() == ["A"]
+    assert rxn.extract_reactant_ids() == ["A"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
-    assert rxn.extract_reactant_labels() == ["A", "B"]
+    assert rxn.extract_reactant_ids() == ["A", "B"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
-    assert rxn.extract_reactant_labels() == ["A", "B"]
+    assert rxn.extract_reactant_ids() == ["A", "B"]
 
     rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
-    assert rxn.extract_reactant_labels() == ["D", "C"]
+    assert rxn.extract_reactant_ids() == ["D", "C"]
 
 
 
 def test_extract_product_labels_ReactionGeneric():
     rxn = ReactionGeneric(reactants="A", products="B")
-    assert rxn.extract_product_labels() == ["B"]
+    assert rxn.extract_product_ids() == ["B"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
-    assert rxn.extract_product_labels() == ["C"]
+    assert rxn.extract_product_ids() == ["C"]
 
 
     rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
-    assert rxn.extract_product_labels() == ["B", "C"]
+    assert rxn.extract_product_ids() == ["B", "C"]
 
     rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
-    assert rxn.extract_product_labels() == ["C", "E"]
+    assert rxn.extract_product_ids() == ["C", "E"]
 
 
 

@@ -268,10 +268,10 @@ class ReactionRegistry:
         rxns_found_in = []
         for rxn in self.reaction_list:
             if side == "reagent":
-                if chem_label in rxn.extract_reactant_labels():
+                if chem_label in rxn.extract_reactant_ids():
                     rxns_found_in.append(rxn)
             else:
-                 if chem_label in rxn.extract_product_labels():
+                 if chem_label in rxn.extract_product_ids():
                     rxns_found_in.append(rxn)
 
 
@@ -538,12 +538,12 @@ class ReactionRegistry:
             #self.species_data.add_species(id=catalyst, skip_duplicates=True)
 
         # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_labels()
+        rxn_reactants = rxn.extract_reactant_ids()
         for label in rxn_reactants:
             self.species_data.add_species(id=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction product not already registered
-        rxn_products = rxn.extract_product_labels()
+        rxn_products = rxn.extract_product_ids()
         for label in rxn_products:
             self.species_data.add_species(id=label, skip_duplicates=True)
 
