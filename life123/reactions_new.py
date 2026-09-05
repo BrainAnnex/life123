@@ -161,30 +161,31 @@ class Stoichiometry:
 
 
 class Kinetics:
+    """
+
+    """
 
     def __init__(self, law :str, parameters=None):
         """
-        EXAMPLES of `law`:
-            "mass action"
-            "Michaelis-Menten"
-            "custom"            [user-supplied Python function]
-            "Hill"              [not yet supported]
-            "enzyme inhibition" [hypothetical future extension; not available]
-
-
         :param law:
-        :param parameters:
+            EXAMPLES of `law`:
+                "mass action"
+                "MM"                [Michaelis-Menten]
+                "custom"            [user-supplied Python function]
+                "Hill"              [not yet supported]
+                "enzyme inhibition" [hypothetical future extension; not available]
+
+        :param parameters:  A dict of data that is specific to the given rate law
         """
-        AVAILABLE_RATE_LAWS = ["mass action", "Michaelis-Menten", "custom"]
+        # TODO: maybe have a separate class for each rate law
+
+        AVAILABLE_RATE_LAWS = ["mass action", "MM", "custom"]
 
         if law is not None:
+            # Validate that it's a known rate law
             assert law in AVAILABLE_RATE_LAWS, \
                 f"Kinetics instantiation: the value passed to the `law` argument (\"{law}\") " \
                 f"is not one the allowed values: {AVAILABLE_RATE_LAWS}"
-
-
-        if parameters is None:
-            parameters = {}
 
 
         self.law = law
@@ -197,6 +198,8 @@ class Kinetics:
 
     def set_parameters(self, parameters :dict) -> None:
         """
+        Validate and set the passed kinetic parameters,
+        as well as any others derivable from them
 
         :param parameters:
         :return:            None
@@ -207,15 +210,16 @@ class Kinetics:
 
         if self.law == "mass action":
 
-            # validate that at most only "kR" and/or "kF" were passed
-            allowed_keys = {"kR", "kF"}
-            extra_keys = set(parameters.keys()) - allowed_keys
+            # Validate that at most only the allowed key were passed
+            ALLOWED_KEYS = {"kR", "kF"}
+            extra_keys = set(parameters.keys()) - ALLOWED_KEYS
 
             if extra_keys:
-                raise ValueError(f"set_parameters(): Unexpected parameter keys: {', '.join(extra_keys)}")
+                raise ValueError(f"set_parameters(): Unexpected parameter keys:  {extra_keys} ")
 
-            kF = parameters.get("kF", self.parameters.get("kF"))    # Over-write if passed
-            kR = parameters.get("kR", self.parameters.get("kR"))    # Over-write if passed
+            kF = parameters.get("kF", self.parameters.get("kF"))    # Over-write (thermodymically-set value) if passed
+            kR = parameters.get("kR", self.parameters.get("kR"))    # Over-write (thermodymically-set value) if passed
+                                                                    # TODO: check consistency
             K = None
 
             if kF is None:
@@ -242,6 +246,49 @@ class Kinetics:
 
 
             self.parameters = {"kF": kF, "kR": kR, "reversible": reversible, "K": K}
+
+
+        elif self.law == "MM":
+            # Validate that at most only the allowed key were passed
+            ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
+            """
+            :param k1_F:    [OPTIONAL] The forward reaction rate of the 1st part of the reaction
+            :param k1_R:    [OPTIONAL] The reverse reaction rate of the 1st part of the reaction
+            :param k2_F:    [OPTIONAL] The forward reaction rate of the 2nd part of the reaction
+            :param kM:      [OPTIONAL] "Michaelis constant"
+            :param kcat:    [OPTIONAL] "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
+                                (equal to k2_F)
+            """
+            extra_keys = set(parameters.keys()) - ALLOWED_KEYS
+            if extra_keys:
+                raise ValueError(f"set_parameters(): Unexpected parameter keys:  {extra_keys} ")
+
+            k1_F = parameters.get("k1_F")
+            k1_R = parameters.get("k1_R")
+            k2_F = parameters.get("k2_F")
+
+            kM = parameters.get("kM")
+            kcat = parameters.get("kcat")
+
+            if all(v is not None for v in [k1_F, k1_R, k2_F]):
+                kM_derived = (k2_F + k1_R) / k1_F
+                if kM is not None:
+                    assert np.allclose(kM, kM_derived), \
+                        f"set_parameters(): inconsistent arguments.  " \
+                        f"The passed `kM` value ({kM}) doesn't match the value ({kM_derived}) inferred from the given reaction rate constants"
+                else:
+                    kM = kM_derived
+
+            if k2_F is not None:
+                kcat_derived = k2_F
+                if kcat is not None:
+                    assert np.allclose(kcat, kcat_derived), \
+                        f"set_parameters(): inconsistent arguments.  " \
+                        f"The passed `kcat` value ({kcat}) doesn't match the value ({kcat_derived}) of the given `k2_F` reaction rate constant"
+                else:
+                   kcat = kcat_derived
+
+            self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
 
 
 

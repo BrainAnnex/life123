@@ -56,7 +56,7 @@ def test_get_reaction_vector():
     assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "P": 1, "Q": 1}
 
     rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
-                   species_registry=sr, kinetics_type="Michaelis-Menten")
+                   species_registry=sr, kinetics_type="MM")
     assert rxn.stoichiometry.get_reaction_vector() == {"S": -1, "P": 1}
 
     rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
@@ -84,7 +84,7 @@ def test_get_split_reaction_vector():
     assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1}, {"P": 1, "Q": 1})
 
     rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
-                   species_registry=sr, kinetics_type="Michaelis-Menten")
+                   species_registry=sr, kinetics_type="MM")
     assert rxn.stoichiometry.get_split_reaction_vector() == ({"S": -1}, {"P": 1})
 
     rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
@@ -270,7 +270,7 @@ def test_constructor_Reaction_1():
     assert rxn.stoichiometry.to_dict() == {"R": -2, "P": 1}
 
     rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
-                   species_registry=sr, kinetics_type="Michaelis-Menten")
+                   species_registry=sr, kinetics_type="MM")
     assert rxn.stoichiometry.to_dict() == {"S": -1, "P": 1, "E": 0}
 
     rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
@@ -498,10 +498,13 @@ def test_CONSTRUCTOR_Reaction():
                    delta_H=-3,
                    kinetic_parameters={"kF":10, "kR":2})
     assert rxn.active == True
+    assert rxn.kinetics.law == "mass action"
     assert rxn.kinetics.parameters == {"kF":10, "kR":2, "K": 5, "reversible": True}
     assert rxn.thermodynamics.delta_H == -3
     assert rxn.thermodynamics.delta_S is None
     assert rxn.thermodynamics.K == 5
+    assert rxn.reaction_category == "Unimolecular rearrangement/isomerization"
+    assert rxn.analytic_solution_family == "ONE_TO_ONE"
 
 
     rxn = Reaction(reactants="A", products="B", species_registry=sr,
@@ -509,10 +512,50 @@ def test_CONSTRUCTOR_Reaction():
                    delta_H=-3,
                    kinetic_parameters={"kF":10, "kR":0})
     assert rxn.active == False
+    assert rxn.kinetics.law == "mass action"
     assert rxn.kinetics.parameters == {"kF":10, "kR":0, "K": None, "reversible": False}
     assert rxn.thermodynamics.delta_H == -3
     assert rxn.thermodynamics.delta_S is None
     assert rxn.thermodynamics.K is None
+    assert rxn.reaction_category == "Unimolecular rearrangement/isomerization"
+    assert rxn.analytic_solution_family == "ONE_TO_ONE"
+
+
+    with pytest.raises(Exception):
+        Reaction(reactants="A", products="B", species_registry=sr, kinetic_parameters={"intruder":666})
+
+
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn = Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                   delta_S=100,
+                   kinetics_type="MM",
+                   kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5})
+    assert rxn.active == True
+    assert rxn.kinetics.law == "MM"
+    assert rxn.kinetics.parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 5, 'kM': 0.7, 'kcat': 5}
+    assert np.isclose(rxn.kinetics.parameters["k1_F"], 10.)
+    assert np.isclose(rxn.kinetics.parameters["k1_R"], 2.)
+    assert np.isclose(rxn.kinetics.parameters["k2_F"], 5.)
+    print(rxn.kinetics.parameters["kM"])
+    assert np.isclose(rxn.kinetics.parameters["kM"], 0.7)     # (rxn.k2_F + rxn.k1_R) / rxn.k1_F)
+    assert np.isclose(rxn.kinetics.parameters["kcat"], 5.)    # Equal to k2_F
+
+    assert rxn.thermodynamics.delta_H is None
+    assert rxn.thermodynamics.delta_S == 100
+    assert rxn.thermodynamics.K is None
+    assert rxn.reaction_category == "Enzymatic"
+    assert rxn.analytic_solution_family is None
+
+
+    with pytest.raises(Exception):
+        Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                 kinetics_type="MM",
+                 kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5, "kM": 0.71})   # Inconsistent
+
+    with pytest.raises(Exception):
+        Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                 kinetics_type="MM",
+                 kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5, "kcat": 5.01})   # Inconsistent
 
 
 
