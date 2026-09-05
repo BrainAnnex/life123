@@ -720,9 +720,9 @@ class ReactionUnimolecular(ReactionElementary):
         assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
                                f"concentration of the produce `{self.product}` was not provided"
 
-        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=1, p=1,
-                                                                        A0=A0, P0=C0)
+        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                         a=1, p=1,
+                                                                         A0=A0, P0=C0)
 
         # eq_dict contains the keys "A", "B", "P", "Q";
         # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
@@ -1021,13 +1021,13 @@ class ReactionSynthesis(ReactionElementary):
                                f"concentration of the produce `{self.product}` was not provided"
 
         if self.reactant_1 == self.reactant_2:
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                            a=2, b=2, p=1,
-                                                                            A0=A0, B0=B0, P0=C0)
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                             a=2, b=2, p=1,
+                                                                             A0=A0, B0=B0, P0=C0)
         else:
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                            a=1, b=1, p=1,
-                                                                            A0=A0, B0=B0, P0=C0)
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                             a=1, b=1, p=1,
+                                                                             A0=A0, B0=B0, P0=C0)
 
         # eq_dict contains the keys "A", "B", "P", "Q";
         # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
@@ -1332,13 +1332,13 @@ class ReactionDecomposition(ReactionElementary):
                                f"concentration of the produce `{self.product_2}` was not provided"
 
         if self.product_1 == self.product_2:
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                            a=1, p=2, q=2,
-                                                                            A0=A0, P0=C0, Q0=D0)
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                             a=1, p=2, q=2,
+                                                                             A0=A0, P0=C0, Q0=D0)
         else:
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                            a=1, p=1, q=1,
-                                                                            A0=A0, P0=C0, Q0=D0)
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                             a=1, p=1, q=1,
+                                                                             A0=A0, P0=C0, Q0=D0)
 
         # eq_dict contains the keys "A", "B", "P", "Q";
         # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
@@ -2443,10 +2443,10 @@ class ReactionGeneric(ReactionOneStep):
 
 
 
-        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=self.extract_stoichiometry(r1), b=self.extract_stoichiometry(r2),
-                                                                        p=self.extract_stoichiometry(p1), q=self.extract_stoichiometry(p1),
-                                                                        A0=A0, B0=B0, P0=C0, Q0=D0)
+        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                         a=self.extract_stoichiometry(r1), b=self.extract_stoichiometry(r2),
+                                                                         p=self.extract_stoichiometry(p1), q=self.extract_stoichiometry(p1),
+                                                                         A0=A0, B0=B0, P0=C0, Q0=D0)
 
         # eq_dict contains the keys "A", "B", "P", "Q";
         # translate the standard names A, B, P, Q into the actual names, and also drop any missing term

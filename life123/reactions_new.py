@@ -17,6 +17,8 @@ class Stoichiometry:
     for all species in the reaction.
     Reaction reagents have negative signs, and products have positive signs.
     (including species that have a net coefficient of zero, such as catalysts that appear on both sides)
+
+    EXAMPLE:  {"A": -1, "B": 1, "E": 0}   for the reaction A + E -> B + E
     """
     coefficients: Mapping[str, int]
 
@@ -25,7 +27,7 @@ class Stoichiometry:
     def reaction_pattern(self) -> tuple[int, int, int]:
         """
         Return the triplet (n_reactants, n_products, n_catalysts)
-        Catalysts, if present, are NOT counted under either "reactants" or "products"
+        Catalysts, if present, are counted separated, and NOT included under either "reactants" or "products"
         ~~~
         EXAMPLES:
         {"A": -1, "B": -1, "C": 1} , i.e. the reaction A + B -> C, leads to (2, 1, 0)
@@ -54,6 +56,57 @@ class Stoichiometry:
         """
         d = asdict(self)
         return d.get("coefficients")
+
+
+
+    def consistency_checker(self, conc_before :dict, conc_after :dict) -> None:
+        """
+
+        :param conc_before:
+        :param conc_after:
+        :return:            None.  Raise an Exception if the change in reactant/product concentrations is consistent with the
+                                    reaction's stoichiometry
+        """
+        assert len(conc_before) == len(self.coefficients), \
+            f"consistency_checker(): the argument `conc_before` must contain exactly the same keys " \
+            f"as the species in this reaction: {list(self.coefficients.keys())}"
+
+        assert len(conc_after) == len(self.coefficients), \
+            f"consistency_checker(): the argument `conc_after` must contain exactly the same keys " \
+            f"as the species in this reaction: {list(self.coefficients.keys())}"
+
+        delta_conc = {}
+        for sp,conc in conc_before.items():
+            assert sp in self.coefficients, \
+                f"consistency_checker(): the species \"{sp}\" appearing in the argument `conc_before` " \
+                f"is not part of the reaction: {self.coefficients}"
+
+            assert sp in conc_after, \
+                f"consistency_checker(): the species \"{sp}\" appearing in the argument `conc_before` " \
+                f"is not found among the species provided to the argument `conc_after`: {conc_after}"
+
+            delta_conc[sp] = conc_after[sp] - conc_before[sp]
+
+        #print("delta_conc: ", delta_conc)
+
+        # Example: if the reaction's signed stoichiometric coefficient are
+        #          {"A": -1, "B": 1, "E": 0}
+        #          then a delta_conc of {"A": -10, "B": 10, "E": 0}
+        #          is consistent because of multiple of the reaction vector
+        ratio = None
+        # Loop over all the values of delta_conc,
+        # and make sure they are all the same multiple of the corresponding reaction coefficients
+        for sp,conc in delta_conc.items():
+            if self.coefficients[sp] == 0:
+                continue
+            if ratio is None:
+                ratio = delta_conc[sp] / self.coefficients[sp]
+                #print("ratio: ", ratio)
+            else:
+                assert np.allclose(delta_conc[sp], ratio * self.coefficients[sp]), \
+                    f"consistency_checker(): the delta concentration {delta_conc} " \
+                    f"is incompatible with the reaction's stoichiometry of {self.coefficients}"
+
 
 
 
@@ -109,7 +162,13 @@ class Kinetics:
 
         if self.law == "mass action":
 
-            # TODO: validate that only "kR" and/or "kF" were passed
+            # validate that at most only "kR" and/or "kF" were passed
+            allowed_keys = {"kR", "kF"}
+            extra_keys = set(parameters.keys()) - allowed_keys
+
+            if extra_keys:
+                raise ValueError(f"set_parameters(): Unexpected parameter keys: {', '.join(extra_keys)}")
+
             kF = parameters.get("kF", self.parameters.get("kF"))    # Over-write if passed
             kR = parameters.get("kR", self.parameters.get("kR"))    # Over-write if passed
             K = None
@@ -569,6 +628,18 @@ class Reaction:
 
 
 
+    def get_split_reaction_vector(self) -> {}:
+        """
+
+        :return:
+        """
+        vec = self.stoichiometry.to_dict()
+        reactants = {k:v  for k,v in vec.items() if v < 0}
+        products = {k:v   for k,v in vec.items() if v > 0}
+        return (reactants, products)
+
+
+
     def get_reaction_vector(self) -> {}:
         """
         Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
@@ -594,6 +665,7 @@ class Reaction:
         """
         # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
         # omitting all terms with a zero value
+        # TODO: move to Stoichiometry class
         # TODO: don't recompute the coefficients; just extract them from the saved value!
         d = {k:v
                 for k,v in self.get_signed_stoichiometric_coefficients(reactants=self.reactants, products=self.products).items()
@@ -929,7 +1001,7 @@ class Reaction:
                 "it's only implemented when the kinetic rate function is `ReactionKinetics.compute_rate_first_order` \n" \
                 "if that's the case, make sure to first invoke:   set_rate_function(ReactionKinetics.compute_rate_first_order)"
 
-            # To conform with ReactionKinetics.compute_equilibrium_conc,
+            # To conform with ReactionKinetics._compute_equilibrium_conc_first_order(),
             # we'll express the reaction in the form aA + bB <-> bC + dD
 
             assert len(reactants) == 2, \
@@ -961,10 +1033,10 @@ class Reaction:
                                    f"concentration of the product `{p2[1]}` was not provided"
 
 
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
-                                                                            a=r1[0], b=r2[0],
-                                                                            p=p1[0], q=p1[0],
-                                                                            A0=A0, B0=B0, P0=C0, Q0=D0)
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                                             a=r1[0], b=r2[0],
+                                                                             p=p1[0], q=p1[0],
+                                                                             A0=A0, B0=B0, P0=C0, Q0=D0)
 
             # eq_dict contains the keys "A", "B", "P", "Q";
             # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
@@ -972,7 +1044,9 @@ class Reaction:
                      p1[1]: eq_dict["P"], p2[1]: eq_dict["Q"]}
 
 
-        # If we get thus far, we have mass-action kinetics
+        """
+        # If we get thus far, we have MASS-ACTION kinetics
+        """
         assert len(reactants) <= 2, \
                 f"find_equilibrium_conc(): for reactions that exhibit mass-action kinetics, " \
                 f"it's only implemented when there are no more than 2 reactants (number of reactants is {len(reactants)})"
@@ -981,56 +1055,98 @@ class Reaction:
                 f"it's only implemented when there are no more than 2 products (number of products is {len(products)})"
 
 
-        # To conform with ReactionKinetics.compute_equilibrium_conc,
-        # we'll express the reaction in the form   a A + b B <-> c C + d D
+        # To conform with functions available in ReactionKinetics,
+        # we'll express the reaction in the form   A + B <-> P + Q   or  2 A <-> P  or  A <-> 2 P   (no other solver is available)
 
-        # TODO: maybe switch to using signed coefficients
+        standard_names = ["A", "B", "P", "Q"]
+        coeffs = [0, 0, 0, 0]       # For general reaction A + B <-> P + Q
+        concs  = [0., 0., 0., 0.]   # For A0, B0, P0, Q0
 
-        name_map = {}
+        vec_r, vec_p = self.get_split_reaction_vector()
+        #print("reaction vectors (reactants) (products): ", vec_r, vec_p)
 
-        a, A = reactants[0]
-        name_map["A"] = A
-        A0 = conc_dict.get(A)
-        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                       f"concentration of the reactant `{A}` was not provided"
+        name_map = {}   # To map standard names into actual species names
 
-        if len(reactants) > 1:
-            b, B = reactants[1]
-            name_map["B"] = B
-            B0 = conc_dict.get(B)
-            assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the reactant `{B}` was not provided"
+
+        # Process reactants (which will set the first element or first two, in coeffs and concs)
+        index = 0
+        for sp, c in vec_r.items():
+            coeffs[index] = -c      # Negative of stoichiometric coefficient because it's a reactant
+            conc = conc_dict.get(sp)
+            assert conc is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                       f"concentration of the reactant `{sp}` was not provided"
+            concs[index] = conc
+            std_name = standard_names[index]
+            name_map[std_name] = sp
+            index += 1
+
+        # Process products (which will set the next element or two, in coeffs and concs)
+        index = 2
+        for sp, c in vec_p.items():
+            coeffs[index] = c
+            conc = conc_dict.get(sp)
+            assert conc is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                       f"concentration of the product `{sp}` was not provided"
+            concs[index] = conc
+            std_name = standard_names[index]
+            name_map[std_name] = sp
+            index += 1
+
+
+        # Unpack
+        a, b, p, q = coeffs
+        A0, B0, P0, Q0 = concs
+
+        """
+        print(f"coeffs: {coeffs} | concs: {concs} | name_map: {name_map}")
+        print(f"a: {a} | b: {b} | p: {p} | q: {q}")
+        print(f"A0: {A0} | B0: {B0} | P0: {P0} | Q0: {Q0}")
+        print(f"kF: {self.kinetics.parameters['kF']} | kR: {self.kinetics.parameters['kR']}")
+        print(self.analytic_solution_family)
+        """
+        
+        if (self.analytic_solution_family == "ONE_TO_ONE"):
+            # Reaction is of the form A <-> P
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
+                                                                            kR=self.kinetics.parameters["kR"],
+                                                                            A0=A0, P0=P0)
+
+        elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 1):
+            # Reaction is of the form A + B <-> P
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
+                                                                            kR=self.kinetics.parameters["kR"],
+                                                                            A0=A0, B0=B0, P0=P0)
+
+        elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 2):
+            # Reaction is of the form 2 A <-> P
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=self.kinetics.parameters["kF"],
+                                                                                     kR=self.kinetics.parameters["kR"],
+                                                                                     A0=A0, P0=P0)
+
+        elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 1):
+            # Reaction is of the form A <-> P + Q
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
+                                                                            kR=self.kinetics.parameters["kR"],
+                                                                            A0=A0, P0=P0, Q0=Q0)
+
+        elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 2):
+            # Reaction is of the form A <-> 2 P
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_decomposition(kF=self.kinetics.parameters["kF"],
+                                                                                         kR=self.kinetics.parameters["kR"],
+                                                                                         A0=A0, P0=P0)
+
         else:
-            b = 0
-            B0 = None
+            raise Exception(f"find_equilibrium_conc(): Not implemented for this reaction type ({self.analytic_solution_family})")
 
-
-        c, C = products[0]
-        name_map["P"] = C
-        C0 = conc_dict.get(C)
-        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                               f"concentration of the product `{C}` was not provided"
-
-        if len(products) > 1:
-            d, D = products[1]
-            name_map["Q"] = D
-            D0 = conc_dict.get(D)
-            assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the product `{D}` was not provided"
-        else:
-            d = 0
-            D0 = None
-
-        #print("name_map", name_map)
-        #print(f"a: {a} | b: {b} | c: {c} | d: {d}")
-        #print(f"A0: {A0} | B0: {B0} | C0: {C0} | D0: {D0}")
-        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
-                                                                        a=a, b=b, p=c, q=d,
-                                                                        A0=A0, B0=B0, P0=C0, Q0=D0)
+        """                                                                      
+        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                                         a=a, b=b, p=c, q=d,
+                                                                         A0=A0, B0=B0, P0=C0, Q0=D0)
+        """
         #print("eq_dict", eq_dict)
 
         # eq_dict contains the keys "A", "B", "P", "Q";
-        # Translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+        # Translate the standard names A, B, P, Q into the actual species names, and also drop any missing term
         converted_dict = {}
         for k, v in eq_dict.items():
             converted_name = name_map[k]

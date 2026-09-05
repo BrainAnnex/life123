@@ -73,6 +73,79 @@ def test_to_dict_Kinetics():
 
 
 
+def test_consistency_checker():
+    # Reaction  A <-> B
+    st = Stoichiometry({"A": -1, "B": 1})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "X": 0}, conc_after={"A": 0, "B": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"X": 0, "B": 0})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
+    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 40})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 39.9})
+
+    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 90, "B": 10})
+
+    # Reaction 2A <-> B
+    st = Stoichiometry({"A": -2, "B": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10.1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 45})
+    
+    # Reaction A + B <--> C
+    st = Stoichiometry({"A": -1, "B": -1, "C": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 9.9})
+
+    # Reaction A + 3B <--> C
+    st = Stoichiometry({"A": -1, "B": -3, "C": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10.1})
+
+    # Reaction 0:   A + 3B <--> 4C
+    st = Stoichiometry({"A": -1, "B": -3, "C": 4})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 40})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 39.9})
+
+    # Reaction 0:   2A + 3B <--> 4C + 5D
+    st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0, "D": 0}, conc_after={"A": 0, "B": 0, "C": 0, "D": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120, "B": 130, "C": 60, "D": 50})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120.1, "B": 130, "C": 60, "D": 50})
+
+    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100.1}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
+
+
+
+
 
 ########################  class ReactionThermodynamics  ########################
 
@@ -380,6 +453,28 @@ def test_get_reaction_vector():
 
 
 
+def test_get_split_reaction_vector():
+    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
+
+    rxn = Reaction(reactants="R", products="P", species_registry=sr)
+    assert rxn.get_split_reaction_vector() == ({"R": -1}, {"P": 1})
+
+    rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
+    assert rxn.get_split_reaction_vector() == ({"R": -1, "S": -1}, {"P": 1})
+
+    rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn.get_split_reaction_vector() == ({"R": -1}, {"P": 1, "Q": 1})
+
+    rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
+                   species_registry=sr, kinetics_type="Michaelis-Menten")
+    assert rxn.get_split_reaction_vector() == ({"S": -1}, {"P": 1})
+
+    rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+                   species_registry=sr, kinetics_type="custom")
+    assert rxn.get_split_reaction_vector() == ({"A": -2, "B":- 2}, {"P": 3, "Q": 1})
+
+
+
 def test_ReactionElementary():
     sr = SpeciesRegistry(ids=["A", "B"])
 
@@ -473,6 +568,7 @@ def test_describe():
 
 def test_extract_reactant_ids():
     sr = SpeciesRegistry(ids=["A", "B"])
+
     rxn = Reaction(reactants="A", products="B", species_registry=sr)
     assert rxn.extract_reactant_ids() == ["A"]
 
@@ -485,6 +581,10 @@ def test_extract_reactant_ids():
 
     rxn = Reaction(reactants=[(2, "R")], products="C", species_registry=sr, autoregister_species=True)
     assert rxn.extract_reactant_ids() == ["R"]
+
+
+    rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_reactant_ids() == ["A"]
 
 
 
@@ -512,6 +612,11 @@ def test_extract_product_ids():
     rxn = Reaction(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
     assert rxn.extract_product_ids() == ["C"]
 
+    rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_product_ids() == ["B", "C"]
+
+    rxn = Reaction(reactants="A", products=["F", "F"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_product_ids() == ["F"]
 
 
 def test_extract_products():
@@ -538,6 +643,8 @@ def test_extract_species_in_reaction():
     rxn = Reaction(reactants=["A", "B"], products="C", species_registry=sr)
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
+    rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr)
+    assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
 
 def test_reaction_quotient():
@@ -560,6 +667,34 @@ def test_reaction_quotient():
     assert np.allclose(11., quotient)
     assert formula == '[F] / [A]'
 
+    # Reaction :  A + B <-> C
+    sr.add_species("C")
+    rxn = Reaction(reactants=["A" , "B"], products="C", species_registry=sr)
+    c = {'A': 3., 'B': 4., 'C': 12.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1., quotient)
+    assert formula == '[C] / ([A][B])'
+
+    # Reaction :  2A <-> P
+    rxn = Reaction(reactants=["A" , "A"], products="P", species_registry=sr, autoregister_species=True)
+    c = {'A': 2., 'P': 20.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(5., quotient)
+    assert formula == '[P] /  [A]^2 '
+
+    # Reaction :  C <-> A + B
+    rxn = Reaction(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True)
+    c = {'A': 3., 'B': 4., 'C': 12.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1., quotient)
+    assert formula == '([A][B]) / [C]'
+
+    # Reaction :  B <-> 2A
+    rxn = Reaction(reactants="B", products=["A" , "A"], species_registry=sr, autoregister_species=True)
+    c = {'A': 2., 'B': 20.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1/5., quotient)
+    assert formula == ' [A]^2  / [B]'
 
 
 def test_determine_reaction_rate():
@@ -593,6 +728,20 @@ def test_determine_reaction_rate():
 
     result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
     assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
+
+
+    # Reaction A <-> B + C
+    rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 20})
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.)
+
+    # Make reversible
+    rxn.kinetics.set_parameters({"kR": 2.})
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
 
 
 
@@ -631,7 +780,6 @@ def test_step_simulation():
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn.kinetics.parameters["reversible"] == False
 
-
     # Euler approx
     result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
     assert result[0] == {'A': -3, 'B': 3}
@@ -651,6 +799,24 @@ def test_step_simulation():
     assert result[1] == 30    # Rate = 3. * 10.
 
 
+    # Reaction : A + B <-> C
+    rxn = Reaction(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 5., "kR": 2})
+
+    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == 5*10*50 - 2 * 20        # 2460
+
+
+    # Reaction : C <-> A + B
+    rxn = Reaction(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 2., "kR": 5.})
+
+    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == -2460
+
+
 
 def test_find_equilibrium_conc():
     sr = SpeciesRegistry()
@@ -658,7 +824,7 @@ def test_find_equilibrium_conc():
     # Reaction : A <-> C
     rxn = Reaction(reactants="A", products="C", species_registry=sr, autoregister_species=True,
                    kinetic_parameters={"kF": 3, "kR": 2})
-    assert rxn.elementary == True
+    assert rxn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn.kinetics.law == "mass action"
     assert rxn.kinetics.parameters["kF"] == 3
     assert rxn.kinetics.parameters["kR"] == 2
@@ -666,10 +832,13 @@ def test_find_equilibrium_conc():
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 36)
     assert np.allclose(result["C"], 54)
+    rxn.stoichiometry.consistency_checker(conc_before={"A":80., "C":10.}, conc_after={"A":36., "C":54.})
+
 
     # Only the forward reaction
     rxn = Reaction(reactants="A", products="C", species_registry=sr, autoregister_species=True,
                    kinetic_parameters={"kF": 3})
+    assert rxn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn.kinetics.parameters["reversible"] == False
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 0)
@@ -678,6 +847,62 @@ def test_find_equilibrium_conc():
     # Only the reverse reaction
     rxn = Reaction(reactants="A", products="C", species_registry=sr, autoregister_species=True,
                    kinetic_parameters={"kR": 2})
+    assert rxn.analytic_solution_family == "ONE_TO_ONE"
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 90)
     assert np.allclose(result["C"], 0)
+
+    # Reaction X + Y <-> Z
+    rxn = Reaction(reactants=["X", "Y"], products="Z", species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 5, "kR": 2})
+    assert rxn.analytic_solution_family == "TWO_TO_ONE"
+    result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
+    expected_eq = [0.2948774087575341, 40.294877408757536, 29.705122591242464]
+    assert np.allclose(result["X"], expected_eq[0])
+    assert np.allclose(result["Y"], expected_eq[1])
+    assert np.allclose(result["Z"], expected_eq[2])
+    rxn.stoichiometry.consistency_checker(conc_before={"X":10., "Y": 50, "Z": 20.},
+                                          conc_after={"X":expected_eq[0], "Y": expected_eq[1], "Z": expected_eq[2]})
+
+    with pytest.raises(Exception):
+        rxn.find_equilibrium_conc(conc_dict={"X":10., "Z":20.})     # Missing reactant concentration
+
+    with pytest.raises(Exception):
+        rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50})     # Missing product concentration
+
+
+    # 2 A <-> C
+    rxn = Reaction(reactants=["A", "A"], products="C", species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 3., "kR": 2.})
+    assert rxn.analytic_solution_family == "TWO_TO_ONE"
+    result = rxn.find_equilibrium_conc(conc_dict={"A":200., "C": 40.})
+    expected_eq = [9.49568869375716, 135.2521556531214]
+    assert np.allclose(result["A"], expected_eq[0])
+    assert np.allclose(result["C"], expected_eq[1])
+    rxn.stoichiometry.consistency_checker(conc_before={"A":200., "C": 40.},
+                                          conc_after={"A":expected_eq[0], "C": expected_eq[1]})
+
+
+    # Reaction Z <-> X + Y
+    rxn = Reaction(reactants="Z", products=["X", "Y"], species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 2., "kR": 5.})
+    assert rxn.analytic_solution_family == "ONE_TO_TWO"
+    result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
+    expected_eq = [0.2948774087575341, 40.294877408757536, 29.705122591242464]
+    assert np.allclose(result["X"], expected_eq[0])
+    assert np.allclose(result["Y"], expected_eq[1])
+    assert np.allclose(result["Z"], expected_eq[2])
+    rxn.stoichiometry.consistency_checker(conc_before={"X":10., "Y": 50, "Z": 20.},
+                                          conc_after={"X":expected_eq[0], "Y": expected_eq[1], "Z": expected_eq[2]})
+
+
+    # C <-> 2 A
+    rxn = Reaction(reactants="C", products=["A", "A"], species_registry=sr, autoregister_species=True,
+                   kinetic_parameters={"kF": 2., "kR": 3.})
+    assert rxn.analytic_solution_family == "ONE_TO_TWO"
+    result = rxn.find_equilibrium_conc(conc_dict={"C": 40., "A":200.})
+
+    assert np.allclose(result["C"], 135.2521556531214)
+    assert np.allclose(result["A"], 9.49568869375716)
+    rxn.stoichiometry.consistency_checker(conc_before={"C": 40., "A":200.},
+                                          conc_after={"C": 135.2521556531214, "A": 9.49568869375716})

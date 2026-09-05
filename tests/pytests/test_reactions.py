@@ -449,7 +449,7 @@ def test_extract_reactant_labels_ReactionDecomposition():
     assert rxn.extract_reactant_ids() == ["A"]
 
 
-def test_extract_product_labels_ReactionDecomposition():
+def test_extract_product_ids_ReactionDecomposition():
     rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
     assert rxn.extract_product_ids() == ["B", "C"]
 
@@ -457,7 +457,7 @@ def test_extract_product_labels_ReactionDecomposition():
     assert rxn.extract_product_ids() == ["F"]
 
 
-def test_extract_chemicals_in_reaction_ReactionDecomposition():
+def test_extract_species_in_reaction_ReactionDecomposition():
     rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
@@ -517,9 +517,9 @@ def test_find_equilibrium_conc_ReactionDecomposition():
 
     # C <-> 2 A
     rxn = ReactionDecomposition(reactant="C", products=["A", "A"], kF=2., kR=3.)
-    result = rxn.find_equilibrium_conc(conc_dict={"A":200., "C": 40.})
-    assert np.allclose(result["A"], 9.49568869375716)
+    result = rxn.find_equilibrium_conc(conc_dict={"C": 40., "A":200.})
     assert np.allclose(result["C"], 135.2521556531214)
+    assert np.allclose(result["A"], 9.49568869375716)
 
 
 

@@ -564,7 +564,7 @@ class Diagnostics:
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
         :param rxn_index:       The integer index (0-based) to identify the reaction of interest
-        :param conc_arr_before: Numpy array with the concentrations of ALL the chemicals (whether involved
+        :param conc_arr_before: Numpy array with the concentrations of ALL the species (whether involved
                                     in the reaction or not), in their index order, BEFORE the reaction step
         :param conc_arr_after:  Same as above, but after the reaction
                                 TODO: maybe also accept a Panda's dataframe row
@@ -606,11 +606,11 @@ class Diagnostics:
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the chemicals (whether involved
+        :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the species (whether involved
                                 in the reaction or not), in their index order,
                                 as a result of JUST the reaction of interest
         :return:            True if the change in reactant/product concentrations is consistent with the
-                                reaction's stoichiometry, or False otherwise
+                                reaction's stoichiometry, or False otherwise.
                                 Note: if any of the elements of the passed Numpy array is NaN, then True is returned
                                       (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
                                       check because of that)
@@ -667,7 +667,7 @@ class Diagnostics:
         """
         # TODO: maybe make it also accept as inputs a reaction object and a Pandas dataframe
         if self.diagnostic_rxn_data == {}:
-            print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
+            print("stoichiometry_checker_entire_run(): WARNING *** In order to run stoichiometry_checker_entire_run(), "
                   "the diagnostics must be turned enabled prior to the simulation run!")
             return False
 
