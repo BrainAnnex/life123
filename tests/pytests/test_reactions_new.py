@@ -8,9 +8,9 @@ from tests.utilities.comparisons import *
 
 
 
-########################  class Stoichiometry  ########################
+############################  class Stoichiometry  ############################
 
-def test_constructor_Stoichiometry():
+def test_CONSTRUCTOR_Stoichiometry():
 
     # Reaction R -> P
     st = Stoichiometry(coefficients={"R": -1, "P": 1})
@@ -38,8 +38,64 @@ def test_reaction_pattern():
 
 
 
+def test_get_reaction_vector():
+    # Reaction  2A + 3B + 2 E + F <--> 4C  + 5D  + 2 E + F
+    st = Stoichiometry({"A": -2, "B": -3, "E": 0, "F": 0, "C": 4, "D": 5})
+    assert st.get_reaction_vector() == {"A": -2, "B": -3, "C": 4, "D": 5}
 
-########################  class Kinetics  ########################
+
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D", "R", "P", "Q", "S", "E", "F"])
+
+    rxn = Reaction(reactants="R", products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "P": 1}
+
+    rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "S": -1, "P": 1}
+
+    rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "P": 1, "Q": 1}
+
+    rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
+                   species_registry=sr, kinetics_type="Michaelis-Menten")
+    assert rxn.stoichiometry.get_reaction_vector() == {"S": -1, "P": 1}
+
+    rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+                   species_registry=sr, kinetics_type="custom")
+    assert rxn.stoichiometry.get_reaction_vector() == {"A": -2, "B":- 2, "P": 3, "Q": 1}
+
+
+    # Reaction  2A + 3B + 2 E + F <--> 4C  + 5D  + 2 E + F
+    rxn = Reaction(reactants=["E", "A", "F", (3, "B"), "E", "A"], products=[(4, "C"), "F", (2, "E"), (5, "D")],
+                   species_registry=sr, kinetics_type="custom")
+    assert rxn.stoichiometry.get_reaction_vector() == {"A": -2, "B": -3, "C": 4, "D": 5}
+
+
+
+def test_get_split_reaction_vector():
+    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
+
+    rxn = Reaction(reactants="R", products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1}, {"P": 1})
+
+    rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1, "S": -1}, {"P": 1})
+
+    rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1}, {"P": 1, "Q": 1})
+
+    rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
+                   species_registry=sr, kinetics_type="Michaelis-Menten")
+    assert rxn.stoichiometry.get_split_reaction_vector() == ({"S": -1}, {"P": 1})
+
+    rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+                   species_registry=sr, kinetics_type="custom")
+    assert rxn.stoichiometry.get_split_reaction_vector() == ({"A": -2, "B":- 2}, {"P": 3, "Q": 1})
+
+
+
+
+
+############################  class Kinetics  ############################
 
 def test_constructor_Kinetics():
     k = Kinetics(law="mass action")
@@ -123,7 +179,7 @@ def test_consistency_checker():
     with pytest.raises(Exception):
         st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10.1})
 
-    # Reaction 0:   A + 3B <--> 4C
+    # Reaction  A + 3B <--> 4C
     st = Stoichiometry({"A": -1, "B": -3, "C": 4})
 
     st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
@@ -131,7 +187,7 @@ def test_consistency_checker():
     with pytest.raises(Exception):
         st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 39.9})
 
-    # Reaction 0:   2A + 3B <--> 4C + 5D
+    # Reaction  2A + 3B <--> 4C + 5D
     st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5})
 
     st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0, "D": 0}, conc_after={"A": 0, "B": 0, "C": 0, "D": 0})
@@ -146,10 +202,9 @@ def test_consistency_checker():
 
 
 
+############################  class ReactionThermodynamics  ############################
 
-########################  class ReactionThermodynamics  ########################
-
-def test_constructor_ReactionThermodynamics():
+def test_CONSTRUCTOR_ReactionThermodynamics():
     rt = ReactionThermodynamics(delta_H=3, delta_S=-200, delta_G=1000, K=0.1)
     assert rt.delta_H == 3
     assert rt.delta_S == -200
@@ -431,51 +486,12 @@ def test_get_signed_stoichiometric_coefficients():
 
 
 
-def test_get_reaction_vector():
-    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
-
-    rxn = Reaction(reactants="R", products="P", species_registry=sr)
-    assert rxn.get_reaction_vector() == {"R": -1, "P": 1}
-
-    rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
-    assert rxn.get_reaction_vector() == {"R": -1, "S": -1, "P": 1}
-
-    rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
-    assert rxn.get_reaction_vector() == {"R": -1, "P": 1, "Q": 1}
-
-    rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
-                   species_registry=sr, kinetics_type="Michaelis-Menten")
-    assert rxn.get_reaction_vector() == {"S": -1, "P": 1}
-
-    rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
-                   species_registry=sr, kinetics_type="custom")
-    assert rxn.get_reaction_vector() == {"A": -2, "B":- 2, "P": 3, "Q": 1}
 
 
 
-def test_get_split_reaction_vector():
-    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
+############################  class Reaction  ############################
 
-    rxn = Reaction(reactants="R", products="P", species_registry=sr)
-    assert rxn.get_split_reaction_vector() == ({"R": -1}, {"P": 1})
-
-    rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
-    assert rxn.get_split_reaction_vector() == ({"R": -1, "S": -1}, {"P": 1})
-
-    rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
-    assert rxn.get_split_reaction_vector() == ({"R": -1}, {"P": 1, "Q": 1})
-
-    rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
-                   species_registry=sr, kinetics_type="Michaelis-Menten")
-    assert rxn.get_split_reaction_vector() == ({"S": -1}, {"P": 1})
-
-    rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
-                   species_registry=sr, kinetics_type="custom")
-    assert rxn.get_split_reaction_vector() == ({"A": -2, "B":- 2}, {"P": 3, "Q": 1})
-
-
-
-def test_ReactionElementary():
+def test_CONSTRUCTOR_Reaction():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     rxn = Reaction(reactants="A", products="B", species_registry=sr,

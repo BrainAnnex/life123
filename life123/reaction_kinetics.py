@@ -724,25 +724,28 @@ class ReactionKinetics:
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
 
-        :param kF:
-        :param kR:
-        :param A0:
-        :param P0:
-        :return:
-        """
+        :param kF:  The reaction's forward rate constant
+        :param kR:  The reaction's reverse rate constant
+        :param A0:  Initial concentration of the reactant species `A`
+        :param P0:  Initial concentration of the product species `P`
+        :return:    A dictionary with two keys, `A` and `P`, containing their equilibrium concentrations.
+                        EXAMPLE:    {'A': 24.0, 'P': 1.8}
         """
         # Reverse kF and kR, to obtain the reversed reaction 2 P <-> A
-        result = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=kR, kR=kF, A0=A0, P0=P0)
+        result = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=kR, kR=kF, A0=P0, P0=A0)
 
         return {"A": result["P"], "P": result["A"]}     # Reverse `A` and `P`, because the above function
                                                         # was in terms of 2 A <-> P
         """
+        # ALTERNATIVE WAY (successfully tested)
         # Note: the confusing arguments "Q0=P0, p=2, q=2" are a hack to use "Generalization 2" of _compute_equilibrium_conc_first_order()
         # TODO: ditch the helper function, and do a direct computation
         result = ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=kR,
                                                                         A0=A0, a=1,
                                                                         P0=P0, Q0=P0, p=2, q=2)
+        
         del result["Q"]
+        """
         return result
 
 
@@ -755,11 +758,12 @@ class ReactionKinetics:
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
 
-        :param kF:
-        :param kR:
-        :param A0:
-        :param P0:
-        :return:    A dict with two keys, `A` and `P`
+        :param kF:  The reaction's forward rate constant
+        :param kR:  The reaction's reverse rate constant
+        :param A0:  Initial concentration of the reactant species `A`
+        :param P0:  Initial concentration of the product species `P`
+        :return:    A dictionary with two keys, `A` and `P`, containing their equilibrium concentrations.
+                        EXAMPLE:    {'A': 24.0, 'P': 1.8}
         """
         # Note: the confusing arguments "B0=A0, a=2, b=2" are a hack to use "Generalization 2" of _compute_equilibrium_conc_first_order()
         # TODO: ditch the helper function, and do a direct computation

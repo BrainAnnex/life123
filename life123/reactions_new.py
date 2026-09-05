@@ -109,6 +109,51 @@ class Stoichiometry:
 
 
 
+    def get_reaction_vector(self) -> {}:
+        """
+        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
+        we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
+        as:  y' - y
+
+        The component of (y′ − y) corresponding to species s is  y′_s − y_s,
+        i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
+        and its stoichiometric coefficient in the reactant complex y (the left-hand side of the equation).
+        This difference is the net number of molecules of s
+        produced with each occurrence of the reaction y → y′.
+
+        ~~~
+        EXAMPLE: for reaction  A + E -> 2P + Q + E
+                 the reactant complex y is:     A + E
+                 while product complex y′ is:   2P + Q + E
+                 and the corresponding reaction vector y′ - y is:  2P + Q - A
+                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
+        ~~~
+
+        :return:    The non-zero components of the reaction vector,
+                        written as a dict mapping of species id to its component value
+        """
+        # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
+        # omitting all terms with a zero value
+        d = {k:v
+                for k,v in self.coefficients.items()
+                if v != 0}
+
+        return d
+
+
+
+    def get_split_reaction_vector(self) -> tuple:
+        """
+        Similar to get_reaction_vector(), but it separately returns the reactants and products in a pair
+
+        :return:    The pair (reactants portion , products portion)
+        """
+        coeffs = self.coefficients
+        reactants = {k:v  for k,v in coeffs.items() if v < 0}
+        products = {k:v   for k,v in coeffs.items() if v > 0}
+        return (reactants, products)
+
+
 
 
 
@@ -628,53 +673,6 @@ class Reaction:
 
 
 
-    def get_split_reaction_vector(self) -> {}:
-        """
-
-        :return:
-        """
-        vec = self.stoichiometry.to_dict()
-        reactants = {k:v  for k,v in vec.items() if v < 0}
-        products = {k:v   for k,v in vec.items() if v > 0}
-        return (reactants, products)
-
-
-
-    def get_reaction_vector(self) -> {}:
-        """
-        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
-        we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
-        as:  y' - y
-
-        The component of (y′ − y) corresponding to species s is  y′_s − y_s,
-        i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
-        and its stoichiometric coefficient in the reactant complex y (the left-hand side of the equation).
-        This difference is the net number of molecules of s
-        produced with each occurrence of the reaction y → y′.
-
-        ~~~
-        EXAMPLE: for reaction  A + E -> 2P + Q + E
-                 the reactant complex y is:     A + E
-                 while product complex y′ is:   2P + Q + E
-                 and the corresponding reaction vector y′ - y is:  2P + Q - A
-                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
-        ~~~
-
-        :return:    The non-zero components of the reaction vector,
-                        written as a dict mapping of species id to its component value
-        """
-        # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
-        # omitting all terms with a zero value
-        # TODO: move to Stoichiometry class
-        # TODO: don't recompute the coefficients; just extract them from the saved value!
-        d = {k:v
-                for k,v in self.get_signed_stoichiometric_coefficients(reactants=self.reactants, products=self.products).items()
-                if v != 0}
-
-        return d
-
-
-
     def extract_rxn_properties(self) -> dict:
         """
         Create a dictionary with the numerical properties of the given reaction
@@ -1062,7 +1060,7 @@ class Reaction:
         coeffs = [0, 0, 0, 0]       # For general reaction A + B <-> P + Q
         concs  = [0., 0., 0., 0.]   # For A0, B0, P0, Q0
 
-        vec_r, vec_p = self.get_split_reaction_vector()
+        vec_r, vec_p = self.stoichiometry.get_split_reaction_vector()
         #print("reaction vectors (reactants) (products): ", vec_r, vec_p)
 
         name_map = {}   # To map standard names into actual species names
