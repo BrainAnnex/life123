@@ -533,12 +533,12 @@ def test_CONSTRUCTOR_Reaction():
     assert rxn.active == True
     assert rxn.kinetics.law == "MM"
     assert rxn.kinetics.parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 5, 'kM': 0.7, 'kcat': 5}
-    assert np.isclose(rxn.kinetics.parameters["k1_F"], 10.)
-    assert np.isclose(rxn.kinetics.parameters["k1_R"], 2.)
-    assert np.isclose(rxn.kinetics.parameters["k2_F"], 5.)
+    assert np.allclose(rxn.kinetics.parameters["k1_F"], 10.)
+    assert np.allclose(rxn.kinetics.parameters["k1_R"], 2.)
+    assert np.allclose(rxn.kinetics.parameters["k2_F"], 5.)
     print(rxn.kinetics.parameters["kM"])
-    assert np.isclose(rxn.kinetics.parameters["kM"], 0.7)     # (rxn.k2_F + rxn.k1_R) / rxn.k1_F)
-    assert np.isclose(rxn.kinetics.parameters["kcat"], 5.)    # Equal to k2_F
+    assert np.allclose(rxn.kinetics.parameters["kM"], 0.7)     # (rxn.k2_F + rxn.k1_R) / rxn.k1_F)
+    assert np.allclose(rxn.kinetics.parameters["kcat"], 5.)    # Equal to k2_F
 
     assert rxn.thermodynamics.delta_H is None
     assert rxn.thermodynamics.delta_S == 100
@@ -631,7 +631,6 @@ def test_extract_reactant_ids():
     rxn = Reaction(reactants="A", products="B", species_registry=sr)
     assert rxn.extract_reactant_ids() == ["A"]
 
-
     rxn = Reaction(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
     assert rxn.extract_reactant_ids() == ["A", "B"]
 
@@ -641,9 +640,11 @@ def test_extract_reactant_ids():
     rxn = Reaction(reactants=[(2, "R")], products="C", species_registry=sr, autoregister_species=True)
     assert rxn.extract_reactant_ids() == ["R"]
 
-
     rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True)
     assert rxn.extract_reactant_ids() == ["A"]
+
+    rxn = Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_reactant_ids() == ["S", "E"]
 
 
 
@@ -677,6 +678,10 @@ def test_extract_product_ids():
     rxn = Reaction(reactants="A", products=["F", "F"], species_registry=sr, autoregister_species=True)
     assert rxn.extract_product_ids() == ["F"]
 
+    rxn = Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_product_ids() == ["P", "E"]
+
+
 
 def test_extract_products():
     sr = SpeciesRegistry(ids=["A", "B"])
@@ -704,6 +709,10 @@ def test_extract_species_in_reaction():
 
     rxn = Reaction(reactants="A", products=["B", "C"], species_registry=sr)
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
+
+    rxn = Reaction(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_species_in_reaction() == {"S", "P", "E"}     # "ES"
+
 
 
 def test_reaction_quotient():

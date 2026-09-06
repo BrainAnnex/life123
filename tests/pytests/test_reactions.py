@@ -558,17 +558,17 @@ def test_initialize_ReactionEnzyme():
 
 
 
-def test_extract_reactant_labels_ReactionEnzyme():
+def test_extract_reactant_ids_ReactionEnzyme():
     rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
     assert rxn.extract_reactant_ids() == ["S", "E"]
 
 
-def test_extract_product_labels_ReactionEnzyme():
+def test_extract_product_ids_ReactionEnzyme():
     rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
     assert rxn.extract_product_ids() == ["P", "E"]
 
 
-def test_extract_chemicals_in_reaction_ReactionEnzyme():
+def test_extract_species_in_reaction_ReactionEnzyme():
     rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
     assert rxn.extract_species_in_reaction() == {"S", "P", "E", "ES"}
 

@@ -1150,39 +1150,39 @@ def test_norm_C():
     assert result == 0
 
     result = rd.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([4]))
-    assert np.isclose(result, 4/3)
+    assert np.allclose(result, 4/3)
 
     result = rd.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-2]))
     assert result == 0
 
     result = rd.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-5]))
-    assert np.isclose(result, 5/4)
+    assert np.allclose(result, 5/4)
 
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
     delta =    np.array([0.5, 1, 4, -2, -5])
     result = rd.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3)
+    assert np.allclose(result, 4/3)
 
     # A scenario where the 'prev' and 'baseline' values are almost identical
     prev = np.append(prev, 3)
     baseline = np.append(baseline, 2.999999999)
     delta = np.append(delta, 8)
     result = rd.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3)
+    assert np.allclose(result, 4/3)
 
     # A scenario where the 'delta' dwarfs the change between 'prev' and 'baseline'
     prev = np.append(prev, 10)
     baseline = np.append(baseline, 10.05)
     delta = np.append(delta, -9)
     result = rd.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3)
+    assert np.allclose(result, 4/3)
 
     prev = np.append(prev, 10)
     baseline = np.append(baseline, 10.2)
     delta = np.append(delta, -9)
     result = rd.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 45)
+    assert np.allclose(result, 45)
 
 
 
@@ -1193,4 +1193,4 @@ def test_norm_D():
     baseline = np.array([ 12.99244738,  31.04428765,  55.96326497,  43.91117372, 956.08882628])
     delta =    np.array([-2.56160549,   -0.03542113,   2.59702662,   1.36089356,  -1.36089356])
     result = rd.norm_D(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 37.64942285399873)
+    assert np.allclose(result, 37.64942285399873)
