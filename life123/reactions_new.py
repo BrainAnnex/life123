@@ -1,26 +1,68 @@
 from __future__ import annotations      # To facilitate type annotations
 import numpy as np
 from typing import Set, Mapping
-from dataclasses import dataclass, field, fields, asdict
+from dataclasses import dataclass, field, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
-from life123.species_registry import Species, SpeciesRegistry
+from life123.species_registry import SpeciesRegistry
 from life123.units import show_standard_units, convert, K, C
-
 
 
 
 @dataclass(frozen=True)
 class Stoichiometry:
     """
-    Mapping species `id` to its signed stoichiometric coefficient,
+    Managing the SIGNED stoichiometric coefficients,
     for all species in the reaction.
-    Reaction reagents have negative signs, and products have positive signs.
-    (including species that have a net coefficient of zero, such as catalysts that appear on both sides)
 
-    EXAMPLE:  {"A": -1, "B": 1, "E": 0}   for the reaction A + E -> B + E
+    Reaction reagents have negative signs, and products have positive signs.
+
+    Catalysts (which would have a net coefficient of zero) are stored separately
     """
-    coefficients: Mapping[str, int]
+
+    # EXAMPLES below are for the reaction A + E -> B + E
+
+    vector: Mapping[str, int]
+    # Signed stoichiometric reaction vector.
+    # Maps species id -> signed stoichiometric coefficient.
+    # Reactants are negative; products are positive.
+    # Catalysts are not represented here, since their net coefficient is zero.
+    # EXAMPLE: {"A": -1, "B": 1}
+
+    catalysts : list[str] = field(default_factory=list)
+    # EXAMPLE: ["E"]    (list of species that have a net coefficient of zero in the reaction vector)
+
+
+    def __post_init__(self) -> None:
+        """
+        Automatically invoked by the constructor, just before it terminates.
+
+        Enforce non zero values in argument `coefficients`
+
+        :return: None
+        """
+        for sp, coeff in self.vector.items():
+            assert coeff != 0, f"Stoichiometry instantiation: coefficients cannot be zero (species \"{sp}\") - " \
+            f"if you want to specify an enzyme/catalyst, pass it as a list to the argument `catalysts`"
+
+
+
+    def to_dict(self) -> dict:
+        """
+        Return a dictionary form of the stoichiometry,
+        mapping all species id's to their SIGNED stoichiometric coefficients;
+        catalysts carry a net signed stoichiometric coefficient of zero
+
+        :return:    A dictionary with the mapping of the species id's
+                    to their signed stoichiometric coefficients
+        """
+        #d = asdict(self)
+        #return d.get("coefficients")
+        d = dict(self.vector).copy()  # Clone the dictionary
+        for cat in self.catalysts:
+            d[cat] = 0
+
+        return d
 
 
 
@@ -30,56 +72,102 @@ class Stoichiometry:
         Catalysts, if present, are counted separated, and NOT included under either "reactants" or "products"
         ~~~
         EXAMPLES:
-        {"A": -1, "B": -1, "C": 1} , i.e. the reaction A + B -> C, leads to (2, 1, 0)
-
-        {"A": -1, "B": 1, "E": 0}, i.e. the reaction A + E -> B + E, leads to (1, 1, 1)
+            The reaction A + B -> C      gives (2, 1, 0)
+            The reaction A + E -> B + E  gives (1, 1, 1)
         ~~~
 
-        :return:    A triplet of integers
+        :return:    A triplet of integers (n_reactants, n_products, n_catalysts)
         """
-        values = self.coefficients.values()     # EXAMPLE: dict_values([-1, 1])
+        values = self.vector.values()     # EXAMPLE: dict_values([-1, 1])
 
         negative_count = sum(v < 0 for v in values)
         positive_count = sum(v > 0 for v in values)
-        zero_count     = sum(v == 0 for v in values)
+        zero_count     = len(self.catalysts)
 
         return (negative_count, positive_count, zero_count)
 
 
 
-    def to_dict(self) -> dict:
+    def get_reaction_vector(self) -> dict:
         """
-        Return a dictionary form of the stoichiometry.
+        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
+        we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
+        as:  y' - y
 
-        :return:    A dictionary with the mapping of the species id's
-                    to their signed stoichiometric coefficients
+        Note that catalysts, if any, are NOT included.
+
+        The component of (y′ − y) corresponding to species s is  y′_s − y_s,
+        i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
+        and its stoichiometric coefficient in the reactant complex y (the left-hand side of the equation).
+        This difference is the net number of molecules of s
+        produced with each occurrence of the reaction y → y′.
+
+        Other terms for reaction vectors: "reaction difference vector", or "reaction increment"
+        ~~~
+        EXAMPLE: for reaction  A + E -> 2P + Q + E
+                 the reactant complex y is:     A + E
+                 while product complex y′ is:   2P + Q + E
+                 and the corresponding reaction vector y′ - y is:  2P + Q - A
+                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
+        ~~~
+
+        :return:    The non-zero components of the reaction vector,
+                        written as a dict mapping of species id to its component value
         """
-        d = asdict(self)
-        return d.get("coefficients")
+        # Note that catalysts, if any, are NOT included
+        return dict(self.vector)
+
+
+
+    def get_reaction_complexes(self) -> tuple:
+        """
+        Similar to get_reaction_vector(), but it separates the reactants and products in a pair.
+        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
+        a reaction is:  reactant complex -> product complex
+        ~~~
+        EXAMPLE: for reaction  A + E -> 2P + Q + E
+                 the reactant complex is:     A + E
+                 while product complex is:   2P + Q + E
+                 So, this function will return  ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
+        ~~
+        :return:    The pair (reactants complex , products complex)
+        """
+        coeffs = self.vector
+        reactants = {k:-v  for k,v in coeffs.items() if v < 0}
+        for cat in self.catalysts:
+            reactants[cat] = 1
+
+        products = {k:v    for k,v in coeffs.items() if v > 0}
+        for cat in self.catalysts:
+            products[cat] = 1
+
+        return (reactants, products)
 
 
 
     def consistency_checker(self, conc_before :dict, conc_after :dict) -> None:
         """
+        Investigate the change in the concentration of the species involved in the reaction,
+        to ascertain whether the change is consistent with the reaction's stoichiometry.
 
-        :param conc_before:
-        :param conc_after:
+        :param conc_before: A dict that maps species `id` to its initial concentration
+        :param conc_after:  A dict that maps species `id` to its final concentration
         :return:            None.  Raise an Exception if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry
         """
-        assert len(conc_before) == len(self.coefficients), \
+        assert len(conc_before) == len(self.vector), \
             f"consistency_checker(): the argument `conc_before` must contain exactly the same keys " \
-            f"as the species in this reaction: {list(self.coefficients.keys())}"
+            f"as the species in this reaction: {list(self.vector.keys())}"
 
-        assert len(conc_after) == len(self.coefficients), \
+        assert len(conc_after) == len(self.vector), \
             f"consistency_checker(): the argument `conc_after` must contain exactly the same keys " \
-            f"as the species in this reaction: {list(self.coefficients.keys())}"
+            f"as the species in this reaction: {list(self.vector.keys())}"
 
         delta_conc = {}
         for sp,conc in conc_before.items():
-            assert sp in self.coefficients, \
+            assert sp in self.vector, \
                 f"consistency_checker(): the species \"{sp}\" appearing in the argument `conc_before` " \
-                f"is not part of the reaction: {self.coefficients}"
+                f"is not part of the reaction: {self.vector}"
 
             assert sp in conc_after, \
                 f"consistency_checker(): the species \"{sp}\" appearing in the argument `conc_before` " \
@@ -97,62 +185,15 @@ class Stoichiometry:
         # Loop over all the values of delta_conc,
         # and make sure they are all the same multiple of the corresponding reaction coefficients
         for sp,conc in delta_conc.items():
-            if self.coefficients[sp] == 0:
+            if self.vector[sp] == 0:
                 continue
             if ratio is None:
-                ratio = delta_conc[sp] / self.coefficients[sp]
+                ratio = delta_conc[sp] / self.vector[sp]
                 #print("ratio: ", ratio)
             else:
-                assert np.allclose(delta_conc[sp], ratio * self.coefficients[sp]), \
+                assert np.allclose(delta_conc[sp], ratio * self.vector[sp]), \
                     f"consistency_checker(): the delta concentration {delta_conc} " \
-                    f"is incompatible with the reaction's stoichiometry of {self.coefficients}"
-
-
-
-    def get_reaction_vector(self) -> {}:
-        """
-        Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
-        we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
-        as:  y' - y
-
-        The component of (y′ − y) corresponding to species s is  y′_s − y_s,
-        i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
-        and its stoichiometric coefficient in the reactant complex y (the left-hand side of the equation).
-        This difference is the net number of molecules of s
-        produced with each occurrence of the reaction y → y′.
-
-        ~~~
-        EXAMPLE: for reaction  A + E -> 2P + Q + E
-                 the reactant complex y is:     A + E
-                 while product complex y′ is:   2P + Q + E
-                 and the corresponding reaction vector y′ - y is:  2P + Q - A
-                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
-        ~~~
-
-        :return:    The non-zero components of the reaction vector,
-                        written as a dict mapping of species id to its component value
-        """
-        # Form a new dict from the dict returned by get_signed_stoichiometric_coefficients(),
-        # omitting all terms with a zero value
-        d = {k:v
-                for k,v in self.coefficients.items()
-                if v != 0}
-
-        return d
-
-
-
-    def get_split_reaction_vector(self) -> tuple:
-        """
-        Similar to get_reaction_vector(), but it separately returns the reactants and products in a pair
-
-        :return:    The pair (reactants portion , products portion)
-        """
-        coeffs = self.coefficients
-        reactants = {k:v  for k,v in coeffs.items() if v < 0}
-        products = {k:v   for k,v in coeffs.items() if v > 0}
-        return (reactants, products)
-
+                    f"is incompatible with the reaction's stoichiometry of {self.vector}"
 
 
 
@@ -497,7 +538,8 @@ class Reaction:
         self.reactants = None       # A list of pairs (stoichiometry, chemical label)
         self.products = None        # A list of pairs (stoichiometry, chemical label)
         self.stoichiometry = None   # A "Stoichiometry" object
-                                    #   mapping species `id` to its signed stoichiometric coefficient,
+                                    #   managing all the stoichiometric coefficients
+                                    #   (incl. for catalysts, if applicable)
                                     #   for all species in the reaction
 
         self.analytic_solution_family = None    # Available values: "ONE_TO_ONE", "ONE_TO_TWO", "TWO_TO_ONE"
@@ -543,7 +585,8 @@ class Reaction:
 
 
         c = self.get_signed_stoichiometric_coefficients(reactants=reactant_list, products=product_list)
-        self.stoichiometry = Stoichiometry(c)
+        self.stoichiometry = Stoichiometry(vector= {k: v for k,v in c.items() if v != 0},
+                                           catalysts =    [k  for k,v in c.items() if v == 0])
 
 
         # TODO: move to a separate function
@@ -707,7 +750,7 @@ class Reaction:
         :return:    A dictionary mapping the id's of the species in this reaction
                         to their SIGNED stoichiometric coefficients in this reaction
         """
-        # TODO: maybe move to class Stoichiometry (and turn it from dataclass to regular class)
+        # TODO: maybe move to class Stoichiometry (and turn it from dataclass to regular class, to allow multiple ways to initialize)
         coeffs = {}
 
         for c, species in reactants:        # Example: (2, "A")
@@ -1107,7 +1150,7 @@ class Reaction:
         coeffs = [0, 0, 0, 0]       # For general reaction A + B <-> P + Q
         concs  = [0., 0., 0., 0.]   # For A0, B0, P0, Q0
 
-        vec_r, vec_p = self.stoichiometry.get_split_reaction_vector()
+        reaction_vector = self.stoichiometry.get_reaction_vector()  # Note: catalysts will NOT appear
         #print("reaction vectors (reactants) (products): ", vec_r, vec_p)
 
         name_map = {}   # To map standard names into actual species names
@@ -1115,7 +1158,10 @@ class Reaction:
 
         # Process reactants (which will set the first element or first two, in coeffs and concs)
         index = 0
-        for sp, c in vec_r.items():
+        for sp, c in reaction_vector.items():
+            if c > 0:
+                continue    # Skip the products
+
             coeffs[index] = -c      # Negative of stoichiometric coefficient because it's a reactant
             conc = conc_dict.get(sp)
             assert conc is not None, f"find_equilibrium_conc(): unable to proceed because the " \
@@ -1127,7 +1173,10 @@ class Reaction:
 
         # Process products (which will set the next element or two, in coeffs and concs)
         index = 2
-        for sp, c in vec_p.items():
+        for sp, c in reaction_vector.items():
+            if c < 0:
+                continue    # Skip the reactants
+
             coeffs[index] = c
             conc = conc_dict.get(sp)
             assert conc is not None, f"find_equilibrium_conc(): unable to proceed because the " \

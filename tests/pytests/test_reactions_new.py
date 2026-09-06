@@ -13,34 +13,58 @@ from tests.utilities.comparisons import *
 def test_CONSTRUCTOR_Stoichiometry():
 
     # Reaction R -> P
-    st = Stoichiometry(coefficients={"R": -1, "P": 1})
-    assert st.coefficients == {"R": -1, "P": 1}
+    st = Stoichiometry(vector={"R": -1, "P": 1})
+    assert st.vector == {"R": -1, "P": 1}
+    assert st.catalysts == []
 
     # Reaction R -> P + Q
-    st = Stoichiometry(coefficients={"R": -1, "P": 1, "Q": 1})
-    assert st.coefficients == {"R": -1, "P": 1, "Q": 1}
+    st = Stoichiometry(vector={"R": -1, "P": 1, "Q": 1})
+    assert st.vector == {"R": -1, "P": 1, "Q": 1}
+
+    # Reaction S + E -> P + E
+    st = Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert st.vector == {"S": -1, "P": 1}
+    assert st.catalysts == ["E"]
+
+
+    with pytest.raises(Exception):
+        Stoichiometry(vector={"R": -1, "P": 1, "E": 0})    # Zero coefficient
+
+
+
+def test_to_dict():
+     # Reaction R -> P
+    st = Stoichiometry(vector={"R": -1, "P": 1})
+    assert st.to_dict() == {"R": -1, "P": 1}
+
+    # Reaction R -> P + Q
+    st = Stoichiometry(vector={"R": -1, "P": 1, "Q": 1})
+    assert st.to_dict() == {"R": -1, "P": 1, "Q": 1}
+
+    # Reaction A + E -> B + E
+    st = Stoichiometry(vector={"A": -1, "B": 1}, catalysts=["E"])
+    assert st.to_dict() == {"A": -1, "B": 1, "E": 0}
 
 
 
 def test_reaction_pattern():
-
     # Reaction R -> P
-    st = Stoichiometry(coefficients={"R": -1, "P": 1})
+    st = Stoichiometry(vector={"R": -1, "P": 1})
     assert st.reaction_pattern() == (1, 1, 0)
 
     # Reaction R -> P + Q
-    st = Stoichiometry(coefficients={"R": -1, "P": 1, "Q": 1})
+    st = Stoichiometry(vector={"R": -1, "P": 1, "Q": 1})
     assert st.reaction_pattern() == (1, 2, 0)
 
     # Reaction A + E -> B + E
-    st = Stoichiometry(coefficients={"A": -1, "B": 1, "E": 0})
+    st = Stoichiometry(vector={"A": -1, "B": 1}, catalysts=["E"])
     assert st.reaction_pattern() == (1, 1, 1)
 
 
 
 def test_get_reaction_vector():
     # Reaction  2A + 3B + 2 E + F <--> 4C  + 5D  + 2 E + F
-    st = Stoichiometry({"A": -2, "B": -3, "E": 0, "F": 0, "C": 4, "D": 5})
+    st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5}, catalysts=["E", "F"])
     assert st.get_reaction_vector() == {"A": -2, "B": -3, "C": 4, "D": 5}
 
 
@@ -71,25 +95,102 @@ def test_get_reaction_vector():
 
 
 
-def test_get_split_reaction_vector():
+def test_get_reaction_complexesr():
+    st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"])
+
+    assert st.get_reaction_complexes() == ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
+
+
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
 
     rxn = Reaction(reactants="R", products="P", species_registry=sr)
-    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1}, {"P": 1})
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1})
 
     rxn = Reaction(reactants=("R", "S"), products="P", species_registry=sr)
-    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1, "S": -1}, {"P": 1})
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1, "S": 1}, {"P": 1})
 
     rxn = Reaction(reactants="R", products=["P", "Q"], species_registry=sr)
-    assert rxn.stoichiometry.get_split_reaction_vector() == ({"R": -1}, {"P": 1, "Q": 1})
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1, "Q": 1})
 
     rxn = Reaction(reactants=("E", "S"), products=("E", "P"),
                    species_registry=sr, kinetics_type="MM")
-    assert rxn.stoichiometry.get_split_reaction_vector() == ({"S": -1}, {"P": 1})
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"S": 1, "E": 1}, {"P": 1, "E": 1})
 
     rxn = Reaction(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
                    species_registry=sr, kinetics_type="custom")
-    assert rxn.stoichiometry.get_split_reaction_vector() == ({"A": -2, "B":- 2}, {"P": 3, "Q": 1})
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"A": 2, "B": 2, "E": 1}, {"P": 3, "Q": 1, "E": 1})
+
+
+
+def test_consistency_checker():
+    # Reaction  A <-> B
+    st = Stoichiometry({"A": -1, "B": 1})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "X": 0}, conc_after={"A": 0, "B": 0})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"X": 0, "B": 0})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
+    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 40})
+
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 39.9})
+
+    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 90, "B": 10})
+
+    # Reaction 2A <-> B
+    st = Stoichiometry({"A": -2, "B": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10.1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 45})
+
+    # Reaction A + B <--> C
+    st = Stoichiometry({"A": -1, "B": -1, "C": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 9.9})
+
+    # Reaction A + 3B <--> C
+    st = Stoichiometry({"A": -1, "B": -3, "C": 1})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10.1})
+
+    # Reaction  A + 3B <--> 4C
+    st = Stoichiometry({"A": -1, "B": -3, "C": 4})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 40})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 39.9})
+
+    # Reaction  2A + 3B <--> 4C + 5D
+    st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5})
+
+    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0, "D": 0}, conc_after={"A": 0, "B": 0, "C": 0, "D": 0})
+    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120, "B": 130, "C": 60, "D": 50})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120.1, "B": 130, "C": 60, "D": 50})
+
+    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
+    with pytest.raises(Exception):
+        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100.1}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
 
 
 
@@ -128,76 +229,6 @@ def test_to_dict_Kinetics():
         Kinetics(law="random name")
 
 
-
-def test_consistency_checker():
-    # Reaction  A <-> B
-    st = Stoichiometry({"A": -1, "B": 1})
-
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0})
-
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0, "C": 0})
-
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 0, "X": 0}, conc_after={"A": 0, "B": 0})
-
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"X": 0, "B": 0})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
-    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 40})
-
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 39.9})
-
-    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 90, "B": 10})
-
-    # Reaction 2A <-> B
-    st = Stoichiometry({"A": -2, "B": 1})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0}, conc_after={"A": 0, "B": 0})
-    st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 0}, conc_after={"A": 80, "B": 10.1})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 50}, conc_after={"A": 10, "B": 45})
-    
-    # Reaction A + B <--> C
-    st = Stoichiometry({"A": -1, "B": -1, "C": 1})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
-    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 10})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 40, "C": 9.9})
-
-    # Reaction A + 3B <--> C
-    st = Stoichiometry({"A": -1, "B": -3, "C": 1})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
-    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 10.1})
-
-    # Reaction  A + 3B <--> 4C
-    st = Stoichiometry({"A": -1, "B": -3, "C": 4})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0}, conc_after={"A": 0, "B": 0, "C": 0})
-    st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 40})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 50, "C": 0}, conc_after={"A": 90, "B": 20, "C": 39.9})
-
-    # Reaction  2A + 3B <--> 4C + 5D
-    st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5})
-
-    st.consistency_checker(conc_before={"A": 0, "B": 0, "C": 0, "D": 0}, conc_after={"A": 0, "B": 0, "C": 0, "D": 0})
-    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120, "B": 130, "C": 60, "D": 50})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 120.1, "B": 130, "C": 60, "D": 50})
-
-    st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
-    with pytest.raises(Exception):
-        st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100.1}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
 
 
 
@@ -288,7 +319,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K=None)
 
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
@@ -302,7 +333,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K=5)
 
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
@@ -321,7 +352,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P'), (1, 'Q')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K=None)
 
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
@@ -335,7 +366,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P'), (1, 'Q')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=None, K=None)
 
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
@@ -349,7 +380,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P'), (1, 'Q')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
 
     assert rxn.thermodynamics.delta_H == 5
     assert rxn.thermodynamics.delta_S == -3
@@ -376,7 +407,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P'), (1, 'Q')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
 
     assert rxn.thermodynamics.delta_H == 5
     assert rxn.thermodynamics.delta_S == -3
@@ -400,7 +431,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(1, 'P'), (1, 'Q')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
 
     assert rxn.thermodynamics.delta_H == 5
     assert rxn.thermodynamics.delta_S == -3
@@ -422,7 +453,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(2, 'P')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 2})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K=None)
 
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
@@ -435,7 +466,7 @@ def test_constructor_Reaction_2():
 
     assert rxn.reactants == [(1, 'R')]
     assert rxn.products == [(2, 'P')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'R': -1, 'P': 2})
+    assert rxn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
     assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K=None)
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
     assert rxn.reaction_category == "Unimolecular decomposition"
@@ -452,7 +483,7 @@ def test_constructor_Reaction_3():
 
     assert rxn.reactants == [(1, 'S'), (1, 'E')]
     assert rxn.products == [(1, 'P'), (1, 'E')]
-    assert rxn.stoichiometry == Stoichiometry(coefficients={'S': -1, 'P': 1, 'E': 0})
+    assert rxn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
 
     assert rxn.analytic_solution_family is None
     assert rxn.reaction_category == "Enzymatic"
