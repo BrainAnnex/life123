@@ -5,6 +5,7 @@ from dataclasses import dataclass, field, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
 from life123.species_registry import SpeciesRegistry
+from life123.kinetics import Kinetics
 from life123.units import show_standard_units, convert, K, C
 
 
@@ -150,10 +151,18 @@ class Stoichiometry:
         Investigate the change in the concentration of the species involved in the reaction,
         to ascertain whether the change is consistent with the reaction's stoichiometry.
 
+        In other words, a "stoichiometric-ratio consistency check"
+
+        More formally stated, for a single reaction,
+        with a reaction vector ν = (ν_A, ν_B, ...)  , where the coefficients are signed numbers,
+        and the observed concentration change Delta c = conc_after - conc_before ,
+        the question is whether there exists a single scalar "reaction extent" ξ such that
+        Δc = ξ ν
+
         :param conc_before: A dict that maps species `id` to its initial concentration
         :param conc_after:  A dict that maps species `id` to its final concentration
-        :return:            None.  Raise an Exception if the change in reactant/product concentrations is consistent with the
-                                    reaction's stoichiometry
+        :return:            None.  Raise an Exception if the change in reactant/product concentrations
+                                is not consistent with the reaction's stoichiometry
         """
         assert len(conc_before) == len(self.vector), \
             f"consistency_checker(): the argument `conc_before` must contain exactly the same keys " \
@@ -194,241 +203,6 @@ class Stoichiometry:
                 assert np.allclose(delta_conc[sp], ratio * self.vector[sp]), \
                     f"consistency_checker(): the delta concentration {delta_conc} " \
                     f"is incompatible with the reaction's stoichiometry of {self.vector}"
-
-
-
-
-#######################################################################################################################
-
-
-class Kinetics:
-    """
-
-    """
-
-    def __init__(self, law :str, parameters=None):
-        """
-        :param law:
-            EXAMPLES of `law`:
-                "mass action"
-                "MM"                [Michaelis-Menten]
-                "custom"            [user-supplied Python function]
-                "Hill"              [not yet supported]
-                "enzyme inhibition" [hypothetical future extension; not available]
-
-        :param parameters:  A dict of data that is specific to the given rate law
-        """
-        # TODO: maybe have a separate class for each rate law
-
-        AVAILABLE_RATE_LAWS = ["mass action", "MM", "custom"]
-
-        if law is not None:
-            # Validate that it's a known rate law
-            assert law in AVAILABLE_RATE_LAWS, \
-                f"Kinetics instantiation: the value passed to the `law` argument (\"{law}\") " \
-                f"is not one the allowed values: {AVAILABLE_RATE_LAWS}"
-
-
-        self.law = law
-        self.kinetic_rate_function = None
-        self.parameters = {}
-
-        self.set_parameters(parameters)
-
-
-
-    def set_parameters(self, parameters :dict) -> None:
-        """
-        Validate and set the passed kinetic parameters,
-        as well as any others derivable from them
-
-        :param parameters:
-        :return:            None
-        """
-        if parameters is None:
-            parameters = {}
-
-
-        if self.law == "mass action":
-
-            # Validate that at most only the allowed key were passed
-            ALLOWED_KEYS = {"kR", "kF"}
-            extra_keys = set(parameters.keys()) - ALLOWED_KEYS
-
-            if extra_keys:
-                raise ValueError(f"set_parameters(): Unexpected parameter keys:  {extra_keys} ")
-
-            kF = parameters.get("kF", self.parameters.get("kF"))    # Over-write (thermodymically-set value) if passed
-            kR = parameters.get("kR", self.parameters.get("kR"))    # Over-write (thermodymically-set value) if passed
-                                                                    # TODO: check consistency
-            K = None
-
-            if kF is None:
-                kF = 0
-
-            if kR is None:
-                kR = 0
-
-            if np.allclose(kR, 0):
-                reversible = False
-            else:
-                reversible = True
-
-            if reversible:
-                # If we have a reversible reaction that follows mass-action kinetics
-                if (kF is not None) and (kR is not None) and (not np.allclose(kR, 0)):
-                    K = kF / kR    # Kinetic parameter ratio
-            else:
-                # If we have an IR-reversible reaction that follows mass-action kinetics
-                assert not kR, \
-                    f"Irreversible reactions with mass-action kinetics " \
-                    f"cannot have a value for the reverse rate constant (kR = {kR})"
-                kR = 0
-
-
-            self.parameters = {"kF": kF, "kR": kR, "reversible": reversible, "K": K}
-
-
-        elif self.law == "MM":
-            # Validate that at most only the allowed key were passed
-            ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
-            """
-            :param k1_F:    [OPTIONAL] The forward reaction rate of the 1st part of the reaction
-            :param k1_R:    [OPTIONAL] The reverse reaction rate of the 1st part of the reaction
-            :param k2_F:    [OPTIONAL] The forward reaction rate of the 2nd part of the reaction
-            :param kM:      [OPTIONAL] "Michaelis constant"
-            :param kcat:    [OPTIONAL] "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
-                                (equal to k2_F)
-            """
-            extra_keys = set(parameters.keys()) - ALLOWED_KEYS
-            if extra_keys:
-                raise ValueError(f"set_parameters(): Unexpected parameter keys:  {extra_keys} ")
-
-            k1_F = parameters.get("k1_F")
-            k1_R = parameters.get("k1_R")
-            k2_F = parameters.get("k2_F")
-
-            kM = parameters.get("kM")
-            kcat = parameters.get("kcat")
-
-            if all(v is not None for v in [k1_F, k1_R, k2_F]):
-                kM_derived = (k2_F + k1_R) / k1_F
-                if kM is not None:
-                    assert np.allclose(kM, kM_derived), \
-                        f"set_parameters(): inconsistent arguments.  " \
-                        f"The passed `kM` value ({kM}) doesn't match the value ({kM_derived}) inferred from the given reaction rate constants"
-                else:
-                    kM = kM_derived
-
-            if k2_F is not None:
-                kcat_derived = k2_F
-                if kcat is not None:
-                    assert np.allclose(kcat, kcat_derived), \
-                        f"set_parameters(): inconsistent arguments.  " \
-                        f"The passed `kcat` value ({kcat}) doesn't match the value ({kcat_derived}) of the given `k2_F` reaction rate constant"
-                else:
-                   kcat = kcat_derived
-
-            self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
-
-
-
-    def to_dict(self) -> dict:
-        """
-        Return a dictionary form of the dataclass.
-        Unset fields are omitted
-
-        :return:    A dictionary populated with the public fields of this data class
-        """
-        properties = {"kinetics_type": self.law}
-
-         # Only include the fields that were set
-        if self.parameters.get("kF") is not None:
-            properties['kF'] = self.parameters.get("kF")
-
-        if self.parameters.get("kR") is not None:
-            properties['kR'] = self.parameters.get("kR")
-
-        if self.parameters.get("reversible") is not None:
-            properties['reversible'] = self.parameters.get("reversible")
-
-        return properties
-
-
-
-    def set_rate_constants_from_equilibrium_constant(self, K :float|int) -> None:
-        """
-        Set, as needed, a missing reaction rate constant (kF or kR)
-        from the other one and the given equilibrium constant K.
-        If all values already exist, and an inconsistency is detected, an Exception will be raised.
-
-        Note: the reaction's equilibrium constant and its kinetic rate constants are
-              in the relationship K = kF / kR for any reaction that follows "mass-action kinetics",
-              i.e. whose reaction rates are proportional to the product of the reactants’ concentrations
-              raised to their stoichiometric coefficients
-
-        :param K:   The reaction's equilibrium constant
-        :return:    None
-        """
-        assert K is not None, \
-            "set_rate_constants_from_equilibrium_constant(): missing value for argument `K`"
-
-
-        if self.law != "mass action":
-            return
-
-        kF = self.parameters.get("kF")
-        kR = self.parameters.get("kR")
-
-        if (not kR) and (kF is not None) and (not np.allclose(K, 0)):
-            kR = kF / K
-            self.parameters["kR"] = kR
-            if not np.allclose(kR, 0):
-                self.parameters["reversible"] = True
-            return
-
-        if (not kF) and (kR is not None):
-            self.parameters["kF"] = K * kR
-            return
-
-        if (kF is not None) and (kR is not None) and (not np.allclose(kR, 0)):
-            assert np.allclose(K, kF / kR), \
-                f"set_rate_constants_from_equilibrium_constant(): values for kR ({kR}) and kR ({kR}) already exist, " \
-                f"and are inconsistent with the passed value of K ({K})"
-
-
-
-    def extract_intermediate(self) -> str|None:
-        """
-        Return the name of the reaction intermediate species,
-        or None if there's no intermediate
-
-        :return:
-        """
-        if self.law == "Michaelis-Menten":
-            return "TBA"        # TODO: FIX!
-
-        return None
-
-
-
-    def set_rate_function(self, f) -> None:
-        """
-        Set the function used to estimate the reaction rate (aka "velocity"),
-        at the start of the time step.
-
-        :param f:   A function that takes the following args:
-                        reactant_terms :[(int, str)]
-                        product_terms :[(int, str)],
-                        kF :float, kR :float,
-                        conc_dict :dict
-                    and return a float
-                    EXAMPLE:  ReactionKinetics.compute_rate_mass_action_kinetics
-                              # Generalized "standard rate law"
-
-        :return:    None
-        """
-        self.kinetic_rate_function = f
 
 
 
@@ -491,6 +265,101 @@ class ReactionThermodynamics:
         self.delta_S = thermo_data["delta_S"]
         self.delta_G = thermo_data["delta_G"]
 
+
+
+
+###################################################################################################################
+
+class ReactionDefinition:
+    """
+    The user-facing object; what the user specifies as an overall reaction (simple or complex).
+    This is the authoritative biological object at the user/model level.
+
+    The simulation engine never sees this.
+
+    A reaction definition is what the modeler specifies;
+    a simulation reaction is what the numerical engine executes.
+
+    A ReactionDefinition object may expand into one or more SimulationReaction objects.
+
+    In other words, some reaction definitions are compound models and expand into multiple simulation reactions.
+
+            user-level reaction model --->  simulation-level reaction model
+
+    EXAMPLES - specific:
+        1) An ordinary mass-action reaction can simply compile as:
+
+            ReactionDefinition
+                    ↓
+                   [itself / equivalent]
+                    ↓
+            SimulationReaction
+
+        2) A mechanistic enzyme reaction (such as S + E <-> SE -> P + E , when we are given kF_1, kR_1 and kF_2:
+
+            ReactionDefinition
+                    ↓
+              expansion
+                    ↓
+            SimulationReaction A
+            SimulationReaction B
+
+
+    EXAMPLES - tabulation:
+
+        | User enters                                | ReactionDefinition | SimulationRepresentation |
+        | -------------------------------------------| ------------------ | ------------------------ |
+        | A + B -> C,   mass action                  | one                | one                      |
+        | S -> P, MM mechanism, with kcat, kM        | one                | one                      |
+        | E+S ⇌ ES -> E+P , with kF_1, kR_1 and kF_2 | one                | two                      |
+        | ordered Bi-Bi                              | one                | several                  |
+        | ping-pong Bi-Bi (2 substrates, 2 products) | one                | several                  |
+
+    """
+    def __init__(self):
+        self.stoichiometry: Stoichiometry | None = None
+        self.kinetics: Kinetics | None = None
+        self.thermodynamics: ReactionThermodynamics | None = None
+
+        """
+        #Ideas for other object variables:
+        
+            id
+            name
+            description
+            literature references
+            annotations
+            original kinetic model
+            thermodynamic data
+        """
+
+
+    def expand(self):
+        """
+        Could perhaps return something like:
+        [SimulationReaction_1, SimulationReaction_2]
+        :return:
+        """
+        pass
+
+
+
+class SimulationReaction:
+    """
+    The reaction object actually handed to the simulation engine.
+    Simulation level.
+    The actual chemical reaction, as seen by the simulator.
+
+    It can handle a variety of kinetic laws.
+
+    Note: at a future date, the simulation engine might have things that aren't strictly "kinetic reactions";
+    for example, transport events, membrane events, diffusion operators, binding events, etc.
+    """
+    def __init__(self):
+        self.stoichiometry: Stoichiometry | None = None
+        self.kinetics: Kinetics  | None = None
+
+        self.source_definition_id = None    # provenance
 
 
 
