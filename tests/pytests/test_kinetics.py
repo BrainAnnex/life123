@@ -3,11 +3,13 @@ import math
 import pytest
 import pandas as pd
 from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
-from life123.reactions_new import Stoichiometry, ReactionThermodynamics, Reaction
+from life123.reactions_new import Stoichiometry, ReactionThermodynamics
 from life123.kinetics import Kinetics
 from tests.utilities.comparisons import *
 
 
+
+############################  class Kinetics [PROBABLY TO PHASE OUT]  ############################
 
 def test_CONSTRUCTOR_Kinetics():
     with pytest.raises(Exception):
@@ -91,18 +93,20 @@ def test_CONSTRUCTOR_Kinetics():
 
 
 
+
+
 def test_to_dict_Kinetics():
     k = Kinetics(law="mass action")
-    assert k.to_dict() == {"kinetics_type": "mass action", "reversible": False}
+    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 0, "kR": 0, "reversible": False}
 
     k = Kinetics(law="mass action", parameters={"kF": 10})
-    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "reversible": False}
+    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "kR": 0, "reversible": False}
 
     k = Kinetics(law="mass action", parameters={"kF": 10, "kR": 2})
-    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "kR": 2, "K": 5, "reversible": True}
+    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "kR": 2, "reversible": True}
 
     k = Kinetics(law="mass action", parameters={"kF": 10})
-    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "reversible": False}
+    assert k.to_dict() == {"kinetics_type": "mass action", "kF": 10, "kR": 0, "reversible": False}
 
     with pytest.raises(Exception):
         Kinetics(law="random name")

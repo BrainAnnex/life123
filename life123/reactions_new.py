@@ -5,7 +5,7 @@ from dataclasses import dataclass, field, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
 from life123.species_registry import SpeciesRegistry
-from life123.kinetics import Kinetics
+from life123.kinetics import MichaelisMenten_Model, MassAction_Model
 from life123.units import show_standard_units, convert, K, C
 
 
@@ -51,41 +51,17 @@ class Stoichiometry:
     def to_dict(self) -> dict:
         """
         Return a dictionary form of the stoichiometry,
-        mapping all species id's to their SIGNED stoichiometric coefficients;
-        catalysts carry a net signed stoichiometric coefficient of zero
+        mapping all species id's to their SIGNED stoichiometric coefficients.
+        IMPORTANT: catalysts, if any, carry a net signed stoichiometric coefficient of zero
 
         :return:    A dictionary with the mapping of the species id's
                     to their signed stoichiometric coefficients
         """
-        #d = asdict(self)
-        #return d.get("coefficients")
         d = dict(self.vector).copy()  # Clone the dictionary
         for cat in self.catalysts:
             d[cat] = 0
 
         return d
-
-
-
-    def reaction_pattern(self) -> tuple[int, int, int]:
-        """
-        Return the triplet (n_reactants, n_products, n_catalysts)
-        Catalysts, if present, are counted separated, and NOT included under either "reactants" or "products"
-        ~~~
-        EXAMPLES:
-            The reaction A + B -> C      gives (2, 1, 0)
-            The reaction A + E -> B + E  gives (1, 1, 1)
-        ~~~
-
-        :return:    A triplet of integers (n_reactants, n_products, n_catalysts)
-        """
-        values = self.vector.values()     # EXAMPLE: dict_values([-1, 1])
-
-        negative_count = sum(v < 0 for v in values)
-        positive_count = sum(v > 0 for v in values)
-        zero_count     = len(self.catalysts)
-
-        return (negative_count, positive_count, zero_count)
 
 
 
@@ -95,7 +71,7 @@ class Stoichiometry:
         we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
         as:  y' - y
 
-        Note that catalysts, if any, are NOT included.
+        IMPORTANT: Note that catalysts, if any, are NOT included.
 
         The component of (y′ − y) corresponding to species s is  y′_s − y_s,
         i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
@@ -133,16 +109,65 @@ class Stoichiometry:
         ~~
         :return:    The pair (reactants complex , products complex)
         """
-        coeffs = self.vector
-        reactants = {k:-v  for k,v in coeffs.items() if v < 0}
+        d = self.vector
+        reactants = {k:-v  for k,v in d.items() if v < 0}
         for cat in self.catalysts:
             reactants[cat] = 1
 
-        products = {k:v    for k,v in coeffs.items() if v > 0}
+        products = {k:v    for k,v in d.items() if v > 0}
         for cat in self.catalysts:
             products[cat] = 1
 
         return (reactants, products)
+
+
+
+    def get_reactant_list(self) -> list:
+        """
+        Return all reactants as a list of pairs
+        of the form (stoichiometry coefficient, species id)
+        ~~~
+        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
+                 would return to [(2, "A"), (2, "B"), (1, "E")]
+        :return:
+        """
+        return [  (-v, k) for k,v in self.vector.items() if v < 0]  \
+                + [(1, c) for c in self.catalysts]
+
+
+    def get_product_list(self) -> list:
+        """
+        Return all products as a list of pairs
+        of the form (stoichiometry coefficient, species id)
+        ~~~
+        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
+                 would return to [(3, "P"), (1, "E")]
+        :return:
+        """
+        return [   (v, k) for k,v in self.vector.items() if v > 0] \
+                + [(1, c) for c in self.catalysts]
+
+
+
+    def reaction_pattern(self) -> tuple[int, int, int]:
+        """
+        Return the triplet (n_reactants, n_products, n_catalysts)
+        Catalysts, if present, are counted separated, and NOT included under either "reactants" or "products"
+        ~~~
+        EXAMPLES:
+            The reaction A + B -> C      gives (2, 1, 0)
+            The reaction A + E -> B + E  gives (1, 1, 1)
+        ~~~
+
+        :return:    A triplet of integers (n_reactants, n_products, n_catalysts)
+        """
+        values = self.vector.values()     # EXAMPLE: dict_values([-1, 1])
+
+        negative_count = sum(v < 0 for v in values)
+        positive_count = sum(v > 0 for v in values)
+        zero_count     = len(self.catalysts)
+
+        return (negative_count, positive_count, zero_count)
 
 
 
@@ -229,7 +254,7 @@ class ReactionThermodynamics:
     def to_dict(self) -> dict:
         """
         Return a dictionary form of the dataclass.
-        Unset fields are omitted
+        Unset (missing) fields are omitted
 
         :return:    A dictionary populated with the public fields of this data class
         """
@@ -270,7 +295,8 @@ class ReactionThermodynamics:
 
 ###################################################################################################################
 
-class ReactionDefinition:
+
+class ReactionDefinition_INACTIVE:
     """
     The user-facing object; what the user specifies as an overall reaction (simple or complex).
     This is the authoritative biological object at the user/model level.
@@ -316,10 +342,11 @@ class ReactionDefinition:
         | ping-pong Bi-Bi (2 substrates, 2 products) | one                | several                  |
 
     """
-    def __init__(self):
-        self.stoichiometry: Stoichiometry | None = None
-        self.kinetics: Kinetics | None = None
-        self.thermodynamics: ReactionThermodynamics | None = None
+    def __init__(self, stoichiometry, kinetics, thermodynamics, sim_reactions):
+        self.stoichiometry: Stoichiometry | None = stoichiometry
+        self.kinetics: Kinetics | None = kinetics
+        self.thermodynamics: ReactionThermodynamics | None = thermodynamics
+        self.sim_reactions = sim_reactions
 
         """
         #Ideas for other object variables:
@@ -355,12 +382,138 @@ class SimulationReaction:
     Note: at a future date, the simulation engine might have things that aren't strictly "kinetic reactions";
     for example, transport events, membrane events, diffusion operators, binding events, etc.
     """
-    def __init__(self):
-        self.stoichiometry: Stoichiometry | None = None
-        self.kinetics: Kinetics  | None = None
+    def __init__(self, model, stoichiometry, source_id):
+        self.model = model
+        self.stoichiometry: Stoichiometry | None = stoichiometry
+        self.kinetics: Kinetics  | None
 
-        self.source_definition_id = None    # provenance
+        self.source_definition_id = source_id    # Provenance
+        # TODO: maybe add an extra field such as self.generated_role,
+        #       to explain how this object came about:
+        #       "what role this particular generated reaction plays."
 
+
+
+
+
+
+class ReactionCompiler_MassAction:
+    @staticmethod
+    def compile(stoichiometry, parameters, source_id, species_registry=None):
+        print("In compile() method of class 'ReactionCompiler_MassAction'")
+
+        ALLOWED_KEYS = {"kR", "kF", "K"}
+        unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
+
+        if unexpected_keys:
+            raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+
+        m = MassAction_Model()
+        m.set_parameters(parameters=parameters)     # Pass thru the parameters
+        print(f"    name of model being used: {m.name!r}")
+
+        sr1 = SimulationReaction(model=m, stoichiometry=stoichiometry, source_id=source_id)
+        return (sr1,)
+
+
+class ReactionCompiler_MichaelisMenten:
+    @staticmethod
+    def compile(stoichiometry, parameters, source_id, species_registry=None):
+        print("In compile() method of class 'ReactionCompiler_MichaelisMenten'")
+
+        ALLOWED_KEYS = {"kM", "kcat"}
+        unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
+        if unexpected_keys:
+            raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+
+        m = MichaelisMenten_Model()
+        m.set_parameters(parameters=parameters)     # Pass thru the parameters
+        print(f"    name of model being used: {m.name!r}")
+
+        r1 = SimulationReaction(model=m, stoichiometry=stoichiometry, source_id=source_id)
+        return (r1,)
+
+
+class ReactionCompiler_SingleSubstrateMechanism:
+    @staticmethod
+    def compile(stoichiometry, parameters, source_id, species_registry):
+        print("In compile() method of class 'ReactionCompiler_SingleSubstrateMechanism'")
+
+        ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
+        unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
+
+        if unexpected_keys:
+            raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+
+        assert stoichiometry.reaction_pattern() == (1, 1, 1), \
+            "ReactionCompiler_SingleSubstrateMechanism.compile(): reaction stoichiometry " \
+            "isn't compatible with the requested model"
+
+        reactants, products = stoichiometry.get_reaction_complexes()
+
+        S, coeff = next(iter(reactants.items()))    # Unpack the single-element dictionary
+        assert coeff == 1
+
+        P, coeff = next(iter(products.items()))     # Unpack the single-element dictionary
+        assert coeff == 1
+
+        E = stoichiometry.catalysts[0]
+
+        SE = S + E + "*"
+        species_registry.add_species(id= SE,
+                                     annotation="reaction intermediary from single substrate mechanism")
+
+        # Reaction 1: S + E <-> SE
+        m1 = MassAction_Model()
+        m1.set_parameters(parameters={"kF": parameters.get("k1_F"),
+                                      "kR": parameters.get("k1_R")})
+        r1 = SimulationReaction(model=m1,
+                                stoichiometry=Stoichiometry(vector={S: -1, E: -1, SE: 1}),
+                                source_id=source_id)
+
+        # Reaction 2: SE -> P + E
+        m2 = MassAction_Model()
+        m2.set_parameters(parameters={"kF": parameters.get("k2_F")})
+        r2 = SimulationReaction(model=m2, stoichiometry=Stoichiometry(vector={SE: -1, P: 1, E: 1}),
+                                source_id=source_id)
+
+        return (r1, r2)
+
+
+
+class ReactionModelRegistry:
+    """
+    Registry for all the Reaction Models.
+
+    Invoked by ReactionDefinition,
+    to pick and utilize the appropriate reaction "compiler" (model)
+    """
+    REGISTERED_REACTION_MODELS = \
+        {
+            "mass action": ReactionCompiler_MassAction,
+            "michaelis menten": ReactionCompiler_MichaelisMenten,
+            "single substrate mechanism": ReactionCompiler_SingleSubstrateMechanism
+        }
+
+        # "single substrate mechanism" means  S + E <-> SE -> P + E  , with 3 parameters
+        # Note: "single substrate mechanism" isn't merely a kinetic law;
+        #        it is a model specification that happens to compile into kinetic laws.
+        #        That's why we're using the term "reaction_model" rather than "kinetic_law"
+
+
+    @classmethod
+    def get_compiler_class(cls, model_name :str):
+        """
+        EXAMPLE:  get_compiler_class("mass action")
+
+        :param model_name:
+        :return:            A python class
+        """
+        cl = cls.REGISTERED_REACTION_MODELS.get(model_name)
+        assert cl is not None, \
+            f"get_compiler_class(): no python handler class register for the model name \"{model_name}\""
+
+        return cl
 
 
 
@@ -368,16 +521,16 @@ class SimulationReaction:
 ###################################################################################################################
 
 
-class Reaction:
+class ReactionDefinition:
     """
 
     """
 
     def __init__(self, reactants :str|list|tuple, products :str|list|tuple,
-                 species_registry :SpeciesRegistry, name=None, autoregister_species=False,
-                 active=True,
+                 species_registry :SpeciesRegistry, autoregister_species=False,
+                 name=None, id=0,
                  delta_H=None, delta_S=None, temp=None,
-                 kinetics_type=None, kinetic_parameters=None):
+                 reaction_model=None, kinetic_parameters=None):
         """
 
         :param reactants:   A list/tuple of terms that are either species id's (with implied stoichiometry 1),
@@ -387,40 +540,90 @@ class Reaction:
                                 or pairs (stoichiometry coefficient , chemical label).
                                 If not a list, it will first get turned into one
         :param species_registry:
-        :pamar auto_register_species:
+        :param auto_register_species:
 
-        :param active:
+        :param name:        [OPTIONAL]
+        :param id:
 
         :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
         :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
         :param temp:        [OPTIONAL]
 
-        :param kinetics_type:[OPTIONAL]
+        :param reaction_model:[OPTIONAL]      Primarily meant for kinetics_type
         """
         self.name = name
+        self.id = id
 
-        self.active = active
+        self.thermodynamics: ReactionThermodynamics | None = None
 
-        self.thermodynamics = None
-        self.kinetics = None
+        self.source_kinetic_parameters = kinetic_parameters
+        #self.kinetics: Kinetics | None = None
 
-        self.reactants = None       # A list of pairs (stoichiometry, chemical label)
-        self.products = None        # A list of pairs (stoichiometry, chemical label)
         self.stoichiometry = None   # A "Stoichiometry" object
                                     #   managing all the stoichiometric coefficients
                                     #   (incl. for catalysts, if applicable)
                                     #   for all species in the reaction
 
         self.analytic_solution_family = None    # Available values: "ONE_TO_ONE", "ONE_TO_TWO", "TWO_TO_ONE"
-        self.elementary = None
         self.reaction_category = None
 
+        self.species_registry = species_registry
 
-        assert reactants is not None, "Reaction() instantiation: the argument `reactants` is a required one"
+        self.reaction_model = reaction_model
+        self.sim_reactions :tuple|None = None
+
+
+        self._parse(reactants=reactants, products=products, autoregister_species=autoregister_species)
+
+        # if self._detect_elementary_reaction(reaction_model):
+        #    reaction_model = "mass action"
+
+        if reaction_model is not None:
+            self._build_model(reaction_model, kinetic_parameters)
+
+
+        #self.kinetics = Kinetics(law=reaction_model, parameters=kinetic_parameters)
+
+        #self.reaction_type = self._determine_reaction_type()
+        #print(f"detected reaction type `{self.reaction_type}`")
+
+        self.reaction_category = self._determine_reaction_category()
+        #print(f"detected reaction category `{self.reaction_category}`")
+
+        self.analytic_solution_family = self._determine_analytic_solution_family()
+
+
+        #########   Process the thermodynamic data   #########
+
+        self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S, temp=temp)
+                                                     #K=self.kinetics.parameters.get("K")
+
+        return
+        if temp is not None:
+            self.set_thermodynamic_data(temp)
+
+
+
+
+    def _parse(self, reactants :list, products :list, autoregister_species :bool):
+        """
+        Parse the reactants and products,
+        and set the object variable self.stoichiometry accordingly.
+        Possibly modify self.species_registry as needed
+
+        :param reactants:           A list of pairs (stoichiometry, species id)
+        :param products:            A list of pairs (stoichiometry, species id)
+        :param autoregister_species:
+        :return:                    None
+        """
+        #TODO: unit test
+        assert reactants is not None, \
+            "ReactionDefinition() instantiation: the argument `reactants` is a required one"
         if type(reactants) == str:
             reactants = [reactants]
 
-        assert products is not None, "Reaction() instantiation: the argument `products` is a required one"
+        assert products is not None, \
+            "ReactionDefinition() instantiation: the argument `products` is a required one"
         if type(products) == str:
             products = [products]
 
@@ -433,22 +636,22 @@ class Reaction:
 
         # Catch identical reaction sides, even if terms are reshuffled
         assert set(reactant_list) != set(product_list), \
-            f"Reaction(): the two sides of the reaction can't be identical! " \
+            f"ReactionDefinition(): the two sides of the reaction can't be identical! " \
             f"Same reactant and product complexes: \"{self._standard_form_chem_eqn(reactant_list)}\""
 
 
         # Check whether all the species in the reaction are registered ones
         for _, s_id in reactant_list:
-            if not species_registry.species_exists(s_id):
+            if not self.species_registry.species_exists(s_id):
                 if autoregister_species:
-                    species_registry.add_species(id=s_id)
+                    self.species_registry.add_species(id=s_id)
                 else:
                     raise Exception(f'No species with id "{s_id}" exists in the species registry')
 
         for _, s_id in product_list:
-            if not species_registry.species_exists(s_id):
+            if not self.species_registry.species_exists(s_id):
                 if autoregister_species:
-                    species_registry.add_species(id=s_id)
+                    self.species_registry.add_species(id=s_id)
                 else:
                     raise Exception(f'No species with id "{s_id}" exists in the species registry')
 
@@ -458,51 +661,36 @@ class Reaction:
                                            catalysts =    [k  for k,v in c.items() if v == 0])
 
 
-        # TODO: move to a separate function
-        # EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
-        #   would lead to self.reactants = [(2, "A"), (2, "B"), (1, "E")]
-        #              and self.products = [(3, "P"), (1, "E")]
-        self.reactants = [(-v, k) for k,v in c.items() if v < 0] + [(1, k) for k,v in c.items() if v == 0]
-        self.products =  [(v, k)  for k,v in c.items() if v > 0] + [(1, k) for k,v in c.items() if v == 0]
 
+    def _build_model(self, reaction_model, kinetic_parameters) -> None:
+        """
 
-
+        :param reaction_model:
+        :param kinetic_parameters:
+        :return:                    None
+        """
 
         #########   Process the kinetic data   #########
 
-        self.elementary = self._detect_elementary_reaction(kinetics_type)
-        if self.elementary:
-            kinetics_type = "mass action"
+        # Look up the appropriate "reaction compiler"
+        print(f"reaction_model: {reaction_model!r}")    # EXAMPLE: 'mass action'
+        reaction_compiler = ReactionModelRegistry.get_compiler_class(model_name=reaction_model)
+        # EXAMPLE: the `ReactionCompiler_MassAction` class
+        print("reaction_compiler: ", reaction_compiler.__name__)    # EXAMPLE: ReactionCompiler_MassAction
 
-
-        self.kinetics = Kinetics(law=kinetics_type, parameters=kinetic_parameters)
-
-
-        #self.reaction_type = self._determine_reaction_type()
-        #print(f"detected reaction type `{self.reaction_type}`")
-
-        self.reaction_category = self._determine_reaction_category()
-        #print(f"detected reaction category `{self.reaction_category}`")
-
-
-        self.analytic_solution_family = self._determine_analytic_solution_family()
+        # Invoke the appropriate "reaction compiler",
+        # which returns a tuple of "SimulationReaction" objects
+        sr = reaction_compiler.compile(stoichiometry=self.stoichiometry, parameters=kinetic_parameters,
+                                      source_id=self.id, species_registry=self.species_registry)
+        #print("sr: ", sr)
+        self.sim_reactions = sr
+        #print("self.sim_reactions: ", self.sim_reactions)
 
 
 
-        #########   Process the thermodynamic data   #########
-
-        self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S,
-                                                     K=self.kinetics.parameters.get("K"), temp=temp)
-
-        if temp is not None:
-            self.set_thermodynamic_data(temp)
-
-
-
-
-    def _detect_elementary_reaction(self, kinetics_type) -> bool:
+    def _detect_elementary_reaction_NOT_IN_USE(self, kinetics_type) -> bool:
         """
-
+        TODO: maybe turn into a generator for default model type
         :return:
         """
         if kinetics_type is not None:
@@ -538,25 +726,28 @@ class Reaction:
             return "Enzymatic"
 
         # TODO: switch to using signed terms
-        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 1):
+        reactants = self.stoichiometry.get_reactant_list()
+        products = self.stoichiometry.get_product_list()
+
+        if (r == 1 and reactants[0][0] == 1) and (p == 1 and products[0][0] == 1):
             # Reaction is of the type A <-> B               {"A": -1, "B": 1}
             return "Unimolecular rearrangement/isomerization"
 
-        if (r == 1 and self.reactants[0][0] == 1) \
-                and (p == 2 and self.products[0][0] == 1  and self.products[1][0] == 1):
+        if (r == 1 and reactants[0][0] == 1) \
+                and (p == 2 and products[0][0] == 1  and products[1][0] == 1):
             # Reaction is of the type A <-> B + C           {"A": -1, "B": 1, "C": 1}
             return "Unimolecular decomposition"
 
-        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 2):
+        if (r == 1 and reactants[0][0] == 1) and (p == 1 and products[0][0] == 2):
             # Reaction is of the type A <-> 2 B             {"A": -1, "B": 2}
             return "Unimolecular decomposition"
 
-        if (r == 2 and self.reactants[0][0] == 1 and self.reactants[1][0] == 1) \
-            and (p == 1 and self.products[0][0] == 1):
+        if (r == 2 and reactants[0][0] == 1 and reactants[1][0] == 1) \
+            and (p == 1 and products[0][0] == 1):
             # Reaction is of the type A + B <-> C           {"A": -1, "B": -1, "C": 1}
             return "Bimolecular synthesis"
 
-        if (r == 1 and self.reactants[0][0] == 2) and (p == 1 and self.products[0][0] == 1):
+        if (r == 1 and reactants[0][0] == 2) and (p == 1 and products[0][0] == 1):
             # Reaction is of the type 2 A <-> C             {"A": -2, "C": 1}
             return "Bimolecular synthesis"
 
@@ -569,8 +760,8 @@ class Reaction:
 
         :return:
         """
-        reactant_list = self.reactants
-        product_list = self.products
+        reactant_list = self.stoichiometry.get_reactant_list()
+        product_list = self.stoichiometry.get_product_list()
 
         single_reactant = None
         if len(reactant_list) == 1 and reactant_list[0][0] == 1:    # A single reactant, with stoichiometry 1
@@ -689,8 +880,10 @@ class Reaction:
         :return:            A string with a description of this reaction
         """
         if self.kinetics.law == "mass action":
-            left = self._standard_form_chem_eqn(self.reactants)       # Left side of the equation, as a user-friendly string
-            right = self._standard_form_chem_eqn(self.products)       # Right side of the equation
+            reactants = self.stoichiometry.get_reactant_list()
+            products = self.stoichiometry.get_product_list()
+            left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
+            right = self._standard_form_chem_eqn(products)       # Right side of the equation
 
             if self.kinetics.parameters["reversible"]:
                 rxn_description = f"{left} <-> {right}"
@@ -702,8 +895,6 @@ class Reaction:
 
             # If we get this far, we're looking for a more detailed description
             rxn_description += "  "
-            if self.elementary:
-                rxn_description += "Elementary "
 
             rxn_description += self.reaction_category + " reaction\n       "
 
@@ -1121,7 +1312,6 @@ class Reaction:
 
 
 
-
     #####################################################################################################
 
     '''                                    ~   PRIVATE  ~                                             '''
@@ -1165,7 +1355,8 @@ class Reaction:
 
         :return:
         """
-        if self.kinetics.law != "mass action":
+        #if self.kinetics.law != "mass action":
+        if (self.reaction_model is not None) and (self.reaction_model != "mass action"):
             return None
 
         r, p, c = self.stoichiometry.reaction_pattern()     # number of reactants, products, catalysts
@@ -1174,25 +1365,27 @@ class Reaction:
             return None
 
         # TODO: switch to using signed terms
-        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 1):
+        reactants = self.stoichiometry.get_reactant_list()
+        products = self.stoichiometry.get_product_list()
+        if (r == 1 and reactants[0][0] == 1) and (p == 1 and products[0][0] == 1):
             # Reaction is of the type A <-> B               {"A": -1, "B": 1}
             return "ONE_TO_ONE"
 
-        if (r == 1 and self.reactants[0][0] == 1) \
-                and (p == 2 and self.products[0][0] == 1  and self.products[1][0] == 1):
+        if (r == 1 and reactants[0][0] == 1) \
+                and (p == 2 and products[0][0] == 1  and products[1][0] == 1):
             # Reaction is of the type A <-> B + C           {"A": -1, "B": 1, "C": 1}
             return "ONE_TO_TWO"
 
-        if (r == 1 and self.reactants[0][0] == 1) and (p == 1 and self.products[0][0] == 2):
+        if (r == 1 and reactants[0][0] == 1) and (p == 1 and products[0][0] == 2):
             # Reaction is of the type A <-> 2 B             {"A": -1, "B": 2}
             return "ONE_TO_TWO"
 
-        if (r == 2 and self.reactants[0][0] == 1 and self.reactants[1][0] == 1) \
-            and (p == 1 and self.products[0][0] == 1):
+        if (r == 2 and reactants[0][0] == 1 and reactants[1][0] == 1) \
+            and (p == 1 and products[0][0] == 1):
             # Reaction is of the type A + B <-> C           {"A": -1, "B": -1, "C": 1}
             return "TWO_TO_ONE"
 
-        if (r == 1 and self.reactants[0][0] == 2) and (p == 1 and self.products[0][0] == 1):
+        if (r == 1 and reactants[0][0] == 2) and (p == 1 and products[0][0] == 1):
             # Reaction is of the type 2 A <-> C             {"A": -2, "C": 1}
             return "TWO_TO_ONE"
 

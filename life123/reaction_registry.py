@@ -20,11 +20,12 @@ class ReactionRegistry:
     def __init__(self, species_data=None):
 
         """
-        :param species_data:    [OPTIONAL] Object of type "SpeciesRegistry"; if not passed, it will get instantiated automatically -
-                                    and then it can be obtained by means of the method get_chem_data()
+        :param species_data:    [OPTIONAL] Object of type "SpeciesRegistry";
+                                    if not passed, it will get instantiated automatically -
+                                    and then it can be obtained by means of the method get_species_data()
         """
 
-        # TODO: consider adding to argument   "=labels=None"
+        # TODO: consider adding to argument   "=species=None"
         """
         assert (chem_data is not None) or (labels is not None), \
             "ReactionRegistry() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
@@ -279,77 +280,14 @@ class ReactionRegistry:
 
 
 
-    def _parse_reaction_term(self, term :str|tuple|list, name="term") -> (int, str):
-        """
-        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
 
-        NOTE: if the stoichiometry coefficient isn't specified, it defaults to 1
+    #####################################################################################################
 
-        In the passed tuples or lists:
-            - required 1st entry is the stoichiometry
-            - required 2nd entry is the chemical name
+    '''                             ~   TO MODIFY THE REACTIONS  ~                                    '''
 
-        If just a string is being passed, it is taken to be the chemical name,
-        with stoichiometry coefficient of 1
-
-        EXAMPLES:
-            "F"          gets turned into:  (1, "F")   - defaults used for stoichiometry
-            (2, "F")                        (2, "F")
-            It's equally acceptable to use LISTS in lieu of tuples
-
-        :param term:    A string (a chemical name)
-                            OR  a pair (stoichiometry coeff, name)
-        :param name:    An optional nickname, handy to refer to this term in error messages if needed
-                            (for example, "reactant" or "product")
-        :return:        A standardized pair of the form (stoichiometry, species_label),
-                            where stoichiometry is an integer, while species_label is a string
-        """
-        if type(term) == str:
-            return  (1, term)    # Accept simply the chemical name as a shortcut,
-                                    # for when the stoichiometry coefficient and reaction order are both 1
-
-        if type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
-                            f"or a pair (stoichiometry coeff, name). "
-                            f"Instead, it is `{term}` (of type {type(term)})")
-
-        # If we get thus far, term is either a tuple or a list
-        assert len(term) == 2,  \
-            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2. " \
-            f"Instead, it is {len(term)}"
-
-        stoichiometry = term[0]
-        assert type(stoichiometry) == int, \
-            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
-
-        chem_label = term[1]
-        assert type(chem_label) == str, \
-                            f"_parse_reaction_term(): The chemical name must be a string. " \
-                            f"Instead, it is `{chem_label}` (of type {type(chem_label)})"
-
-
-        return (stoichiometry, chem_label)
-
-
-
-    def _standardize_reaction_side(self, terms :str|list, arg_name :str):
-        """
-
-        :param terms:
-        :param arg_name:
-        :return:
-        """
-        assert terms is not None, \
-            f"standardize_reaction_side(): the argument `{arg_name}` is a required one; it can't be None"
-
-        if type(terms) == str:
-            terms = [terms]
-        else:
-            assert type(terms) == list, \
-                f"standardize_reaction_side(): the argument `{arg_name}` must be a string or a list; the passed value was {type(terms)}"
-
-        return [self._parse_reaction_term(r, "reactant") for r in terms]   # A list of pairs
-
+    def ________MODIFY_REACTIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def add_elementary_reaction(self, reactants :str|list, products :str|list,
@@ -620,6 +558,78 @@ class ReactionRegistry:
             #if rxn.catalyst is not None:
                 #self.active_enzymes.add(rxn.catalyst)       # Add the new entry to a set
 
+
+
+    def _parse_reaction_term(self, term :str|tuple|list, name="term") -> (int, str):
+        """
+        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
+
+        NOTE: if the stoichiometry coefficient isn't specified, it defaults to 1
+
+        In the passed tuples or lists:
+            - required 1st entry is the stoichiometry
+            - required 2nd entry is the chemical name
+
+        If just a string is being passed, it is taken to be the chemical name,
+        with stoichiometry coefficient of 1
+
+        EXAMPLES:
+            "F"          gets turned into:  (1, "F")   - defaults used for stoichiometry
+            (2, "F")                        (2, "F")
+            It's equally acceptable to use LISTS in lieu of tuples
+
+        :param term:    A string (a chemical name)
+                            OR  a pair (stoichiometry coeff, name)
+        :param name:    An optional nickname, handy to refer to this term in error messages if needed
+                            (for example, "reactant" or "product")
+        :return:        A standardized pair of the form (stoichiometry, species_label),
+                            where stoichiometry is an integer, while species_label is a string
+        """
+        if type(term) == str:
+            return  (1, term)    # Accept simply the chemical name as a shortcut,
+                                    # for when the stoichiometry coefficient and reaction order are both 1
+
+        if type(term) != tuple and type(term) != list:
+            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
+                            f"or a pair (stoichiometry coeff, name). "
+                            f"Instead, it is `{term}` (of type {type(term)})")
+
+        # If we get thus far, term is either a tuple or a list
+        assert len(term) == 2,  \
+            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2. " \
+            f"Instead, it is {len(term)}"
+
+        stoichiometry = term[0]
+        assert type(stoichiometry) == int, \
+            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
+
+        chem_label = term[1]
+        assert type(chem_label) == str, \
+                            f"_parse_reaction_term(): The chemical name must be a string. " \
+                            f"Instead, it is `{chem_label}` (of type {type(chem_label)})"
+
+
+        return (stoichiometry, chem_label)
+
+
+
+    def _standardize_reaction_side(self, terms :str|list, arg_name :str):
+        """
+
+        :param terms:
+        :param arg_name:
+        :return:
+        """
+        assert terms is not None, \
+            f"standardize_reaction_side(): the argument `{arg_name}` is a required one; it can't be None"
+
+        if type(terms) == str:
+            terms = [terms]
+        else:
+            assert type(terms) == list, \
+                f"standardize_reaction_side(): the argument `{arg_name}` must be a string or a list; the passed value was {type(terms)}"
+
+        return [self._parse_reaction_term(r, "reactant") for r in terms]   # A list of pairs
 
 
 

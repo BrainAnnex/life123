@@ -1,18 +1,32 @@
 from __future__ import annotations      # To facilitate type annotations
 import numpy as np
 import math
-from typing import Set, Mapping
-from dataclasses import dataclass, field, asdict
-from life123.thermodynamics import ThermoDynamics
-from life123.reaction_kinetics import ReactionKinetics
-from life123.species_registry import SpeciesRegistry
-from life123.units import show_standard_units, convert, K, C
 
 
 
+class OrderedBiBi_Model:
+    pass
 
-class MichaelisMentenLaw:
+class PingPongBiBi_Model:
+    pass
+
+#########################
+
+class MichaelisMenten_Model:
     name = "Michaelis-Menten"
+
+    def __init__(self):
+        self.kM: float | None = None
+        self.kcat: float | None = None
+
+
+    def get_parameters(self) -> dict:
+        """
+        Return the model's parameters
+        :return:
+        """
+        return {"kM": self.kM, "kcat": self.kcat}
+
 
     def set_parameters(self, parameters :dict) -> None:
         """
@@ -22,12 +36,9 @@ class MichaelisMentenLaw:
         :param parameters:
         :return:            None
         """
-       # Validate that at most only the allowed key were passed
-        ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
+        # Validate that at most only the allowed key were passed
+        ALLOWED_KEYS = {"kM", "kcat"}
         """
-        :param k1_F:    [OPTIONAL] The forward reaction rate of the 1st part of the reaction
-        :param k1_R:    [OPTIONAL] The reverse reaction rate of the 1st part of the reaction
-        :param k2_F:    [OPTIONAL] The forward reaction rate of the 2nd part of the reaction
         :param kM:      [OPTIONAL] "Michaelis constant"
         :param kcat:    [OPTIONAL] "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
                             (equal to k2_F)
@@ -36,52 +47,35 @@ class MichaelisMentenLaw:
         if unexpected_keys:
             raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
-        k1_F = parameters.get("k1_F")
-        k1_R = parameters.get("k1_R")
-        k2_F = parameters.get("k2_F")
 
-        kM = parameters.get("kM")
-        kcat = parameters.get("kcat")
+        #self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
+        self.kM = parameters.get("kM")
+        self.kcat = parameters.get("kcat")
 
-        if all(v is not None for v in [k1_F, k1_R, k2_F]):
-            kM_derived = (k2_F + k1_R) / k1_F
-            if kM is not None:
-                assert np.allclose(kM, kM_derived), \
-                    f"set_parameters(): inconsistent arguments.  " \
-                    f"The passed `kM` value ({kM}) doesn't match the value ({kM_derived}) inferred from the given reaction rate constants"
-            else:
-                kM = kM_derived
-
-        if k2_F is not None:
-            kcat_derived = k2_F
-            if kcat is not None:
-                assert np.allclose(kcat, kcat_derived), \
-                    f"set_parameters(): inconsistent arguments.  " \
-                    f"The passed `kcat` value ({kcat}) doesn't match the value ({kcat_derived}) of the given `k2_F` reaction rate constant"
-            else:
-               kcat = kcat_derived
-
-        self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
 
     def rate(self, concentrations):
         pass
 
 
-
 #########################
 
-class MassActionLaw:
+class MassAction_Model:
     name = "mass action"
 
     def __init__(self):
         self.kF: float | None = None
         self.kR: float | None = None
         self.K: float | None = None
-        self.reversible: bool = False
+        self.reversible: bool = False   # Model metadata/state
 
 
 
-    def get_parameters(self):
+    def get_parameters(self) -> dict:
+        """
+        Return the model's parameters
+        :return:
+        """
+        # TODO: maybe take out "reversible", and implement is_reversible() instead??
         return {"kF": self.kF, "kR": self.kR, "K": self.K, "reversible": self.reversible}
 
 
@@ -248,7 +242,7 @@ class MassActionLaw:
 
 ############################################################################
 
-class Kinetics:
+class Kinetics_NO_LONGER_IN_USE:
     """
 
     """
@@ -270,8 +264,8 @@ class Kinetics:
         AVAILABLE_RATE_LAWS = ["mass action", "MM", "custom"]
 
         self.KINETIC_LAWS = {
-            "mass action": MassActionLaw(),
-            "MM": MichaelisMentenLaw()
+            "mass action": MassAction_Model(),
+            "MM": MichaelisMenten_Model()
         }
 
         if law is not None:
