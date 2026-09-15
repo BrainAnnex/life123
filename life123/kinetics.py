@@ -18,10 +18,15 @@ class MichaelisMenten_Model:
 
 
     def __init__(self):
-        self.kM: float|None = None
-        self.kcat: float|None = None
+        self.kM: float|None = None      # "Michaelis constant"
+        self.kcat: float|None = None    # "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
 
-        self.derived_pars : set = set()
+        self.k1_F: float|None = None
+        self.k1_R: float|None = None
+        self.k2_F: float|None = None
+
+        self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
+                                                # not directly supplied by the user
 
 
 
@@ -31,6 +36,7 @@ class MichaelisMenten_Model:
         :return:
         """
         return {"kM": self.kM, "kcat": self.kcat}
+
 
 
     def set_parameters(self, parameters :dict, derived_pars=None) -> None:
@@ -47,20 +53,83 @@ class MichaelisMenten_Model:
             self.derived_pars |= derived_pars   # Set union
 
         # Validate that at most only the allowed key were passed
-        ALLOWED_KEYS = {"kM", "kcat"}
+        #ALLOWED_KEYS = {"kM", "kcat"}
         """
-        :param kM:      [OPTIONAL] "Michaelis constant"
-        :param kcat:    [OPTIONAL] "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
-                            (equal to k2_F)
+
         """
-        unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
-        if unexpected_keys:
-            raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+        #unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
+        #if unexpected_keys:
+        #    raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
 
         #self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
-        self.kM = parameters.get("kM")
-        self.kcat = parameters.get("kcat")
+        #self.kM = parameters.get("kM")
+        #self.kcat = parameters.get("kcat")
+
+        if parameters is None:
+            parameters = {}
+
+        # Validate values
+        for name, value in parameters.items():
+            if value is None:
+                continue
+
+            if not isinstance(value, (int, float)):
+                raise TypeError(f"set_parameters(): `{name}` must be a number or None; value passed was of type {type(value)}")
+
+            if value < 0:
+                raise ValueError(f"set_parameters(): `{name}` must be non-negative; value passed was {value}")
+
+
+        # Resolve what can be resolved
+
+        kM = parameters.get("kM")
+        kcat = parameters.get("kcat")
+        k1_F = parameters.get("k1_F")
+        k1_R = parameters.get("k1_R")
+        k2_F = parameters.get("k2_F")
+
+        if k2_F is not None:
+            derived_kcat = k2_F
+
+            if kcat is None:
+                kcat = derived_kcat
+                self.derived_pars.add("kcat")
+            else:
+                if not math.isclose(kcat, derived_kcat):
+                    raise ValueError(
+                        f"set_parameters(): Inconsistent kinetic parameters: "
+                        f"kcat={kcat}, kcat_derived={derived_kcat}"
+                    )
+
+
+            if (k1_F is not None) and (k1_R is not None):   # still inside the earlier clause (k2_F is not None)
+                # Issue advisory
+                print("INFO: values for k1_F, k1_R and k2_F were all provided.  "
+                      "Consider using the more accurate reaction model 'single substrate mechanism'")
+
+                assert not math.isclose(k1_F, 0), \
+                        f"set_parameters(): Cannot use the reaction model 'michaelis menten' when k1_F is zero"
+
+                derived_kM = (k2_F + k1_R) / k1_F
+
+                if kM is None:
+                    kM = derived_kM
+                    self.derived_pars.add("kM")
+                else:
+                    if not math.isclose(kM, derived_kM):
+                        raise ValueError(
+                            f"set_parameters(): Inconsistent kinetic parameters: "
+                            f"kM={kM}, derived_kM={derived_kM}"
+                        )
+
+
+        # Commit only after everything succeeds
+        self.kM = kM
+        self.kcat = kcat
+        self.k1_F = k1_F
+        self.k1_R = k1_R
+        self.k2_F = k2_F
 
 
 
@@ -81,7 +150,8 @@ class MassAction_Model:
         self.K: float | None = None
         self.reversible: bool = False   # Model metadata/state
 
-        self.derived_pars : set = set()
+        self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
+                                                # not directly supplied by the user
 
 
 
@@ -98,7 +168,9 @@ class MassAction_Model:
     def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
         Validate and set the passed kinetic parameters,
-        as well as any others derivable from them
+        as well as any others derivable from them.
+
+        Any existing values will be updated as applicable
 
         :param parameters:
         :return:
@@ -107,19 +179,17 @@ class MassAction_Model:
             self.derived_pars |= derived_pars   # Set union
 
         # Validate that at most only the allowed key were passed
-        ALLOWED_KEYS = {"kR", "kF", "K"}
-        unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
+        #ALLOWED_KEYS = {"kR", "kF", "K"}
+        #unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
 
-        if unexpected_keys:
-            raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+        #if unexpected_keys:
+        #    raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
 
 
         # --------------------------------------------------------------
         # 1. Merge current state with supplied values
         # --------------------------------------------------------------
-        # (TODO: make sure to coordinate with thermodynamic
-
 
         values = {
             "kF": self.kF,
@@ -260,6 +330,7 @@ class MassAction_Model:
 
     def rate(self, concentrations):
         pass
+
 
 
 ############################################################################

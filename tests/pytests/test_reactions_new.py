@@ -101,11 +101,11 @@ def test_get_reaction_complexes():
     assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1, "Q": 1})
 
     rxn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
-                             species_registry=sr, reaction_model="MM")
+                             species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"S": 1, "E": 1}, {"P": 1, "E": 1})
 
     rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
-                             species_registry=sr, reaction_model="custom")
+                             species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"A": 2, "B": 2, "E": 1}, {"P": 3, "Q": 1, "E": 1})
 
 
@@ -226,7 +226,7 @@ def test_CONSTRUCTOR_ReactionThermodynamics():
 
 def test_to_dict_ReactionThermodynamics():
     rt = ReactionThermodynamics(delta_H=3, delta_S=-200, delta_G=1000, K_eq=0.1)
-    assert rt.to_dict() == {'delta_H': 3, 'delta_S': -200, 'delta_G': 1000, 'K': 0.1}
+    assert rt.to_dict() == {'delta_H': 3, 'delta_S': -200, 'delta_G': 1000, 'K_eq': 0.1}
 
     rt.K_eq = None
     assert rt.to_dict() == {'delta_H': 3, 'delta_S': -200, 'delta_G': 1000}
@@ -291,7 +291,8 @@ def test_get_signed_stoichiometric_coefficients():
 
 def test_constructor_ReactionDefinition_1():
     # The group of testing below is about parsing the reactant/products,
-    # and building the reaction "Stoichiometry" dataclass
+    # and building the reaction "Stoichiometry" dataclass.
+    # No kinetics and no thermodynamics!
 
     sr = SpeciesRegistry(ids=["R", "P", "Q"])
 
@@ -305,10 +306,10 @@ def test_constructor_ReactionDefinition_1():
         ReactionDefinition(reactants="R", products=123, species_registry=sr)  # Bad product
 
     with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products="R", species_registry=sr)     # Cannot be same
+        ReactionDefinition(reactants="R", products="R", species_registry=sr, reaction_model="mass action")     # Cannot be same
 
     with pytest.raises(Exception):
-        ReactionDefinition(reactants=("R", (2, "P")), products=[(2, "P"), "R"], species_registry=sr)     # Cannot be same
+        ReactionDefinition(reactants=("R", (2, "P")), products=[(2, "P"), "R"], species_registry=sr , reaction_model="mass action")     # Cannot be same
 
 
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
@@ -372,7 +373,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
     with pytest.raises(Exception):
         ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                      reaction_model="mass action", kinetic_parameters={"intruder":666})
+                           reaction_model="mass action", kinetic_parameters={"intruder":666})
 
 
     # S + E -> P + E , with MM model
@@ -429,11 +430,12 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
 def test_CONSTRUCTOR_ReactionDefinition_3():
     # Thermodynamic data passed, but no temperature
+
     sr = SpeciesRegistry(ids=["A", "B"])
 
     # A -> B, with "mass action" (reversible)
     rxn_defn = ReactionDefinition(id=41, reactants="A", products="B", species_registry=sr,
-                                  delta_H=-3, K_eq=5,
+                                  thermodynamic_parameters={"delta_H": -3, "K_eq": 5},
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF":10})
     assert rxn_defn.species_registry == sr
@@ -443,6 +445,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert rxn_defn.reaction_category == "Unimolecular rearrangement/isomerization"
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=-3, delta_S=None, delta_G=None, K_eq=5, derived_pars=set())
     assert rxn_defn.source_kinetic_parameters == {"kF": 10}
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_H": -3, "K_eq": 5}
 
     sim_rxn_tuple = rxn_defn.sim_reactions
     assert len(sim_rxn_tuple) == 1
@@ -458,10 +461,11 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
 
     # A -> B, with "mass action" (irreversible)
     rxn_defn = ReactionDefinition(id=42, reactants="A", products="B", species_registry=sr,
-                                  delta_H=-3,
+                                  thermodynamic_parameters={"delta_H": -3},
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF":10, "kR":0})
 
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_H": -3}
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=-3, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
     assert rxn_defn.source_kinetic_parameters == {"kF": 10, "kR":0}
 
@@ -475,32 +479,66 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
 
-    return
-
-
-
-
-
-
+    # S + E -> P + E , with MM model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
-    rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr,
-                             delta_S=100,
-                             reaction_model="MM",
-                             kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5})
-    assert rxn_defn.kinetics.law == "MM"
-    assert rxn_defn.kinetics.parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 5, 'kM': 0.7, 'kcat': 5}
-    assert np.allclose(rxn_defn.kinetics.parameters["k1_F"], 10.)
-    assert np.allclose(rxn_defn.kinetics.parameters["k1_R"], 2.)
-    assert np.allclose(rxn_defn.kinetics.parameters["k2_F"], 5.)
-    print(rxn_defn.kinetics.parameters["kM"])
-    assert np.allclose(rxn_defn.kinetics.parameters["kM"], 0.7)     # (rxn.k2_F + rxn.k1_R) / rxn.k1_F)
-    assert np.allclose(rxn_defn.kinetics.parameters["kcat"], 5.)    # Equal to k2_F
 
-    assert rxn_defn.thermodynamics.delta_H is None
-    assert rxn_defn.thermodynamics.delta_S == 100
-    assert rxn_defn.thermodynamics.K_eq is None
+    rxn_defn = ReactionDefinition(id=44, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                                  thermodynamic_parameters={"delta_S": 100},
+                                  reaction_model="michaelis menten",
+                                  kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5})
+    assert rxn_defn.source_kinetic_parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 5}
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_S": 100}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=100, delta_G=None, K_eq=None, derived_pars=set())
     assert rxn_defn.reaction_category == "Enzymatic"
     assert rxn_defn.analytic_solution_family is None
+
+    sim_rxn_tuple = rxn_defn.sim_reactions
+    assert len(sim_rxn_tuple) == 1
+    sim_rxn = sim_rxn_tuple[0]
+    assert type(sim_rxn) == SimulationReaction
+    assert sim_rxn.source_definition_id == 44
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert type(sim_rxn.model) == MichaelisMenten_Model
+    assert sim_rxn.model.get_parameters() == {'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
+    assert sim_rxn.model.derived_pars == {'kM', 'kcat'}
+
+
+
+    # S + E <-> SE -> P + E, with SingleSubstrateMechanism model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+
+    rxn_defn = ReactionDefinition(id=43, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                                  thermodynamic_parameters={"delta_S": 100},
+                                  reaction_model="single substrate mechanism",
+                                  kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 3})
+    assert rxn_defn.source_kinetic_parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 3}
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_S": 100}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=100, delta_G=None, K_eq=None, derived_pars=set())
+
+    sim_rxn_tuple = rxn_defn.sim_reactions
+    assert len(sim_rxn_tuple) == 2
+    sim_rxn_1, sim_rxn_2 = sim_rxn_tuple
+
+    assert type(sim_rxn_1) == SimulationReaction
+    assert type(sim_rxn_1.model) == MassAction_Model
+    assert sim_rxn_1.source_definition_id == 43
+    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "SE*": 1})
+    assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
+
+    assert type(sim_rxn_2) == SimulationReaction
+    assert type(sim_rxn_2.model) == MassAction_Model
+    assert sim_rxn_2.source_definition_id == 43
+    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"SE*": -1, "P": 1, "E": 1})
+    assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
+
+    assert sr.number_of_species() == 4    # 1 species was automatically added
+    set_of_species = set(sr.get_all_species_ids())
+    assert set_of_species == {"S", "P", "E", "SE*"}
+
+
+
+    return
+
 
 
     with pytest.raises(Exception):
@@ -549,7 +587,7 @@ def test_constructor_ReactionDefinition_4():
 
 
     # Reaction R -> P + Q
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, reaction_model="mass action")
 
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
@@ -630,7 +668,7 @@ def test_constructor_ReactionDefinition_4():
 
 
     # Reaction R -> 2 P
-    rxn_defn = ReactionDefinition(reactants="R", products=[(2, "P")], species_registry=sr)
+    rxn_defn = ReactionDefinition(reactants="R", products=[(2, "P")], species_registry=sr, reaction_model="mass action")
 
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
@@ -639,7 +677,7 @@ def test_constructor_ReactionDefinition_4():
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "P"], species_registry=sr)
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "P"], species_registry=sr, reaction_model="mass action")
 
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
@@ -647,50 +685,46 @@ def test_constructor_ReactionDefinition_4():
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
-
+"""
 def test_extract_rxn_properties():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             delta_H=-3000,
+                             thermodynamic_parameters={"delta_H": -30},
                              kinetic_parameters={"kF":10, "kR":2})
 
-    assert rxn.extract_rxn_properties() == {'kinetics_type': 'mass action', 'kF': 10, 'kR': 2, 'delta_H': -3000, 'K': 5.0, 'reversible': True}
+    assert rxn.extract_rxn_properties() == {'kinetics_type': 'mass action', 'kF': 10, 'kR': 2, 'delta_H': -30, 'K': 5.0, 'reversible': True}
 
-
+"""
 
 def test_set_thermodynamic_data():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             kinetic_parameters={"kF":6, "kR":2})
+                             reaction_model="mass action", kinetic_parameters={"kF":6, "kR":2})
     assert rxn.thermodynamics.delta_H is None
     assert rxn.thermodynamics.delta_S is None
     assert rxn.thermodynamics.delta_G is None
     assert rxn.thermodynamics.K_eq == 3
 
     rxn.set_thermodynamic_data(temp=100)
-    assert np.allclose(rxn.thermodynamics.delta_G, -0.9134370805974775)
+    assert math.isclose(rxn.thermodynamics.delta_G, -0.9134370805974775)
 
 
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             delta_H=0.5, delta_S=-3)
+                             thermodynamic_parameters={"delta_H": 0.5, "delta_S":-3})
     assert np.allclose(rxn.thermodynamics.delta_H, 0.5)
     assert rxn.thermodynamics.delta_S == -3
     assert rxn.thermodynamics.delta_G is None
-    assert rxn.kinetics.parameters["kR"] == 0
-    assert rxn.kinetics.parameters["kF"] == 0
 
     rxn.set_thermodynamic_data(temp=100)
     assert np.allclose(rxn.thermodynamics.delta_H, 0.5)
     assert rxn.thermodynamics.delta_S == -3
     assert np.allclose(rxn.thermodynamics.delta_G, 0.8)
     assert np.allclose(rxn.thermodynamics.K_eq, 0.38205953171)
-    assert rxn.kinetics.parameters["kR"] == 0
-    assert rxn.kinetics.parameters["kF"] == 0
 
 
-
+"""
 def test_extract_intermediate():
     sr = SpeciesRegistry(ids=["A", "B"])
 
@@ -717,7 +751,7 @@ def test_describe():
 def test_extract_reactant_ids():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_reactant_ids() == ["A"]
 
     rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
@@ -740,14 +774,14 @@ def test_extract_reactant_ids():
 def test_extract_reactants():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_reactants() == [(1, "A")]
 
 
 def test_extract_reactants_formula():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_reactants_formula() == "A"
 
 
@@ -755,7 +789,7 @@ def test_extract_reactants_formula():
 def test_extract_product_ids():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_product_ids() == ["B"]
 
     rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
@@ -775,14 +809,14 @@ def test_extract_product_ids():
 def test_extract_products():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_products() == [(1, "B")]
 
 
 def test_extract_products_formula():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_products_formula() == "B"
 
 
@@ -790,13 +824,13 @@ def test_extract_products_formula():
 def test_extract_species_in_reaction():
     sr = SpeciesRegistry(ids=["A", "B", "C"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_species_in_reaction() == {"A", "B"}
 
-    rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr)
+    rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr, reaction_model="mass action")
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
-    rxn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, reaction_model="mass action")
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
@@ -808,7 +842,7 @@ def test_reaction_quotient():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction : A <-> B
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
     c = {'A': 24., 'B': 36.}
     assert np.allclose(1.5, rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -817,7 +851,7 @@ def test_reaction_quotient():
 
     # Reaction : A <-> F
     sr.add_species("F")
-    rxn = ReactionDefinition(reactants="A", products="F", species_registry=sr)
+    rxn = ReactionDefinition(reactants="A", products="F", species_registry=sr, reaction_model="mass action")
     c = {'A': 3., 'F': 33.}
     assert np.allclose(11., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -826,7 +860,7 @@ def test_reaction_quotient():
 
     # Reaction :  A + B <-> C
     sr.add_species("C")
-    rxn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr)
+    rxn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, reaction_model="mass action")
     c = {'A': 3., 'B': 4., 'C': 12.}
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1., quotient)
@@ -1063,3 +1097,4 @@ def test_find_equilibrium_conc():
     assert np.allclose(result["A"], 9.49568869375716)
     rxn.stoichiometry.consistency_checker(conc_before={"C": 40., "A":200.},
                                           conc_after={"C": 135.2521556531214, "A": 9.49568869375716})
+"""

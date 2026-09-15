@@ -250,9 +250,8 @@ class ReactionThermodynamics:
     K_eq: float | None = None
     temp: float | None = None
 
-    derived_pars : set = field(default_factory=set)
-
-
+    derived_pars : set = field(default_factory=set) # Set of names of parameters that were DERIVED - i.e.
+                                                    # not directly supplied by the user
 
     def __post_init__(self) -> None:
         """
@@ -274,6 +273,8 @@ class ReactionThermodynamics:
         d = asdict(self)
         result = {}
         for k, v in d.items():
+            if k == "derived_pars":
+                continue
             if v is not None:
                 result[k] = v    # Only include the fields that were set
 
@@ -296,7 +297,7 @@ class ReactionThermodynamics:
         #TODO: maybe rename to "apply_temperature()" or "derive_parameters()"
         # Process the thermodynamic data, and update various object attributes accordingly
 
-        if self.temp is None:
+        if temp is None:
             return      # Can't do anything!
 
         thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K_eq,
@@ -308,6 +309,7 @@ class ReactionThermodynamics:
         self.delta_H = thermo_data["delta_H"]
         self.delta_S = thermo_data["delta_S"]
         self.delta_G = thermo_data["delta_G"]
+        self.temp = temp
 
 
 
@@ -422,6 +424,36 @@ class SimulationReaction:
 
 #############################################################################################
 
+class Reconciler:
+    # Experimental
+
+    @staticmethod
+    def reconcile(thermodynamics_data, model):
+        """
+        If available and feasible, propagate the thermodynamic value K_eq to the kinetic model
+
+        :param thermodynamics_data:
+        :param model:
+        :return:
+        """
+        #TODO: maybe just pass `K_eq` as arg, in lieu of `thermodynamics_data`
+
+        if thermodynamics_data.K_eq is None:
+            return      # Nothing to do
+
+        if model.supports_equilibrium_constant:
+            if model.K is not None:
+                # Check for inconsistency
+                assert math.isclose(model.K, thermodynamics_data.K_eq), \
+                       "conflict between thermodynamic value K_eq and kinetic value K"
+            else:
+                # Enrich the kinetic data, from thermodynamic values
+                model.set_parameters(parameters={"K":thermodynamics_data.K_eq}, derived_pars={"K"})
+
+
+
+
+#############################################################################################
 
 
 class ReactionCompiler_MassAction:
@@ -470,6 +502,9 @@ class ReactionCompiler_MassAction:
                                  # "Directly modeled as specified by the user"
                                  # "this simulation reaction corresponds directly to the reaction defined by the user"
 
+        # TODO: try out:
+        #Reconciler.reconcile(thermodynamics_data=thermodynamics_data, model=m)
+
         # If available and feasible, propagate the kinetic value K to the thermodynamic K_eq
         if m.supports_equilibrium_constant:
             if (m.K is not None) and (m.K != math.inf):     # If the kinetic value K is available
@@ -481,8 +516,10 @@ class ReactionCompiler_MassAction:
                     thermodynamics_data.K_eq = m.K      # Thermodynamic K_eq can be set from kinetic K
                     thermodynamics_data.derived_pars.add("K_eq")
                     thermodynamics_data.set_temperature(thermodynamics_data.temp)
+        # TODO: END of part to replace
 
         return (sr1,)
+
 
 
 class ReactionCompiler_MichaelisMenten:
@@ -490,10 +527,21 @@ class ReactionCompiler_MichaelisMenten:
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, species_registry=None):
         print("In compile() method of class 'ReactionCompiler_MichaelisMenten'")
 
-        ALLOWED_KEYS = {"kM", "kcat"}
+        ALLOWED_KEYS = {"kM", "kcat", "k1_F", "k1_R", "k2_F"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
         if unexpected_keys:
             raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+
+        if (kinetic_parameters.get("k1_F") is not None) \
+            and (kinetic_parameters.get("k1_R") is not None) \
+            and (kinetic_parameters.get("k2_F") is not None):
+            # Issue advisory
+            advisory = """
+            The supplied parameters (k1_F, k1_R, k2_F) define an explicit single-substrate mechanism. 
+            The requested "michaelis menten" model uses only the derived kM and kcat. 
+            Consider using the model "single substrate mechanism" if transient ES dynamics or enzyme sequestration are important.
+            """
+            print("INFO: ", advisory)
 
         m = MichaelisMenten_Model()
         m.set_parameters(parameters=kinetic_parameters)     # Pass thru the parameters
@@ -596,10 +644,12 @@ class ReactionDefinition:
     """
 
     def __init__(self, reactants :str|list|tuple, products :str|list|tuple,
-                 species_registry :SpeciesRegistry, autoregister_species=False,
+                 species_registry :SpeciesRegistry,
+                 reaction_model=None,
+                 autoregister_species=False,
                  name=None, id=0,
-                 delta_H=None, delta_S=None, delta_G=None, K_eq=None, temp=None,
-                 reaction_model=None, kinetic_parameters=None):
+                 thermodynamic_parameters=None,
+                 kinetic_parameters=None):
         """
 
         :param reactants:   A list/tuple of terms that are either species id's (with implied stoichiometry 1),
@@ -620,7 +670,15 @@ class ReactionDefinition:
 
         :param reaction_model:[OPTIONAL]      Primarily meant for kinetics_type
         """
-        #thermodynamic_parameters=None,
+        if thermodynamic_parameters is None:
+            thermodynamic_parameters = {"delta_H": None, "delta_S": None, "delta_G": None, "K_eq": None, "temp": None}
+
+        delta_H=thermodynamic_parameters.get("delta_H")
+        delta_S=thermodynamic_parameters.get("delta_S")
+        delta_G=thermodynamic_parameters.get("delta_G")
+        K_eq=thermodynamic_parameters.get("K_eq")
+        temp=thermodynamic_parameters.get("temp")
+
 
 
         self.name = name
@@ -629,6 +687,7 @@ class ReactionDefinition:
         self.thermodynamics: ReactionThermodynamics | None = None
 
         self.source_kinetic_parameters = kinetic_parameters
+        self.source_thermodynamic_parameters = thermodynamic_parameters
         #self.kinetics: Kinetics | None = None
 
         self.stoichiometry = None   # A "Stoichiometry" object
@@ -749,21 +808,22 @@ class ReactionDefinition:
         #TODO: no need to pass parameters; they're available as object variables
 
         #########   Process the kinetic data   #########
+        if (kinetic_parameters is not None) and (kinetic_parameters != {}):
+            # Look up the appropriate "reaction compiler"
+            print(f"reaction_model: {reaction_model!r}")    # EXAMPLE: 'mass action'
+            reaction_compiler = ReactionModelRegistry.get_compiler_class(model_name=reaction_model)
+            # EXAMPLE: the `ReactionCompiler_MassAction` class
+            print("reaction_compiler: ", reaction_compiler.__name__)    # EXAMPLE: ReactionCompiler_MassAction
 
-        # Look up the appropriate "reaction compiler"
-        print(f"reaction_model: {reaction_model!r}")    # EXAMPLE: 'mass action'
-        reaction_compiler = ReactionModelRegistry.get_compiler_class(model_name=reaction_model)
-        # EXAMPLE: the `ReactionCompiler_MassAction` class
-        print("reaction_compiler: ", reaction_compiler.__name__)    # EXAMPLE: ReactionCompiler_MassAction
-
-        # Invoke the appropriate "reaction compiler",
-        # which returns a tuple of "SimulationReaction" objects
-        sr = reaction_compiler.compile(stoichiometry=self.stoichiometry, kinetic_parameters=kinetic_parameters,
-                                       thermodynamics_data=self.thermodynamics,
-                                       source_id=self.id, species_registry=self.species_registry)
-        #print("sr: ", sr)
-        self.sim_reactions = sr
-        #print("self.sim_reactions: ", self.sim_reactions)
+            # Invoke the appropriate member of the "reaction compiler" family of classes;
+            # a tuple of "SimulationReaction" objects is returned
+            sr_tuple = reaction_compiler.compile(stoichiometry=self.stoichiometry,
+                                                 kinetic_parameters=kinetic_parameters,
+                                                 thermodynamics_data=self.thermodynamics,
+                                                 source_id=self.id, species_registry=self.species_registry)
+            #print("sr: ", sr)
+            self.sim_reactions = sr_tuple
+            #print("self.sim_reactions: ", self.sim_reactions)
 
 
 
@@ -913,6 +973,7 @@ class ReactionDefinition:
 
         :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.130505, 'K': 1.5}
         """
+        #TODO: this is no longer well-defined as a single dict; maybe return a more complex data structure?
         thermo_properties = self.thermodynamics.to_dict()
         kinetic_properties = self.kinetics.to_dict()
 
@@ -936,7 +997,10 @@ class ReactionDefinition:
             self.thermodynamics.set_temperature(temp)
 
         if self.thermodynamics.K_eq is not None:
-            self.kinetics.set_rate_constants_from_equilibrium_constant(K=self.thermodynamics.K_eq)
+            if self.sim_reactions is not None:
+                for sr in self.sim_reactions:
+                    Reconciler.reconcile(thermodynamics_data=self.thermodynamics, model=sr.model)
+            #self.kinetics.set_rate_constants_from_equilibrium_constant(K=self.thermodynamics.K_eq)
 
 
 
