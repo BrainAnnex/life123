@@ -4,7 +4,6 @@ import pytest
 import pandas as pd
 from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
 from life123.reactions_new import Stoichiometry, ReactionThermodynamics
-from life123.kinetics import Kinetics
 from tests.utilities.comparisons import *
 
 
@@ -90,8 +89,6 @@ def test_CONSTRUCTOR_Kinetics():
 
     with pytest.raises(Exception):
         Kinetics(law="mass action", parameters={"kF": 10, "kR": 2, "K": -0.001})
-
-
 
 
 

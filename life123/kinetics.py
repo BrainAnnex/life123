@@ -14,10 +14,15 @@ class PingPongBiBi_Model:
 
 class MichaelisMenten_Model:
     name = "Michaelis-Menten"
+    supports_equilibrium_constant = False
+
 
     def __init__(self):
-        self.kM: float | None = None
-        self.kcat: float | None = None
+        self.kM: float|None = None
+        self.kcat: float|None = None
+
+        self.derived_pars : set = set()
+
 
 
     def get_parameters(self) -> dict:
@@ -28,14 +33,19 @@ class MichaelisMenten_Model:
         return {"kM": self.kM, "kcat": self.kcat}
 
 
-    def set_parameters(self, parameters :dict) -> None:
+    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
         Validate and set the passed kinetic parameters,
         as well as any others derivable from them
 
         :param parameters:
-        :return:            None
+        :param derived_pars:    [OPTIONAL] Set of names of parameters that were derived
+                                    (i.e. not passed by the user)
+        :return:                None
         """
+        if derived_pars:
+            self.derived_pars |= derived_pars   # Set union
+
         # Validate that at most only the allowed key were passed
         ALLOWED_KEYS = {"kM", "kcat"}
         """
@@ -53,6 +63,7 @@ class MichaelisMenten_Model:
         self.kcat = parameters.get("kcat")
 
 
+
     def rate(self, concentrations):
         pass
 
@@ -61,12 +72,16 @@ class MichaelisMenten_Model:
 
 class MassAction_Model:
     name = "mass action"
+    supports_equilibrium_constant = True
+
 
     def __init__(self):
         self.kF: float | None = None
         self.kR: float | None = None
         self.K: float | None = None
         self.reversible: bool = False   # Model metadata/state
+
+        self.derived_pars : set = set()
 
 
 
@@ -80,7 +95,7 @@ class MassAction_Model:
 
 
 
-    def set_parameters(self, parameters :dict) -> None:
+    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
         Validate and set the passed kinetic parameters,
         as well as any others derivable from them
@@ -88,6 +103,9 @@ class MassAction_Model:
         :param parameters:
         :return:
         """
+        if derived_pars:
+            self.derived_pars |= derived_pars   # Set union
+
         # Validate that at most only the allowed key were passed
         ALLOWED_KEYS = {"kR", "kF", "K"}
         unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
@@ -161,6 +179,7 @@ class MassAction_Model:
 
             if K is None:
                 K = derived_K
+                self.derived_pars.add("K")  # add an element to a set
 
             elif not (math.isclose(K, derived_K)) or (math.isinf(K) and math.isinf(derived_K)):
                 raise ValueError(
@@ -175,6 +194,7 @@ class MassAction_Model:
 
             if K > 0 and math.isfinite(K):
                 kR = kF / K
+                self.derived_pars.add("kR")  # add an element to a set
 
             elif K == 0:
                 if kF > 0:
@@ -204,6 +224,7 @@ class MassAction_Model:
 
             if K > 0 and math.isfinite(K):
                 kF = kR * K
+                self.derived_pars.add("kF")  # add an element to a set
 
             elif K == 0:
                 if kR > 0:
@@ -233,6 +254,7 @@ class MassAction_Model:
         self.K = K
 
         self.reversible = True if (self.kR is not None and self.kR > 0) else False
+        self.derived_pars.add("reversible")  # add an element to a set
 
 
 
@@ -298,7 +320,7 @@ class Kinetics_NO_LONGER_IN_USE:
 
 
 
-    def set_parameters(self, parameters :dict) -> None:
+    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
         Validate and set the passed kinetic parameters,
         as well as any others derivable from them

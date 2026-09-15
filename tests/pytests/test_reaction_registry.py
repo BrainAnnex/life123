@@ -201,7 +201,7 @@ def test_add_reaction():
     assert type(r) == ReactionUnimolecular
     assert np.allclose(r.kF , 3.)
     assert np.allclose(r.kR , 2.)
-    assert np.allclose(r.K , 3./2.)
+    assert np.allclose(r.K_eq, 3. / 2.)
     assert r.reactant == "A"
     assert r.product ==  "B"
     assert r.delta_H is None
@@ -230,7 +230,7 @@ def test_add_reaction():
     assert type(r) == ReactionUnimolecular
     assert np.allclose(r.kF , 3.)
     assert np.allclose(r.kR , 2.)
-    assert np.allclose(r.K , 3./2.)
+    assert np.allclose(r.K_eq, 3. / 2.)
     assert r.reactant == "A"
     assert r.product ==  "B"
     assert r.delta_H is None
@@ -241,7 +241,7 @@ def test_add_reaction():
     assert type(r) == ReactionGeneric
     assert np.allclose(r.kF , 9.)
     assert np.allclose(r.kR , 7.)
-    assert np.allclose(r.K , 9./7.)
+    assert np.allclose(r.K_eq, 9. / 7.)
     assert r.reactants == [(2, "B")]
     assert r.products == [(5, "C")]
     assert r.delta_H is None
@@ -262,7 +262,7 @@ def test_add_reaction():
     assert type(r) == ReactionSynthesis
     assert np.allclose(r.kF , 11.)
     assert np.allclose(r.kR , 13.)
-    assert np.allclose(r.K , 11./13.)
+    assert np.allclose(r.K_eq, 11. / 13.)
     assert r.reactant_1 == "D"
     assert r.reactant_2 == "D"
     assert r.product == "C"
@@ -283,7 +283,7 @@ def test_add_reaction():
     assert type(r) == ReactionGeneric
     assert np.allclose(r.kF , 5.)
     assert np.allclose(r.kR , 1.)
-    assert np.allclose(r.K , 5./1.)
+    assert np.allclose(r.K_eq, 5. / 1.)
     assert r.reactants == [(1, "A"), (2, "B")]
     assert r.products == [(3, "C"), (1, "D")]
     assert r.delta_H is None
@@ -316,7 +316,7 @@ def test_add_reaction():
     assert np.allclose(r.delta_H, 0.005)
     assert np.allclose(r.delta_S, 0.4)
     assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
-    assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.K_eq, 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693)    # 10. / 1.0461347154679432
 
@@ -370,7 +370,7 @@ def test_register_reaction():
     assert r.product == "B"
     assert np.allclose(r.kF, 11.)
     assert np.allclose(r.kR, 13.)
-    assert np.allclose(r.K , 11./13.)
+    assert np.allclose(r.K_eq, 11. / 13.)
     assert r.delta_H is None
     assert r.delta_S is None
     assert np.allclose(r.delta_G, 0.2777928942715384)   # - RT log(K)   , in kJ/mol
@@ -392,7 +392,7 @@ def test_register_reaction():
     assert np.allclose(r.delta_H, 0.005)
     assert np.allclose(r.delta_S, 0.4)
     assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
-    assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.K_eq, 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kR, 9.558998331803693)     # 10. / 1.0461347154679432
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
 
