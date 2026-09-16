@@ -686,7 +686,7 @@ class ReactionDefinition:
 
         self.thermodynamics: ReactionThermodynamics | None = None
 
-        self.source_kinetic_parameters = kinetic_parameters
+        self.source_kinetic_parameters : dict|None = kinetic_parameters if kinetic_parameters is not None else {}
         self.source_thermodynamic_parameters = thermodynamic_parameters
         #self.kinetics: Kinetics | None = None
 

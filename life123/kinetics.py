@@ -98,8 +98,8 @@ class MichaelisMenten_Model:
             else:
                 if not math.isclose(kcat, derived_kcat):
                     raise ValueError(
-                        f"set_parameters(): Inconsistent kinetic parameters: "
-                        f"kcat={kcat}, kcat_derived={derived_kcat}"
+                        f"MichaelisMenten_Model.set_parameters(): Inconsistent kinetic parameters: "
+                        f"passed kcat={kcat}, derived kcat={derived_kcat}"
                     )
 
 
@@ -119,8 +119,8 @@ class MichaelisMenten_Model:
                 else:
                     if not math.isclose(kM, derived_kM):
                         raise ValueError(
-                            f"set_parameters(): Inconsistent kinetic parameters: "
-                            f"kM={kM}, derived_kM={derived_kM}"
+                            f"MichaelisMenten_Model.set_parameters(): Inconsistent kinetic parameters: "
+                            f"passed kM={kM}, derived kM={derived_kM}"
                         )
 
 
