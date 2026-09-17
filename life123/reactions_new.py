@@ -99,7 +99,8 @@ class Stoichiometry:
 
     def get_reaction_complexes(self) -> tuple:
         """
-        Similar to get_reaction_vector(), but it separates the reactants and products in a pair.
+        It separates the reactants and products in a pair;
+        basically (the left-hand side, the right-hand side).
         Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
         a reaction is:  reactant complex -> product complex
         ~~~
@@ -132,8 +133,21 @@ class Stoichiometry:
                  would return to [(2, "A"), (2, "B"), (1, "E")]
         :return:
         """
+        # TODO: consider returning a set instead of a list
         return [  (-v, k) for k,v in self.vector.items() if v < 0]  \
                 + [(1, c) for c in self.catalysts]
+
+
+
+    def get_reactant_ids(self) -> set:
+        """
+        Return the list of all reactant species
+
+        :return:
+        """
+        # Use set construction and set union
+        return    { k for k,v in self.vector.items() if v < 0}  \
+                | { c for c in self.catalysts}
 
 
     def get_product_list(self) -> list:
@@ -145,8 +159,21 @@ class Stoichiometry:
                  would return to [(3, "P"), (1, "E")]
         :return:
         """
+        # TODO: consider returning a set instead of a list
         return [   (v, k) for k,v in self.vector.items() if v > 0] \
                 + [(1, c) for c in self.catalysts]
+
+
+
+    def get_product_ids(self) -> set:
+        """
+        Return the list of all product species
+
+        :return:
+        """
+        # Use set construction and set union
+        return    { k for k,v in self.vector.items() if v > 0}  \
+                | { c for c in self.catalysts}
 
 
 
@@ -337,83 +364,6 @@ class ReactionThermodynamics:
 
 
 
-###################################################################################################################
-
-
-class ReactionDefinition_INACTIVE:
-    """
-    The user-facing object; what the user specifies as an overall reaction (simple or complex).
-    This is the authoritative biological object at the user/model level.
-
-    The simulation engine never sees this.
-
-    A reaction definition is what the modeler specifies;
-    a simulation reaction is what the numerical engine executes.
-
-    A ReactionDefinition object may expand into one or more SimulationReaction objects.
-
-    In other words, some reaction definitions are compound models and expand into multiple simulation reactions.
-
-            user-level reaction model --->  simulation-level reaction model
-
-    EXAMPLES - specific:
-        1) An ordinary mass-action reaction can simply compile as:
-
-            ReactionDefinition
-                    ↓
-                   [itself / equivalent]
-                    ↓
-            SimulationReaction
-
-        2) A mechanistic enzyme reaction (such as S + E <-> SE -> P + E , when we are given kF_1, kR_1 and kF_2:
-
-            ReactionDefinition
-                    ↓
-              expansion
-                    ↓
-            SimulationReaction A
-            SimulationReaction B
-
-
-    EXAMPLES - tabulation:
-
-        | User enters                                | ReactionDefinition | SimulationRepresentation |
-        | -------------------------------------------| ------------------ | ------------------------ |
-        | A + B -> C,   mass action                  | one                | one                      |
-        | S -> P, MM mechanism, with kcat, kM        | one                | one                      |
-        | E+S ⇌ ES -> E+P , with kF_1, kR_1 and kF_2 | one                | two                      |
-        | ordered Bi-Bi                              | one                | several                  |
-        | ping-pong Bi-Bi (2 substrates, 2 products) | one                | several                  |
-
-    """
-    def __init__(self, stoichiometry, kinetics, thermodynamics, sim_reactions):
-        self.stoichiometry: Stoichiometry | None = stoichiometry
-        self.kinetics: Kinetics | None = kinetics
-        self.thermodynamics: ReactionThermodynamics | None = thermodynamics
-        self.sim_reactions = sim_reactions
-
-        """
-        #Ideas for other object variables:
-        
-            id
-            name
-            description
-            literature references
-            annotations
-            original kinetic model
-            thermodynamic data
-        """
-
-
-    def expand(self):
-        """
-        Could perhaps return something like:
-        [SimulationReaction_1, SimulationReaction_2]
-        :return:
-        """
-        pass
-
-
 #############################################################################################
 
 class SimulationReaction:
@@ -437,12 +387,14 @@ class SimulationReaction:
                                     either "direct" or "generated"
         """
         self.model = model
-        self.stoichiometry: Stoichiometry | None = stoichiometry
+        self.stoichiometry: Stoichiometry|None = stoichiometry
 
-        self.source_definition_id = source_id   # Provenance
+        self.source_definition_id = source_id       # Provenance
         self.derivation : str | None = derivation
         # TODO: maybe add another variable "role", such as "binding", "catalysis", "ES formation"
         #       "ES breakdown" ("what role this particular generated reaction plays")
+
+
 
 
 #############################################################################################
@@ -621,6 +573,10 @@ class ReactionCompiler_SingleSubstrateMechanism:
 
 
 
+
+
+###########################################################################
+
 class ReactionModelRegistry:
     """
     Registry for all the Reaction Models.
@@ -658,11 +614,54 @@ class ReactionModelRegistry:
 
 
 
+
 ###################################################################################################################
 
 
 class ReactionDefinition:
     """
+    The user-facing object; what the user specifies as an overall reaction (simple or complex).
+    This is the authoritative biological object at the user/model level.
+
+    The simulation engine never sees this.
+
+    A reaction definition is what the modeler specifies;
+    a simulation reaction is what the numerical engine executes.
+
+    A ReactionDefinition object may expand into one or more SimulationReaction objects.
+
+    In other words, some reaction definitions are compound models and expand into multiple simulation reactions.
+
+            user-level reaction model --->  simulation-level reaction model
+
+    EXAMPLES - specific:
+        1) An ordinary mass-action reaction can simply compile as:
+
+            ReactionDefinition
+                    ↓
+                   [itself / equivalent]
+                    ↓
+            SimulationReaction
+
+        2) A mechanistic enzyme reaction (such as S + E <-> SE -> P + E , when we are given kF_1, kR_1 and kF_2:
+
+            ReactionDefinition
+                    ↓
+              expansion
+                    ↓
+            SimulationReaction A
+            SimulationReaction B
+
+
+    EXAMPLES - tabulation:
+
+        | User enters                                | ReactionDefinition | SimulationRepresentation |
+        | -------------------------------------------| ------------------ | ------------------------ |
+        | A + B -> C,   mass action                  | one                | one                      |
+        | S -> P, MM mechanism, with kcat, kM        | one                | one                      |
+        | E+S ⇌ ES -> E+P , with kF_1, kR_1 and kF_2 | one                | two                      |
+        | ordered Bi-Bi                              | one                | several                  |
+        | ping-pong Bi-Bi (2 substrates, 2 products) | one                | several                  |
 
     """
 
@@ -724,7 +723,9 @@ class ReactionDefinition:
         self.species_registry = species_registry
 
         self.reaction_model = reaction_model
-        self.sim_reactions :tuple|None = None
+        self.sim_reactions :tuple|None = ()     # Tuple of "ReactionSimulation" objects
+
+        self.annotations :str|None = None       # Not in current use
 
 
         self._parse(reactants=reactants, products=products, autoregister_species=autoregister_species)
@@ -732,13 +733,14 @@ class ReactionDefinition:
         # if self._detect_elementary_reaction(reaction_model):
         #    reaction_model = "mass action"
 
+
         #########   Process the given thermodynamic data   #########
 
         self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S, delta_G=delta_G,
                                                      K_eq=K_eq, temp=temp)
 
         if reaction_model is not None:
-            self._build_model(reaction_model, kinetic_parameters)
+            self._build_model()
 
 
         #self.kinetics = Kinetics(law=reaction_model, parameters=kinetic_parameters)
@@ -750,16 +752,6 @@ class ReactionDefinition:
         #print(f"detected reaction category `{self.reaction_category}`")
 
         self.analytic_solution_family = self._determine_analytic_solution_family()
-
-
-        #########   Process the thermodynamic data   #########
-
-        #self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S, temp=temp)
-                                                     #K=self.kinetics.parameters.get("K")
-
-        return
-        if temp is not None:
-            self.set_thermodynamic_data(temp)
 
 
 
@@ -821,32 +813,27 @@ class ReactionDefinition:
 
 
 
-    def _build_model(self, reaction_model, kinetic_parameters) -> None:
+    def _build_model(self) -> None:
         """
+        Process the kinetic data
 
-        :param reaction_model:
-        :param kinetic_parameters:
         :return:                    None
         """
-        #TODO: no need to pass parameters; they're available as object variables
+        # Look up the appropriate "reaction compiler"
+        #print(f"reaction_model: {self.reaction_model!r}")    # EXAMPLE: 'mass action'
+        reaction_compiler = ReactionModelRegistry.get_compiler_class(model_name=self.reaction_model)
+        # EXAMPLE: the `ReactionCompiler_MassAction` class
+        #print("reaction_compiler: ", reaction_compiler.__name__)    # EXAMPLE: ReactionCompiler_MassAction
 
-        #########   Process the kinetic data   #########
-        if (kinetic_parameters is not None) and (kinetic_parameters != {}):
-            # Look up the appropriate "reaction compiler"
-            print(f"reaction_model: {reaction_model!r}")    # EXAMPLE: 'mass action'
-            reaction_compiler = ReactionModelRegistry.get_compiler_class(model_name=reaction_model)
-            # EXAMPLE: the `ReactionCompiler_MassAction` class
-            print("reaction_compiler: ", reaction_compiler.__name__)    # EXAMPLE: ReactionCompiler_MassAction
-
-            # Invoke the appropriate member of the "reaction compiler" family of classes;
-            # a tuple of "SimulationReaction" objects is returned
-            sr_tuple = reaction_compiler.compile(stoichiometry=self.stoichiometry,
-                                                 kinetic_parameters=kinetic_parameters,
-                                                 thermodynamics_data=self.thermodynamics,
-                                                 source_id=self.id, species_registry=self.species_registry)
-            #print("sr: ", sr)
-            self.sim_reactions = sr_tuple
-            #print("self.sim_reactions: ", self.sim_reactions)
+        # Invoke the appropriate member of the "reaction compiler" family of classes;
+        # a tuple of "SimulationReaction" objects is returned
+        sr_tuple = reaction_compiler.compile(stoichiometry=self.stoichiometry,
+                                             kinetic_parameters=self.source_kinetic_parameters,
+                                             thermodynamics_data=self.thermodynamics,
+                                             source_id=self.id, species_registry=self.species_registry)
+        #print("sr: ", sr)
+        self.sim_reactions = sr_tuple
+        #print("self.sim_reactions: ", self.sim_reactions)
 
 
 
@@ -1020,9 +1007,8 @@ class ReactionDefinition:
             self.thermodynamics.set_temperature(temp)
 
         if self.thermodynamics.K_eq is not None:
-            if self.sim_reactions is not None:
-                for sr in self.sim_reactions:
-                    Reconciler.reconcile(thermodynamics_data=self.thermodynamics, model=sr.model)
+            for sr in self.sim_reactions:
+                Reconciler.reconcile(thermodynamics_data=self.thermodynamics, model=sr.model)
             #self.kinetics.set_rate_constants_from_equilibrium_constant(K=self.thermodynamics.K_eq)
 
 
@@ -1030,11 +1016,42 @@ class ReactionDefinition:
     def extract_intermediate(self) -> str|None:
         """
         Return the name of the reaction intermediate species,
-        or None if there's no intermediate
+        or None if there's no intermediate.
 
-        :return:
+        If more than 1 intermediate is present, raise an Exception
+
+        :return:    The species ID of the reaction intermediate, if present;
+                        or None if not present
         """
-        return self.kinetics.extract_intermediate()
+        sim_rxn_tuple = self.sim_reactions
+        print(len(sim_rxn_tuple))
+        if len(sim_rxn_tuple) < 2:
+            # If at most one SimulationReaction
+            return None
+
+        assert len(sim_rxn_tuple) < 3, \
+            "extract_intermediate(): currently not implemented for cases when the reaction definition " \
+            "compiles into more than 2 simulation reactions"
+
+        # If we get thus far, we have exactly 2 elements in the tuple
+        st_0 = sim_rxn_tuple[0].stoichiometry.to_dict()
+        st_1 = sim_rxn_tuple[1].stoichiometry.to_dict()
+        overlap = set(st_0) & set(st_1)     # Set intersection
+        #print("overlap: ", overlap)        # EXAMPLE: {'SE*', 'E'}
+
+        overlap -= sim_rxn_tuple[0].stoichiometry.get_reactant_ids()     # Set difference
+        overlap -= sim_rxn_tuple[1].stoichiometry.get_product_ids()      # Set difference
+
+        assert len(overlap) < 2, \
+            "extract_intermediate(): currently not implemented for cases when " \
+            "there is more than 1 intermediary"
+
+        if overlap == set():
+            return None     # No overlap
+
+        return overlap.pop()    # Extract one element from the set
+
+        #TODO: generalize
 
 
 

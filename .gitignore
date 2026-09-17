@@ -134,3 +134,4 @@ dmypy.json
 # Life123-specific
 /experiments/PRIVATE/
 quick2.bat
+/UNUSED/

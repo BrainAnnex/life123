@@ -111,15 +111,34 @@ def test_get_reaction_complexes():
 
 
 def test_get_reactant_list():
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_reactant_list() == [(2, "A"), (2, "B")]
 
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_reactant_list() == [(2, "A"), (2, "B"), (1, "E")]
+
+def test_get_reactant_ids():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_reactant_ids() == {"A", "B"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_reactant_ids() == {"A", "B", "E"}
 
 
 def test_get_product_list():
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_product_list() == [(3, "P")]
 
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_product_list() == [(3, "P"), (1, "E")]
+
+
+def test_get_product_ids():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_product_ids() == {"P"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_product_ids() == {"P", "E"}
 
 
 
@@ -265,10 +284,20 @@ def test_get_signed_stoichiometric_coefficients():
 
 
 
+############################  class SimulationReaction  ############################
+
+def test_CONSTRUCTOR_SimulationReaction():
+    pass        # TODO
+
+
+# TODO: also test the various "Compiler" classes and ReactionModelRegistry
+
+
+
 
 ############################  class ReactionDefinition  ############################
 
-def test_constructor_ReactionDefinition_1():
+def test_CONSTRUCTOR_ReactionDefinition_1():
     # The group of testing below is about parsing the reactant/products,
     # and building the reaction "Stoichiometry" dataclass.
     # No kinetics and no thermodynamics!
@@ -298,7 +327,7 @@ def test_constructor_ReactionDefinition_1():
     assert rxn_defn.species_registry == sr
     assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "P": 1}
     assert rxn_defn.reaction_model is None
-    assert rxn_defn.sim_reactions is None
+    assert rxn_defn.sim_reactions == ()
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
 
     # Reaction R + S -> P
@@ -400,7 +429,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
 
 
-    # S + E -> P + E , with MM model
+    # S + E -> P + E , with "michaelis menten" model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
     rxn_defn = ReactionDefinition(id=17, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
                                   reaction_model="michaelis menten",
@@ -617,7 +646,6 @@ def test_constructor_ReactionDefinition_4():
                                   reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 2})
 
 
-
     # Reaction R -> P + Q, with "mass action"
     # The thermodynamic data allows derivation of kinetic parameters not supplied
     rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
@@ -695,16 +723,28 @@ def test_set_thermodynamic_data():
     assert np.allclose(rxn.thermodynamics.K_eq, 0.38205953171)
 
 
-"""
+
 def test_extract_intermediate():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, delta_H=-3)
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    assert rxn_defn.extract_intermediate() is None
 
-    assert rxn.extract_intermediate() is None
+    rxn_defn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action")
+    assert rxn_defn.extract_intermediate() is None
 
 
+    rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True,
+                                  reaction_model="michaelis menten")
+    assert rxn_defn.extract_intermediate() is None
 
+
+    rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True,
+                                  reaction_model="single substrate mechanism")
+    assert rxn_defn.extract_intermediate() == "SE*"
+
+"""
 def test_describe():
     sr = SpeciesRegistry(ids=["R", "P"])
 
