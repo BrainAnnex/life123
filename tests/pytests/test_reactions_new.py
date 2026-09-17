@@ -239,27 +239,6 @@ def test_to_dict_ReactionThermodynamics():
 
 
 
-
-
-
-
-########################  class ReactionDefinition (OLDER TESTS) ########################
-
-
-def test_constructor_ReactionDefinition_3_OLD():
-
-    sr = SpeciesRegistry(ids=["S", "P", "E"])
-
-    # Enzymatic reaction
-    rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr)
-
-    assert rxn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
-
-    assert rxn.analytic_solution_family is None
-    assert rxn.reaction_category == "Enzymatic"
-
-
-
 def test_get_signed_stoichiometric_coefficients():
     sr = SpeciesRegistry(["A", "B"])
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
@@ -314,32 +293,53 @@ def test_constructor_ReactionDefinition_1():
 
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
 
-    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
-    assert rxn.species_registry == sr
-    assert rxn.stoichiometry.to_dict() == {"R": -1, "P": 1}
-    assert rxn.reaction_model is None
-    assert rxn.sim_reactions is None
-    assert rxn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
+    # Reaction R -> P
+    rxn_defn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
+    assert rxn_defn.species_registry == sr
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "P": 1}
+    assert rxn_defn.reaction_model is None
+    assert rxn_defn.sim_reactions is None
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
 
-    rxn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"R": -1, "S": -1, "P": 1}
+    # Reaction R + S -> P
+    rxn_defn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr)
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "S": -1, "P": 1}
 
-    rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"R": -1, "P": 1, "Q": 1}
+    # Reaction R -> P + Q
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "P": 1, "Q": 1}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
+    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
+    assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
-    rxn = ReactionDefinition(reactants="R", products=["P", "P"], species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"R": -1, "P": 2}
+    # Reaction R -> 2 P
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "P"], species_registry=sr)
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "P": 2}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
+    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
+    assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
-    rxn = ReactionDefinition(reactants=["R", "R"], products="P", species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"R": -2, "P": 1}
+    rxn_defn = ReactionDefinition(reactants="R", products=[(2, "P")], species_registry=sr)
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "P": 2}
 
-    rxn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
+    # Reaction 2 R -> P
+    rxn_defn = ReactionDefinition(reactants=["R", "R"], products="P", species_registry=sr)
+    assert rxn_defn.stoichiometry.to_dict() == {"R": -2, "P": 1}
+
+    rxn_defn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
                              species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"S": -1, "P": 1, "E": 0}
+    assert rxn_defn.stoichiometry.to_dict() == {"S": -1, "P": 1, "E": 0}
 
-    rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+    rxn_defn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
                              species_registry=sr)
-    assert rxn.stoichiometry.to_dict() == {"A": -2, "B":- 2, "P": 3, "Q": 1, "E": 0}
+    assert rxn_defn.stoichiometry.to_dict() == {"A": -2, "B":- 2, "P": 3, "Q": 1, "E": 0}
+
+
+    # Reaction S + E -> P + E
+    rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr)
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
+    assert rxn_defn.analytic_solution_family is None
+    assert rxn_defn.reaction_category == "Enzymatic"
 
 
 
@@ -368,7 +368,6 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
     assert set(sr.get_all_species_ids()) == {"R", "P"}
-
 
 
     # A -> B, with "mass action"
@@ -516,6 +515,15 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
 
+    # Reaction R -> P + Q, with "mass action"
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 5, "delta_S": -3})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=None, K_eq=None, derived_pars=set())
+    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
+    assert rxn_defn.reaction_category == "Unimolecular decomposition"
+
+
     # S + E -> P + E , with MM model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
 
@@ -587,108 +595,65 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
 def test_constructor_ReactionDefinition_4():
     # Thermodynamic data passed, with temperature
 
-
-
-    return
+    sr = SpeciesRegistry()
 
 
     # Reaction R -> P + Q
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, reaction_model="mass action")
-
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100})
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
-    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
-
-    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
-    assert rxn_defn.reaction_category == "Unimolecular decomposition"
-
-
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr,
-                             delta_H=5, delta_S=-3)
-
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
-    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=None, K_eq=None)
-
-    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
-    assert rxn_defn.reaction_category == "Unimolecular decomposition"
-
-
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr,
-                             delta_H=5, delta_S=-3, temp=100)
-
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
-
-    assert rxn_defn.thermodynamics.delta_H == 5
-    assert rxn_defn.thermodynamics.delta_S == -3
-    assert np.allclose(rxn_defn.thermodynamics.delta_G, 5.3)
-    assert np.allclose(rxn_defn.thermodynamics.K_eq, 0.0017045829244452543)
-
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_H": 5, "delta_S": -3, "temp": 100}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
+                                                             K_eq=0.0017045829244452543, temp=100,
+                                                             derived_pars={"delta_G", "K_eq"})
     assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
     with pytest.raises(Exception):
         # Inconsistent thermodynamic/kinetic data
-        ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr,
-                           delta_H=5, delta_S=-3, temp=100,
-                           reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 2})
+        ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100},
+                                  reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 2})
 
 
+
+    # Reaction R -> P + Q, with "mass action"
     # The thermodynamic data allows derivation of kinetic parameters not supplied
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr,
-                             delta_H=5, delta_S=-3, temp=100,
-                             reaction_model="mass action", kinetic_parameters={"kF": 10})
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100},
+                                  reaction_model="mass action", kinetic_parameters={"kF": 10})
 
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
-
-    assert rxn_defn.thermodynamics.delta_H == 5
-    assert rxn_defn.thermodynamics.delta_S == -3
-    assert np.allclose(rxn_defn.thermodynamics.delta_G, 5.3)
-    assert np.allclose(rxn_defn.thermodynamics.K_eq, 0.0017045829244452543)
-
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
+                                                             K_eq=0.0017045829244452543, temp=100,
+                                                             derived_pars={"delta_G", "K_eq"})
     assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
+    assert rxn_defn.source_kinetic_parameters == {"kF": 10}
 
-    assert rxn_defn.kinetics.parameters["kF"] == 10
-    assert np.allclose(rxn_defn.kinetics.parameters["kR"], 5866.537706433048)
-    assert rxn_defn.kinetics.parameters["reversible"] == True
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 5866.537706433048, 'K': 0.0017045829244452543, 'reversible': True}
+    assert sim_rxn.model.derived_pars == {'kR', 'K', 'reversible'}
 
 
-    # Consistent thermodynamic/kinetic data
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr,
-                             delta_H=5, delta_S=-3, temp=100,
-                             reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 5866.537706433048})
+    # Redundant but consistent thermodynamic/kinetic data
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100},
+                                  reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 5866.537706433048})
 
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
-
-    assert rxn_defn.thermodynamics.delta_H == 5
-    assert rxn_defn.thermodynamics.delta_S == -3
-    assert np.allclose(rxn_defn.thermodynamics.delta_G, 5.3)
-    assert np.allclose(rxn_defn.thermodynamics.K_eq, 0.0017045829244452543)
-
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
+                                                             K_eq=0.0017045829244452543, temp=100,
+                                                             derived_pars={"delta_G", "K_eq"})
     assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
+    assert rxn_defn.source_kinetic_parameters == {"kF": 10, "kR": 5866.537706433048}
 
-    assert rxn_defn.kinetics.parameters["kF"] == 10
-    assert np.allclose(rxn_defn.kinetics.parameters["kR"], 5866.537706433048)
-    assert rxn_defn.kinetics.parameters["reversible"] == True
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 5866.537706433048, 'K': 0.0017045829244452543, 'reversible': True}
+    assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
-
-    # Reaction R -> 2 P
-    rxn_defn = ReactionDefinition(reactants="R", products=[(2, "P")], species_registry=sr, reaction_model="mass action")
-
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
-    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
-
-    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
-    assert rxn_defn.reaction_category == "Unimolecular decomposition"
-
-
-    rxn_defn = ReactionDefinition(reactants="R", products=["P", "P"], species_registry=sr, reaction_model="mass action")
-
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 2})
-    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
-    assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
-    assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
 """

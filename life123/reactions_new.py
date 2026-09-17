@@ -305,10 +305,33 @@ class ReactionThermodynamics:
                                                                 temp=temp)
 
         #print(f"thermo_data : {thermo_data}")
-        self.K_eq = thermo_data["K"]
-        self.delta_H = thermo_data["delta_H"]
+        if self.K_eq is None and thermo_data["K"] is not None:
+            self.derived_pars.add("K_eq")
+
+        if thermo_data["K"] is not None:
+            if self.K_eq is None:
+                self.derived_pars.add("K_eq")
+
+            self.K_eq = thermo_data["K"]
+
+        if thermo_data["delta_H"] is not None:
+            if self.delta_H is None:
+                self.derived_pars.add("delta_H")
+
+            self.delta_H = thermo_data["delta_H"]
+
+        if thermo_data["delta_S"] is not None:
+            if self.delta_S is None:
+                self.derived_pars.add("delta_S")
+
         self.delta_S = thermo_data["delta_S"]
+
+        if thermo_data["delta_G"] is not None:
+            if self.delta_G is None:
+                self.derived_pars.add("delta_G")
+
         self.delta_G = thermo_data["delta_G"]
+
         self.temp = temp
 
 
