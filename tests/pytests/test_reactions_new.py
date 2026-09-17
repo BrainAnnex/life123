@@ -141,6 +141,14 @@ def test_get_product_ids():
     assert s.get_product_ids() == {"P", "E"}
 
 
+def test_get_all_species_ids():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_all_species_ids() == {"A", "B", "P"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_all_species_ids() == {"A", "B", "P", "E"}
+
+
 
 def test_reaction_pattern():
     # Reaction R -> P
@@ -694,6 +702,19 @@ def test_extract_rxn_properties():
 
     assert rxn.extract_rxn_properties() == {'kinetics_type': 'mass action', 'kF': 10, 'kR': 2, 'delta_H': -30, 'K': 5.0, 'reversible': True}
 
+
+def test_describe():
+    sr = SpeciesRegistry(ids=["R", "P"])
+
+    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr,
+                             delta_H=0.5, delta_S=-3, temp=100,
+                             reaction_model="mass action", kinetic_parameters={"kF": 10})
+    assert rxn.describe(concise=True) == "R <-> P"
+    print(rxn.describe(concise=False))
+    assert rxn.describe(concise=False) == \
+            "R <-> P  Elementary Unimolecular rearrangement/isomerization reaction\n" \
+            "         (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K = 0.38206 | Temp = -173.1 C | kinetics_type = 'mass action' | kF = 10 | kR = 26.174 | reversible = True)"
+
 """
 
 def test_set_thermodynamic_data():
@@ -744,41 +765,28 @@ def test_extract_intermediate():
                                   reaction_model="single substrate mechanism")
     assert rxn_defn.extract_intermediate() == "SE*"
 
-"""
-def test_describe():
-    sr = SpeciesRegistry(ids=["R", "P"])
-
-    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr,
-                             delta_H=0.5, delta_S=-3, temp=100,
-                             reaction_model="mass action", kinetic_parameters={"kF": 10})
-    assert rxn.describe(concise=True) == "R <-> P"
-    print(rxn.describe(concise=False))
-    assert rxn.describe(concise=False) == \
-            "R <-> P  Elementary Unimolecular rearrangement/isomerization reaction\n" \
-            "         (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K = 0.38206 | Temp = -173.1 C | kinetics_type = 'mass action' | kF = 10 | kR = 26.174 | reversible = True)"
-
 
 
 def test_extract_reactant_ids():
     sr = SpeciesRegistry(ids=["A", "B"])
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_reactant_ids() == ["A"]
+    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    assert rxn.extract_reactant_ids() == {"A"}
 
     rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
-    assert rxn.extract_reactant_ids() == ["A", "B"]
+    assert rxn.extract_reactant_ids() == {"A", "B"}
 
     rxn = ReactionDefinition(reactants=["R", "R"], products="C", species_registry=sr, autoregister_species=True)
-    assert rxn.extract_reactant_ids() == ["R"]
+    assert rxn.extract_reactant_ids() == {"R"}
 
     rxn = ReactionDefinition(reactants=[(2, "R")], products="C", species_registry=sr, autoregister_species=True)
-    assert rxn.extract_reactant_ids() == ["R"]
+    assert rxn.extract_reactant_ids() == {"R"}
 
     rxn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_reactant_ids() == ["A"]
+    assert rxn.extract_reactant_ids() == {"A"}
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_reactant_ids() == ["S", "E"]
+    assert rxn.extract_reactant_ids() == {"S", "E"}
 
 
 
@@ -801,19 +809,19 @@ def test_extract_product_ids():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_product_ids() == ["B"]
+    assert rxn.extract_product_ids() == {"B"}
 
     rxn = ReactionDefinition(reactants=["A", "B"], products="C", species_registry=sr, autoregister_species=True)
-    assert rxn.extract_product_ids() == ["C"]
+    assert rxn.extract_product_ids() == {"C"}
 
     rxn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_product_ids() == ["B", "C"]
+    assert rxn.extract_product_ids() == {"B", "C"}
 
     rxn = ReactionDefinition(reactants="A", products=["F", "F"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_product_ids() == ["F"]
+    assert rxn.extract_product_ids() == {"F"}
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_product_ids() == ["P", "E"]
+    assert rxn.extract_product_ids() == {"P", "E"}
 
 
 
@@ -845,7 +853,7 @@ def test_extract_species_in_reaction():
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_species_in_reaction() == {"S", "P", "E"}     # "ES"
+    assert rxn.extract_species_in_reaction() == {"S", "P", "E"}
 
 
 
@@ -878,26 +886,31 @@ def test_reaction_quotient():
     assert formula == '[C] / ([A][B])'
 
     # Reaction :  2A <-> P
-    rxn = ReactionDefinition(reactants=["A" , "A"], products="P", species_registry=sr, autoregister_species=True)
+    rxn = ReactionDefinition(reactants=["A" , "A"], products="P", species_registry=sr,
+                             reaction_model="mass action", autoregister_species=True)
     c = {'A': 2., 'P': 20.}
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(5., quotient)
     assert formula == '[P] /  [A]^2 '
 
     # Reaction :  C <-> A + B
-    rxn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True)
+    rxn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr,
+                             reaction_model="mass action", autoregister_species=True)
     c = {'A': 3., 'B': 4., 'C': 12.}
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1., quotient)
     assert formula == '([A][B]) / [C]'
 
     # Reaction :  B <-> 2A
-    rxn = ReactionDefinition(reactants="B", products=["A" , "A"], species_registry=sr, autoregister_species=True)
+    rxn = ReactionDefinition(reactants="B", products=["A" , "A"], species_registry=sr,
+                             reaction_model="mass action", autoregister_species=True)
     c = {'A': 2., 'B': 20.}
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1/5., quotient)
     assert formula == ' [A]^2  / [B]'
 
+
+"""
 
 def test_determine_reaction_rate():
     sr = SpeciesRegistry(ids=["A", "B"])

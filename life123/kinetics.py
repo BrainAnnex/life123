@@ -1,5 +1,4 @@
 from __future__ import annotations      # To facilitate type annotations
-import numpy as np
 import math
 
 
@@ -10,7 +9,8 @@ class OrderedBiBi_Model:
 class PingPongBiBi_Model:
     pass
 
-#########################
+
+################################################################################
 
 class MichaelisMenten_Model:
     name = "Michaelis-Menten"
@@ -43,6 +43,8 @@ class MichaelisMenten_Model:
         """
         Validate and set the passed kinetic parameters,
         as well as any others derivable from them
+
+        TODO: Any existing values will be updated as applicable.  Do it as for "mass action"
 
         :param parameters:
         :param derived_pars:    [OPTIONAL] Set of names of parameters that were derived
@@ -177,13 +179,6 @@ class MassAction_Model:
         """
         if derived_pars:
             self.derived_pars |= derived_pars   # Set union
-
-        # Validate that at most only the allowed key were passed
-        #ALLOWED_KEYS = {"kR", "kF", "K"}
-        #unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
-
-        #if unexpected_keys:
-        #    raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
 
 
@@ -330,8 +325,3 @@ class MassAction_Model:
 
     def rate(self, concentrations):
         pass
-
-
-
-############################################################################
-

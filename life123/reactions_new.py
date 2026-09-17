@@ -139,7 +139,7 @@ class Stoichiometry:
 
 
 
-    def get_reactant_ids(self) -> set:
+    def get_reactant_ids(self) -> Set[str]:
         """
         Return the list of all reactant species
 
@@ -165,7 +165,7 @@ class Stoichiometry:
 
 
 
-    def get_product_ids(self) -> set:
+    def get_product_ids(self) -> Set[str]:
         """
         Return the list of all product species
 
@@ -173,6 +173,19 @@ class Stoichiometry:
         """
         # Use set construction and set union
         return    { k for k,v in self.vector.items() if v > 0}  \
+                | { c for c in self.catalysts}
+
+
+
+    def get_all_species_ids(self) -> Set[str]:
+        """
+        Return a SET of the id's of ALL the species appearing in this reaction
+
+        :return:    A SET of the id's of the species involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        # Use set construction and set union
+        return    { k for k,_ in self.vector.items() }  \
                 | { c for c in self.catalysts}
 
 
@@ -443,7 +456,7 @@ class ReactionCompiler_MassAction:
         :param species_registry:
         :return:
         """
-        print("In compile() method of class 'ReactionCompiler_MassAction'")
+        #print("In compile() method of class 'ReactionCompiler_MassAction'")
 
         ALLOWED_KEYS = {"kR", "kF", "K"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
@@ -469,7 +482,7 @@ class ReactionCompiler_MassAction:
 
 
         m.set_parameters(parameters=pars, derived_pars=derived_pars)     # Pass thru the parameters (possibly enhanced by additional parameters derived from the thermodynamics)
-        print(f"    name of model being used: {m.name!r}")
+        #print(f"    name of model being used: {m.name!r}")
 
         sr1 = SimulationReaction(model=m, stoichiometry=stoichiometry,
                                  source_id=source_id,
@@ -500,7 +513,7 @@ class ReactionCompiler_MassAction:
 class ReactionCompiler_MichaelisMenten:
     @staticmethod
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, species_registry=None):
-        print("In compile() method of class 'ReactionCompiler_MichaelisMenten'")
+        #print("In compile() method of class 'ReactionCompiler_MichaelisMenten'")
 
         ALLOWED_KEYS = {"kM", "kcat", "k1_F", "k1_R", "k2_F"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
@@ -520,7 +533,7 @@ class ReactionCompiler_MichaelisMenten:
 
         m = MichaelisMenten_Model()
         m.set_parameters(parameters=kinetic_parameters)     # Pass thru the parameters
-        print(f"    name of model being used: {m.name!r}")
+        #print(f"    name of model being used: {m.name!r}")
 
         r1 = SimulationReaction(model=m, stoichiometry=stoichiometry, source_id=source_id)
         return (r1,)
@@ -700,7 +713,6 @@ class ReactionDefinition:
         delta_G=thermodynamic_parameters.get("delta_G")
         K_eq=thermodynamic_parameters.get("K_eq")
         temp=thermodynamic_parameters.get("temp")
-
 
 
         self.name = name
@@ -1091,15 +1103,14 @@ class ReactionDefinition:
 
 
 
-    def extract_reactant_ids(self) -> [str]:
+    def extract_reactant_ids(self) -> set[str]:
         """
-        Return the list of ALL the reactant id's in this reaction
+        Return the set of ALL the reactant species id's in this reaction
         (including any catalysts, if applicable)
 
-        :return:    A list of unique chemical labels,
-                        in the order they appeared in when this reaction was first defined
+        :return:    A set of species id's
         """
-        return [t[1] for t in self.reactants]
+        return self.stoichiometry.get_reactant_ids()
 
 
     def extract_reactants(self) -> list[(int, str)]:
@@ -1109,7 +1120,7 @@ class ReactionDefinition:
 
         :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
-        return self.reactants
+        return self.stoichiometry.get_reactant_list()
 
 
     def extract_reactants_formula(self) -> str:
@@ -1119,19 +1130,18 @@ class ReactionDefinition:
 
         :return:    A string with the left (reactant) side of the reaction formula
         """
-        return self._standard_form_chem_eqn(self.reactants)
+        return self._standard_form_chem_eqn(self.stoichiometry.get_reactant_list())
 
 
 
-    def extract_product_ids(self) -> [str]:
+    def extract_product_ids(self) -> set[str]:
         """
-        Return the list of ALL the product id's in this reaction
+        Return the set of ALL the product id's in this reaction
         (including any catalysts, if applicable)
 
-        :return:    A list of unique chemical labels,
-                        in the order they appeared in when this reaction was first defined
+        :return:    A set of species id's
         """
-        return [t[1] for t in self.products]
+        return self.stoichiometry.get_product_ids()
 
 
     def extract_products(self) -> list[(int, str)]:
@@ -1141,7 +1151,7 @@ class ReactionDefinition:
 
         :return:    A list of pairs of the form (stoichiometry coefficient, species id)
         """
-        return self.products
+        return self.stoichiometry.get_product_list()
 
 
     def extract_products_formula(self) -> str:
@@ -1151,7 +1161,7 @@ class ReactionDefinition:
 
         :return:    A string with the right (product) side of the reaction formula
         """
-        return self._standard_form_chem_eqn(self.products)
+        return self._standard_form_chem_eqn(self.stoichiometry.get_product_list())
 
 
 
@@ -1162,7 +1172,7 @@ class ReactionDefinition:
         :return:    A SET of the id's of the species involved in this reaction
                         Note: being a set, it's NOT in any particular order
         """
-        return set(self.extract_reactant_ids()) | set(self.extract_product_ids())   # Union of sets
+        return self.stoichiometry.get_all_species_ids()
 
 
 
@@ -1184,11 +1194,12 @@ class ReactionDefinition:
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        assert self.kinetics.law == "mass action", \
+        #TODO: probably move to "SimulationReaction" class
+        assert self.reaction_model == "mass action", \
             "reaction_quotient(): only implemented for reactions that have \"mass action\" kinetics"
 
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.reactants,
-                                                        product_data=self.products,
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
+                                                        product_data=self.stoichiometry.get_product_list(),
                                                         conc=conc, explain=explain)
 
 
@@ -1513,6 +1524,8 @@ class ReactionDefinition:
         :param eqn_side:    A list encoding either side of a chemical equation
         :return:            A string with a user-friendly form of a side of a chemical equation
         """
+        # TODO: probably switch to using the new Stoichiometry dataclass
+
         assert type(eqn_side) == list, \
             f"Reaction._standard_form_chem_eqn(): the argument must be a list (it was of type {type(eqn_side)})"
 
