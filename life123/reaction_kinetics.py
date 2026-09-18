@@ -785,8 +785,8 @@ class ReactionKinetics:
         Note: for scenarios where one of stoichiometric coefficients is 2,
               use compute_equilibrium_conc_elementary_synthesis() instead
 
-        :param kF:  The reaction's forward rate constant
-        :param kR:  The reaction's reverse rate constant
+        :param kF:  The reaction's forward rate constant (None will be interpreted as a zero, i.e. no forward reaction)
+        :param kR:  The reaction's reverse rate constant (None will be interpreted as a zero, i.e. no reverse reaction)
         :param A0:  The initial concentration of species `A` (i.e. the 1st reactant term)
         :param P0:  The initial concentration of species `P` (i.e. the 1st product term)
         :param B0:  Use None to indicate the absence of a `B` species (i.e. a 2nd term) among the reactants
@@ -801,6 +801,10 @@ class ReactionKinetics:
         """
         b = 0 if B0 is None else 1
         q = 0 if Q0 is None else 1
+
+        kF = 0 if kF is None else kF
+        kR = 0 if kR is None else kR
+
         return ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=b, B0=B0, q=q, Q0=Q0)
 
 

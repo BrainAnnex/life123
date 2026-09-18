@@ -1030,7 +1030,7 @@ def test_step_simulation():
     result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
     assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
     assert result[1] == -2460
-
+"""
 
 
 def test_find_equilibrium_conc():
@@ -1038,11 +1038,8 @@ def test_find_equilibrium_conc():
 
     # Reaction : A <-> C
     rxn = ReactionDefinition(reactants="A", products="C", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 3, "kR": 2})
+                             reaction_model="mass action", kinetic_parameters={"kF": 3, "kR": 2})
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
-    assert rxn.kinetics.law == "mass action"
-    assert rxn.kinetics.parameters["kF"] == 3
-    assert rxn.kinetics.parameters["kR"] == 2
 
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 36)
@@ -1052,16 +1049,16 @@ def test_find_equilibrium_conc():
 
     # Only the forward reaction
     rxn = ReactionDefinition(reactants="A", products="C", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 3})
+                             reaction_model="mass action", kinetic_parameters={"kF": 3})
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
-    assert rxn.kinetics.parameters["reversible"] == False
+    #assert rxn.kinetics.parameters["reversible"] == False
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 0)
     assert np.allclose(result["C"], 90)
 
     # Only the reverse reaction
     rxn = ReactionDefinition(reactants="A", products="C", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kR": 2})
+                             reaction_model="mass action", kinetic_parameters={"kR": 2})
     assert rxn.analytic_solution_family == "ONE_TO_ONE"
     result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
     assert np.allclose(result["A"], 90)
@@ -1069,7 +1066,7 @@ def test_find_equilibrium_conc():
 
     # Reaction X + Y <-> Z
     rxn = ReactionDefinition(reactants=["X", "Y"], products="Z", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 5, "kR": 2})
+                             reaction_model="mass action", kinetic_parameters={"kF": 5, "kR": 2})
     assert rxn.analytic_solution_family == "TWO_TO_ONE"
     result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
     expected_eq = [0.2948774087575341, 40.294877408757536, 29.705122591242464]
@@ -1088,7 +1085,7 @@ def test_find_equilibrium_conc():
 
     # 2 A <-> C
     rxn = ReactionDefinition(reactants=["A", "A"], products="C", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 3., "kR": 2.})
+                             reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
     assert rxn.analytic_solution_family == "TWO_TO_ONE"
     result = rxn.find_equilibrium_conc(conc_dict={"A":200., "C": 40.})
     expected_eq = [9.49568869375716, 135.2521556531214]
@@ -1100,7 +1097,7 @@ def test_find_equilibrium_conc():
 
     # Reaction Z <-> X + Y
     rxn = ReactionDefinition(reactants="Z", products=["X", "Y"], species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 2., "kR": 5.})
+                             reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
     result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
     expected_eq = [0.2948774087575341, 40.294877408757536, 29.705122591242464]
@@ -1113,7 +1110,7 @@ def test_find_equilibrium_conc():
 
     # C <-> 2 A
     rxn = ReactionDefinition(reactants="C", products=["A", "A"], species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 2., "kR": 3.})
+                             reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 3.})
     assert rxn.analytic_solution_family == "ONE_TO_TWO"
     result = rxn.find_equilibrium_conc(conc_dict={"C": 40., "A":200.})
 
@@ -1121,4 +1118,3 @@ def test_find_equilibrium_conc():
     assert np.allclose(result["A"], 9.49568869375716)
     rxn.stoichiometry.consistency_checker(conc_before={"C": 40., "A":200.},
                                           conc_after={"C": 135.2521556531214, "A": 9.49568869375716})
-"""

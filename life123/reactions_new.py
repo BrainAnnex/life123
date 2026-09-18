@@ -542,7 +542,7 @@ class ReactionCompiler_MichaelisMenten:
 class ReactionCompiler_SingleSubstrateMechanism:
     @staticmethod
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id, species_registry):
-        print("In compile() method of class 'ReactionCompiler_SingleSubstrateMechanism'")
+        #print("In compile() method of class 'ReactionCompiler_SingleSubstrateMechanism'")
 
         ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
@@ -1036,7 +1036,7 @@ class ReactionDefinition:
                         or None if not present
         """
         sim_rxn_tuple = self.sim_reactions
-        print(len(sim_rxn_tuple))
+        #print(len(sim_rxn_tuple))
         if len(sim_rxn_tuple) < 2:
             # If at most one SimulationReaction
             return None
@@ -1220,7 +1220,7 @@ class ReactionDefinition:
         if self.kinetics.law == "mass action":
             return ReactionKinetics.compute_rate_elementary(reactants = self.extract_reactant_ids(),
                                                             products = self.extract_product_ids(),
-                                                            kF = self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                                            kF = self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
                                                             reversible=self.kinetics.parameters["reversible"],
                                                             conc_dict=conc_dict)
 
@@ -1231,7 +1231,7 @@ class ReactionDefinition:
         #print(f"determine_reaction_rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
 
         return function_to_call(reactant_terms=self.reactants, product_terms=self.products,
-                                kF = self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                                kF = self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
                                 conc_dict=conc_dict)                        # Carry out the function call
 
 
@@ -1272,7 +1272,7 @@ class ReactionDefinition:
                 P0 = conc_dict[p]
                 # Compute the respective increments of R0 and P0
                 if self.kinetics.parameters["reversible"]:
-                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
                                                                                      A0=R0, P0=P0, t=delta_time, incremental=True)
                 else:
                     delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kinetics.parameters["kF"],
@@ -1334,10 +1334,12 @@ class ReactionDefinition:
 
         :return:            A dict mapping the above chemical id's to their equilibrium concentrations
         """
-        reactants = self.reactants
-        products = self.products
+        reactants = self.stoichiometry.get_reactant_list()
+        products = self.stoichiometry.get_product_list()
 
-        if self.kinetics.law != "mass action":
+        if self.reaction_model != "mass action":
+            raise Exception("find_equilibrium_conc(): only 'mass action' reaction models are currently supported")
+            """
             assert self.kinetics.kinetic_rate_function == ReactionKinetics.compute_rate_first_order, \
                 "find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
                 "it's only implemented when the kinetic rate function is `ReactionKinetics.compute_rate_first_order` \n" \
@@ -1375,7 +1377,7 @@ class ReactionDefinition:
                                    f"concentration of the product `{p2[1]}` was not provided"
 
 
-            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
                                                                              a=r1[0], b=r2[0],
                                                                              p=p1[0], q=p1[0],
                                                                              A0=A0, B0=B0, P0=C0, Q0=D0)
@@ -1384,6 +1386,7 @@ class ReactionDefinition:
             # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
             return  {r1[1]: eq_dict["A"], r2[1]: eq_dict["B"],
                      p1[1]: eq_dict["P"], p2[1]: eq_dict["Q"]}
+            """
 
 
         """
@@ -1445,49 +1448,51 @@ class ReactionDefinition:
         a, b, p, q = coeffs
         A0, B0, P0, Q0 = concs
 
+        sim_rxm = self.sim_reactions[0]
+
         """
         print(f"coeffs: {coeffs} | concs: {concs} | name_map: {name_map}")
         print(f"a: {a} | b: {b} | p: {p} | q: {q}")
         print(f"A0: {A0} | B0: {B0} | P0: {P0} | Q0: {Q0}")
-        print(f"kF: {self.kinetics.parameters['kF']} | kR: {self.kinetics.parameters['kR']}")
+        print(f"kF: {sim_rxm.model.kF} | kR: {sim_rxm.model.kR}")
         print(self.analytic_solution_family)
         """
-        
+
         if (self.analytic_solution_family == "ONE_TO_ONE"):
             # Reaction is of the form A <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
-                                                                            kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+                                                                            kR=sim_rxm.model.kR,
                                                                             A0=A0, P0=P0)
 
         elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 1):
             # Reaction is of the form A + B <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
-                                                                            kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+                                                                            kR=sim_rxm.model.kR,
                                                                             A0=A0, B0=B0, P0=P0)
 
         elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 2):
             # Reaction is of the form 2 A <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=self.kinetics.parameters["kF"],
-                                                                                     kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=sim_rxm.model.kF,
+                                                                                     kR=sim_rxm.model.kR,
                                                                                      A0=A0, P0=P0)
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 1):
             # Reaction is of the form A <-> P + Q
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=self.kinetics.parameters["kF"],
-                                                                            kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+                                                                            kR=sim_rxm.model.kR,
                                                                             A0=A0, P0=P0, Q0=Q0)
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 2):
             # Reaction is of the form A <-> 2 P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_decomposition(kF=self.kinetics.parameters["kF"],
-                                                                                         kR=self.kinetics.parameters["kR"],
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_decomposition(kF=sim_rxm.model.kF,
+                                                                                         kR=sim_rxm.model.kR,
                                                                                          A0=A0, P0=P0)
 
         else:
             raise Exception(f"find_equilibrium_conc(): Not implemented for this reaction type ({self.analytic_solution_family})")
 
         """                                                                      
-        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=self.kinetics.parameters["kR"],
+        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=sim_rxm.model.kF, kR=sim_rxm.model.kR,
                                                                          a=a, b=b, p=c, q=d,
                                                                          A0=A0, B0=B0, P0=C0, Q0=D0)
         """

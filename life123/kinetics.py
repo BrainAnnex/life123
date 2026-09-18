@@ -29,6 +29,10 @@ class MichaelisMenten_Model:
                                                 # not directly supplied by the user
 
 
+    def __str__(self):
+        return f"MichaelisMenten_Model object.  Parameters: {self.get_parameters()}"
+
+
 
     def get_parameters(self) -> dict:
         """
@@ -154,6 +158,10 @@ class MassAction_Model:
 
         self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
                                                 # not directly supplied by the user
+
+
+    def __str__(self):
+        return f"MassAction_Model object.  Parameters: {self.get_parameters()}"
 
 
 
