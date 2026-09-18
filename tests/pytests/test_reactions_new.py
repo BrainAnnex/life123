@@ -1,11 +1,10 @@
 import numpy as np
 import pytest
 import math
-from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
+from life123.species_registry import SpeciesRegistry
 from life123.reactions_new import Stoichiometry, ReactionThermodynamics, \
 ReactionDefinition, SimulationReaction, MassAction_Model, MichaelisMenten_Model
 from tests.utilities.comparisons import *
-
 
 
 
@@ -292,10 +291,151 @@ def test_get_signed_stoichiometric_coefficients():
 
 
 
+
 ############################  class SimulationReaction  ############################
 
 def test_CONSTRUCTOR_SimulationReaction():
     pass        # TODO
+
+
+
+
+def test_determine_reaction_rate():
+    sr = SpeciesRegistry(ids=["A", "B"])
+
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action",
+                                  kinetic_parameters={"kF": 20., "kR": 2.})
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    # Now just the forward reaction
+    sim_rxn.model.set_parameters(parameters={"kR": 0, "K": None})
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5.)            # 100.0
+
+
+    # Reaction A + B -> C
+    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="C",
+                             species_registry=sr, autoregister_species=True,
+                             reaction_model="mass action", kinetic_parameters={"kF": 20})
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8.)
+
+    # Now make reversible
+    sim_rxn.model.set_parameters({"kR": 2})
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
+
+
+    # Reaction A <-> B + C
+    rxn_defn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 20})
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.)
+
+    # Make reversible
+    sim_rxn.model.set_parameters({"kR": 2.})
+    result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
+
+
+
+def test_step_simulation():
+    sr = SpeciesRegistry(ids=["A", "B"])
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.analytic_solution_family == "ONE_TO_ONE"
+
+    # Euler approx
+    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': 7, 'B': -7}
+    assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is in reverse
+
+    result = sim_rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': 56, 'B': -56}              # Note: these increments would make [B] negative!
+    assert result[1] == -70
+
+    # Exact solution
+    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert np.allclose(result[0]['A'],  5.508570764023133)
+    assert np.allclose(result[0]['B'], -5.508570764023133)
+    assert result[1] == -70
+
+    result = sim_rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert np.allclose(result[0]['A'],  13.74358105555772)  # Note: far more sensible than Euler method!
+    assert np.allclose(result[0]['B'], -13.74358105555772)
+    assert result[1] == -70
+
+
+    # Reaction : A -> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.analytic_solution_family == "ONE_TO_ONE"
+
+    # Euler approx
+    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': -3, 'B': 3}
+    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
+
+    result = sim_rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
+    assert result[1] == 30
+
+    # Exact solution
+    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': -2.5918177931828215, 'B': 2.5918177931828215}
+    assert result[1] == 30    # Rate = 3. * 10.
+
+    result = sim_rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': -6.98805788087798, 'B': 6.98805788087798} # Note: far more sensible than Euler method!
+    assert result[1] == 30    # Rate = 3. * 10.
+
+
+    # Reaction : A + B <-> C
+    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2})
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.analytic_solution_family == "TWO_TO_ONE"
+
+    result = sim_rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == 5*10*50 - 2 * 20        # 2460
+
+
+    # Reaction : C <-> A + B
+    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.analytic_solution_family == "ONE_TO_TWO"
+
+    result = sim_rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == -2460
+
+
+
+
+
+
+############################################################################
+
 
 
 # TODO: also test the various "Compiler" classes and ReactionModelRegistry
@@ -909,128 +1049,6 @@ def test_reaction_quotient():
     assert np.allclose(1/5., quotient)
     assert formula == ' [A]^2  / [B]'
 
-
-"""
-
-def test_determine_reaction_rate():
-    sr = SpeciesRegistry(ids=["A", "B"])
-
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             kinetic_parameters={"kF": 20., "kR": 2.})
-    assert rxn.kinetics.law == "mass action"
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
-
-    # Now just the forward reaction
-    rxn.kinetics.set_parameters({"kR": 0})
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5.)            # 100.0
-
-
-    # Reaction A + B -> C
-    rxn = ReactionDefinition(reactants=["A", "B"], products="C",
-                             species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 20})
-    assert rxn.kinetics.parameters["reversible"] == False
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5. * 8.)
-
-    # Now make reversible
-    rxn.kinetics.set_parameters({"kR": 2})
-    assert rxn.kinetics.parameters["reversible"] == True
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
-
-
-    # Reaction A <-> B + C
-    rxn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 20})
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5.)
-
-    # Make reversible
-    rxn.kinetics.set_parameters({"kR": 2.})
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
-
-
-
-def test_step_simulation():
-    sr = SpeciesRegistry(ids=["A", "B"])
-
-    # Reaction : A <-> B
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             kinetic_parameters={"kF": 3., "kR": 2.})
-    assert rxn.analytic_solution_family == "ONE_TO_ONE"
-
-    # Euler approx
-    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': 7, 'B': -7}
-    assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is in reverse
-
-    result = rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': 56, 'B': -56}              # Note: these increments would make [B] negative!
-    assert result[1] == -70
-
-    # Exact solution
-    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert np.allclose(result[0]['A'],  5.508570764023133)
-    assert np.allclose(result[0]['B'], -5.508570764023133)
-    assert result[1] == -70
-
-    result = rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert np.allclose(result[0]['A'],  13.74358105555772)  # Note: far more sensible than Euler method!
-    assert np.allclose(result[0]['B'], -13.74358105555772)
-    assert result[1] == -70
-
-
-    # Reaction : A -> B
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
-                             kinetic_parameters={"kF": 3.})
-    assert rxn.analytic_solution_family == "ONE_TO_ONE"
-    assert rxn.kinetics.parameters["reversible"] == False
-
-    # Euler approx
-    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': -3, 'B': 3}
-    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
-
-    result = rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
-    assert result[1] == 30
-
-    # Exact solution
-    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': -2.5918177931828215, 'B': 2.5918177931828215}
-    assert result[1] == 30    # Rate = 3. * 10.
-
-    result = rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': -6.98805788087798, 'B': 6.98805788087798} # Note: far more sensible than Euler method!
-    assert result[1] == 30    # Rate = 3. * 10.
-
-
-    # Reaction : A + B <-> C
-    rxn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 5., "kR": 2})
-
-    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
-    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
-    assert result[1] == 5*10*50 - 2 * 20        # 2460
-
-
-    # Reaction : C <-> A + B
-    rxn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True,
-                             kinetic_parameters={"kF": 2., "kR": 5.})
-
-    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
-    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
-    assert result[1] == -2460
-"""
 
 
 def test_find_equilibrium_conc():

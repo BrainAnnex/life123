@@ -1,7 +1,7 @@
 from __future__ import annotations      # To facilitate type annotations
 import numpy as np
 import math
-from typing import Set, Mapping
+from typing import Set, Tuple,  Mapping
 from dataclasses import dataclass, field, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
@@ -390,7 +390,7 @@ class SimulationReaction:
     Note: at a future date, the simulation engine might have things that aren't strictly "kinetic reactions";
     for example, transport events, membrane events, diffusion operators, binding events, etc.
     """
-    def __init__(self, model, stoichiometry, source_id :int, derivation=None):
+    def __init__(self, model, stoichiometry, source_id :int, derivation=None, analytic_solution_family=None):
         """
 
         :param model:           Object of type such as "MassAction_Model" or "MichaelisMenten_Model"
@@ -404,8 +404,129 @@ class SimulationReaction:
 
         self.source_definition_id = source_id       # Provenance
         self.derivation : str | None = derivation
+
+        self.analytic_solution_family : str|None = analytic_solution_family
+
         # TODO: maybe add another variable "role", such as "binding", "catalysis", "ES formation"
         #       "ES breakdown" ("what role this particular generated reaction plays")
+
+
+
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
+        """
+        For the specified concentrations of the chemicals in the generic reaction,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_dict:   A dict mapping specie id's to their concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        if self.model.name == "mass action":
+            return ReactionKinetics.compute_rate_elementary(reactants = self.stoichiometry.get_reactant_ids(),
+                                                            products = self.stoichiometry.get_product_ids(),
+                                                            kF = self.model.kF, kR=self.model.kR,
+                                                            reversible=self.model.reversible,
+                                                            conc_dict=conc_dict)
+
+        function_to_call = self.kinetics.rate_function
+        assert function_to_call is not None, \
+            f"determine_reaction_rate(): no kinetic rate function was provide for the reaction `{self.describe(concise=True)}` isn't set; " \
+            f"make sure to first call set_rate_function()"
+        #print(f"determine_reaction_rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
+
+        return function_to_call(reactant_terms=self.stoichiometry.get_reactant_ids(),
+                               product_terms=self.stoichiometry.get_product_ids(),
+                                kF = self.model.kF, kR=self.model.kR,
+                                conc_dict=conc_dict)                        # Carry out the function call
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> Tuple[dict, float]:
+        """
+        Simulate the generic reaction, over the specified time interval.
+        The forward Euler method is used
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentrations won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :param exact:       Only available if this reaction type has a known analytical solution
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn     The mapping of chemical labels
+                                                                    to their concentration CHANGES
+                                                                    during this step
+                                - rxn_rate                      The reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
+        """
+        increment_dict_single_rxn = {}      # The keys are the species id's,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+
+        reactants = self.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
+        products = self.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
+
+
+        if exact:
+            if self.analytic_solution_family == "ONE_TO_ONE":
+                r = reactants[0][1]           # EXAMPLE: "R"
+                p = products[0][1]            # EXAMPLE: "P"
+
+                R0 = conc_dict[r]
+                P0 = conc_dict[p]
+                # Compute the respective increments of R0 and P0
+                if self.model.reversible:
+                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.model.kF, kR=self.model.kR,
+                                                                                     A0=R0, P0=P0, t=delta_time, incremental=True)
+                else:
+                    delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.model.kF,
+                                                                                       A0=R0, P0=P0, t=delta_time, incremental=True)
+
+                # Work out the stoichiometry for all the species
+                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+                return (increment_dict_single_rxn, rxn_rate)
+            else:
+                raise Exception("step_simulation(): no exact analytical solution is available for this reaction type")
+
+
+
+        # If we get thus far, exact=False
+
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
+        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
+
+
+        """
+        Determine the concentration adjustments as a result of this reaction step, 
+        for this individual reaction being considered
+        """
+
+        # The reactants DECREASE based on the quantity delta_rxn
+        for stoichiometry, species_id in reactants:         # Unpack data from each reactant
+            delta_conc = stoichiometry * (- delta_rxn)      # Increment to this reactant from the reaction being considered
+
+            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
+
+
+        # The reaction products INCREASE based on the quantity delta_rxn
+        for stoichiometry, species_id in products:      # Unpack data from each product
+            delta_conc = stoichiometry * delta_rxn      # Increment to this reaction product from the reaction being considered
+
+            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
+
+
+        assert len(increment_dict_single_rxn) == len(self.stoichiometry.get_all_species_ids())  # TODO: temporary check to eventually drop
+
+        return (increment_dict_single_rxn, rxn_rate)
+
+
 
 
 
@@ -446,7 +567,8 @@ class Reconciler:
 
 class ReactionCompiler_MassAction:
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, species_registry=None) -> tuple:
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id,
+               species_registry=None, analytic_solution_family=None) -> tuple:
         """
 
         :param stoichiometry:
@@ -456,7 +578,8 @@ class ReactionCompiler_MassAction:
         :param species_registry:
         :return:
         """
-        #print("In compile() method of class 'ReactionCompiler_MassAction'")
+        print("In compile() method of class 'ReactionCompiler_MassAction'")
+        print("analytic_solution_family: ", analytic_solution_family)
 
         ALLOWED_KEYS = {"kR", "kF", "K"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
@@ -484,11 +607,12 @@ class ReactionCompiler_MassAction:
         m.set_parameters(parameters=pars, derived_pars=derived_pars)     # Pass thru the parameters (possibly enhanced by additional parameters derived from the thermodynamics)
         #print(f"    name of model being used: {m.name!r}")
 
-        sr1 = SimulationReaction(model=m, stoichiometry=stoichiometry,
-                                 source_id=source_id,
-                                 derivation="direct")
-                                 # "Directly modeled as specified by the user"
-                                 # "this simulation reaction corresponds directly to the reaction defined by the user"
+        sim_rxn = SimulationReaction(model=m, stoichiometry=stoichiometry,
+                                     source_id=source_id,
+                                     derivation="direct",
+                                     analytic_solution_family=analytic_solution_family)
+                                     # "Directly modeled as specified by the user"
+                                     # "this simulation reaction corresponds directly to the reaction defined by the user"
 
         # TODO: try out:
         #Reconciler.reconcile(thermodynamics_data=thermodynamics_data, model=m)
@@ -506,13 +630,24 @@ class ReactionCompiler_MassAction:
                     thermodynamics_data.set_temperature(thermodynamics_data.temp)
         # TODO: END of part to replace
 
-        return (sr1,)
+        return (sim_rxn,)
 
 
 
 class ReactionCompiler_MichaelisMenten:
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, species_registry=None):
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id,
+               species_registry=None, analytic_solution_family=None):
+        """
+
+        :param stoichiometry:
+        :param kinetic_parameters:
+        :param thermodynamics_data:
+        :param source_id:
+        :param species_registry:
+        :param analytic_solution_family:
+        :return:
+        """
         #print("In compile() method of class 'ReactionCompiler_MichaelisMenten'")
 
         ALLOWED_KEYS = {"kM", "kcat", "k1_F", "k1_R", "k2_F"}
@@ -541,7 +676,18 @@ class ReactionCompiler_MichaelisMenten:
 
 class ReactionCompiler_SingleSubstrateMechanism:
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id, species_registry):
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id,
+               species_registry, analytic_solution_family=None):
+        """
+
+        :param stoichiometry:
+        :param kinetic_parameters:
+        :param thermodynamics_data:
+        :param source_id:
+        :param species_registry:
+        :param analytic_solution_family:
+        :return:
+        """
         #print("In compile() method of class 'ReactionCompiler_SingleSubstrateMechanism'")
 
         ALLOWED_KEYS = {"k1_F", "k1_R", "k2_F", "kM", "kcat"}
@@ -746,13 +892,9 @@ class ReactionDefinition:
         #    reaction_model = "mass action"
 
 
-        #########   Process the given thermodynamic data   #########
-
+        # Process the given thermodynamic data
         self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S, delta_G=delta_G,
                                                      K_eq=K_eq, temp=temp)
-
-        if reaction_model is not None:
-            self._build_model()
 
 
         #self.kinetics = Kinetics(law=reaction_model, parameters=kinetic_parameters)
@@ -765,6 +907,8 @@ class ReactionDefinition:
 
         self.analytic_solution_family = self._determine_analytic_solution_family()
 
+        if reaction_model is not None:
+            self._build_model()
 
 
 
@@ -839,10 +983,12 @@ class ReactionDefinition:
 
         # Invoke the appropriate member of the "reaction compiler" family of classes;
         # a tuple of "SimulationReaction" objects is returned
+        #print("self.analytic_solution_family: ", self.analytic_solution_family)
         sr_tuple = reaction_compiler.compile(stoichiometry=self.stoichiometry,
                                              kinetic_parameters=self.source_kinetic_parameters,
                                              thermodynamics_data=self.thermodynamics,
-                                             source_id=self.id, species_registry=self.species_registry)
+                                             source_id=self.id, species_registry=self.species_registry,
+                                             analytic_solution_family=self.analytic_solution_family)
         #print("sr: ", sr)
         self.sim_reactions = sr_tuple
         #print("self.sim_reactions: ", self.sim_reactions)
@@ -1201,123 +1347,6 @@ class ReactionDefinition:
         return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
                                                         product_data=self.stoichiometry.get_product_list(),
                                                         conc=conc, explain=explain)
-
-
-
-    def determine_reaction_rate(self, conc_dict :dict) -> float:
-        """
-        For the specified concentrations of the chemicals in the generic reaction,
-        determine its initial reaction's "rate" (aka "velocity"),
-        i.e. its "forward rate" minus its "reverse rate",
-        at the start of the time step.
-
-        :param conc_dict:   A dict mapping specie id's to their concentrations,
-                                for all the chemicals involved in this reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-        :return:            The differences between the reaction's forward and reverse rates
-        """
-
-        if self.kinetics.law == "mass action":
-            return ReactionKinetics.compute_rate_elementary(reactants = self.extract_reactant_ids(),
-                                                            products = self.extract_product_ids(),
-                                                            kF = self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
-                                                            reversible=self.kinetics.parameters["reversible"],
-                                                            conc_dict=conc_dict)
-
-        function_to_call = self.kinetics.rate_function
-        assert function_to_call is not None, \
-            f"determine_reaction_rate(): no kinetic rate function was provide for the reaction `{self.describe(concise=True)}` isn't set; " \
-            f"make sure to first call set_rate_function()"
-        #print(f"determine_reaction_rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
-
-        return function_to_call(reactant_terms=self.reactants, product_terms=self.products,
-                                kF = self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
-                                conc_dict=conc_dict)                        # Carry out the function call
-
-
-
-    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
-        """
-        Simulate the generic reaction, over the specified time interval.
-        The forward Euler method is used
-
-        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentrations won't vary significantly during this span
-        :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in this reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-        :param exact:       Only available if this reaction type has a known analytical solution
-
-        :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn     The mapping of chemical labels
-                                                                    to their concentration CHANGES
-                                                                    during this step
-                                - rxn_rate                      The reaction rate ("velocity") for this reaction
-                                EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
-        """
-        # TODO: move out of this modules
-        increment_dict_single_rxn = {}      # The keys are the species id's,
-                                            # and the values are their respective concentration changes as a result of this reaction
-
-        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
-
-
-        if exact:
-            if self.analytic_solution_family == "ONE_TO_ONE":
-                r = self.reactants[0][1]           # EXAMPLE: "R"
-                p = self.products[0][1]            # EXAMPLE: "P"
-
-                R0 = conc_dict[r]
-                P0 = conc_dict[p]
-                # Compute the respective increments of R0 and P0
-                if self.kinetics.parameters["reversible"]:
-                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
-                                                                                     A0=R0, P0=P0, t=delta_time, incremental=True)
-                else:
-                    delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kinetics.parameters["kF"],
-                                                                                       A0=R0, P0=P0, t=delta_time, incremental=True)
-
-                # Work out the stoichiometry for all the species
-                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
-                return (increment_dict_single_rxn, rxn_rate)
-            else:
-                raise Exception("step_simulation(): no exact analytical solution is available for this reaction type")
-
-
-
-        # If we get thus far, exact=False
-
-        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
-        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
-
-
-        reactants = self.reactants      # A list of pairs of the form (stoichiometry coefficient, species id))
-        products = self.products        # A list of pairs of the form (stoichiometry coefficient, species id))
-
-
-        """
-        Determine the concentration adjustments as a result of this reaction step, 
-        for this individual reaction being considered
-        """
-
-        # The reactants DECREASE based on the quantity delta_rxn
-        for stoichiometry, species_id in reactants:         # Unpack data from each reactant
-            delta_conc = stoichiometry * (- delta_rxn)      # Increment to this reactant from the reaction being considered
-
-            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
-
-
-        # The reaction products INCREASE based on the quantity delta_rxn
-        for stoichiometry, species_id in products:      # Unpack data from each product
-            delta_conc = stoichiometry * delta_rxn      # Increment to this reaction product from the reaction being considered
-
-            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
-
-
-        assert len(increment_dict_single_rxn) == len(self.extract_species_in_reaction())  # TODO: temporary check to eventually drop
-
-        return (increment_dict_single_rxn, rxn_rate)
 
 
 
