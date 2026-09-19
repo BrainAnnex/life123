@@ -23,7 +23,7 @@ def test_CONSTRUCTOR_Stoichiometry():
     assert st.vector == {"R": -1, "P": 1, "Q": 1}
     assert st.catalysts == []
 
-    # Reaction S + E -> P + E
+    # Reaction E + S -> P + E
     st = Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
     assert st.vector == {"S": -1, "P": 1}
     assert st.catalysts == ["E"]
@@ -347,7 +347,7 @@ def test_determine_reaction_rate():
 
 
 
-def test_step_simulation():
+def test_step_simulation_1():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction : A <-> B
@@ -429,6 +429,77 @@ def test_step_simulation():
     assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
     assert result[1] == -2460
 
+
+def test_step_simulation_2():
+
+    # Reaction: # E + S <-> ES* -> E + P, with SingleSubstrateMechanism model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn_defn = ReactionDefinition(id=85, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                             reaction_model="single substrate mechanism",
+                             kinetic_parameters={"k1_F": 18, "k1_R": 100, "k2_F": 49})
+
+    initial_conc = {"E": 1, "S": 20, "P": 0, "ES*": 0}
+    dt = 0.002
+
+    # Look at each derived reaction individually
+    rxn_sim_tuple = rxn_defn.sim_reactions
+    assert len(rxn_sim_tuple) == 2
+    rxn_sim_1, rxn_sim_2 = rxn_sim_tuple
+
+    incr_dict_1, rate_1 = rxn_sim_1.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert incr_dict_1 == {'E': -0.72, 'S': -0.72, 'ES*': 0.72}
+    assert rate_1 == 360       # 18 * 1 * 20 - 100 * 0
+
+    incr_dict_2, rate_2 = rxn_sim_2.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert incr_dict_2 == {'E': 0, 'ES*': 0, 'P': 0}
+    assert rate_2 == 0          # 49 * 0
+    
+    # Simulating by hand each of the 2 sub-reactions will give the same results
+    upstream_rxn_defn = ReactionDefinition(reactants=["E", "S"], products="ES*", species_registry=sr,
+                             reaction_model="mass action",
+                             kinetic_parameters={"kF": 18, "kR": 100})
+    upstream_rxn_sim = upstream_rxn_defn.sim_reactions[0]
+    assert upstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc) == ( {'E': -0.72, 'S': -0.72, 'ES*': 0.72} , 360 )
+
+    downstream_rxn_defn = ReactionDefinition(reactants="ES*", products=["E", "P"], species_registry=sr,
+                             reaction_model="mass action",
+                             kinetic_parameters={"kF": 49})
+    downstream_rxn_sim = downstream_rxn_defn.sim_reactions[0]
+    assert downstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc) == ( {'E': 0, 'ES*': 0, 'P': 0} , 0 )
+
+
+    # Manually advance the reaction simulation by this step, plus one more
+    conc = initial_conc
+
+    # Update the system concentrations (thus advancing the simulation)
+    for k, v in incr_dict_1.items():
+        conc[k] += v
+    for k, v in incr_dict_2.items():
+        conc[k] += v
+
+    assert conc == {'E': 0.28, 'S': 19.28, 'P': 0.0, 'ES*': 0.72}
+
+    incr_dict_1, rate_1 = upstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=conc)
+    assert math.isclose(rate_1, 25.1712)    # 18 * 0.28 * 19.28 - 100 * 0.72
+    expected_incr = {'E': -0.0503424, 'S': -0.0503424, 'ES*': 0.0503424}    # Delta_conc = 25.1712 * 0.002 = 0.0503424
+    for k, _ in incr_dict_1.items():
+        assert math.isclose(incr_dict_1[k], expected_incr[k])
+
+    incr_dict_2, rate_2 = downstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert math.isclose(rate_2, 35.28)      # 49 * 0.72
+    expected_incr = {'ES*': -0.07056, 'E': 0.07056, 'P': 0.07056}           # Delta_conc = 35.28 * 0.002 = 0.07056
+    for k, _ in incr_dict_2.items():
+        assert math.isclose(incr_dict_2[k], expected_incr[k])
+
+    # Update the system concentrations (thus advancing the simulation)
+    for k, v in incr_dict_1.items():
+        conc[k] += v
+    for k, v in incr_dict_2.items():
+        conc[k] += v
+
+    expected = {'E': 0.3002176, 'S': 19.2296576, 'P': 0.07056, 'ES*': 0.6997824}
+    for k, _ in conc.items():
+        assert math.isclose(conc[k], expected[k])
 
 
 
@@ -512,7 +583,7 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     assert rxn_defn.stoichiometry.to_dict() == {"A": -2, "B":- 2, "P": 3, "Q": 1, "E": 0}
 
 
-    # Reaction S + E -> P + E
+    # Reaction E + S -> P + E
     rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr)
     assert rxn_defn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
     assert rxn_defn.analytic_solution_family is None
@@ -576,8 +647,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
                            reaction_model="mass action", kinetic_parameters={"intruder":666})
 
 
-
-    # S + E -> P + E , with "michaelis menten" model
+    # E + S -> E + P, with "michaelis menten" model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
     rxn_defn = ReactionDefinition(id=17, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
                                   reaction_model="michaelis menten",
@@ -598,7 +668,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
 
 
-    # S + E <-> SE -> P + E, with SingleSubstrateMechanism model
+    # E + S <-> ES -> P + E, with SingleSubstrateMechanism model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
     rxn_defn = ReactionDefinition(id=123, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
                              reaction_model="single substrate mechanism",
@@ -615,18 +685,18 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
     assert sim_rxn_1.source_definition_id == 123
-    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "SE*": 1})
+    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
     assert sim_rxn_2.source_definition_id == 123
-    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"SE*": -1, "P": 1, "E": 1})
+    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
     assert sr.number_of_species() == 4    # 1 species was automatically added
     set_of_species = set(sr.get_all_species_ids())
-    assert set_of_species == {"S", "P", "E", "SE*"}
+    assert set_of_species == {"S", "P", "E", "ES*"}
 
 
 
@@ -701,7 +771,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
-    # S + E -> P + E , with MM model
+    # E + S -> E + P, with MM model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
 
     rxn_defn = ReactionDefinition(id=44, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
@@ -736,7 +806,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
                            kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 5, "kcat": 5.01})   # Inconsistent
 
 
-    # S + E <-> SE -> P + E, with SingleSubstrateMechanism model
+    # E + S <-> ES -> P + E, with SingleSubstrateMechanism model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
 
     rxn_defn = ReactionDefinition(id=43, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
@@ -754,18 +824,18 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
     assert sim_rxn_1.source_definition_id == 43
-    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "SE*": 1})
+    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
     assert sim_rxn_2.source_definition_id == 43
-    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"SE*": -1, "P": 1, "E": 1})
+    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
     assert sr.number_of_species() == 4    # 1 species was automatically added
     set_of_species = set(sr.get_all_species_ids())
-    assert set_of_species == {"S", "P", "E", "SE*"}
+    assert set_of_species == {"S", "P", "E", "ES*"}
 
 
 
@@ -832,30 +902,55 @@ def test_constructor_ReactionDefinition_4():
 
 
 
-"""
 def test_extract_rxn_properties():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
                              thermodynamic_parameters={"delta_H": -30},
-                             kinetic_parameters={"kF":10, "kR":2})
+                             reaction_model="mass action", kinetic_parameters={"kF":10, "kR":2})
 
-    assert rxn.extract_rxn_properties() == {'kinetics_type': 'mass action', 'kF': 10, 'kR': 2, 'delta_H': -30, 'K': 5.0, 'reversible': True}
+    assert rxn.extract_rxn_properties() == {'reaction_model': 'mass action', 'delta_H': -30, 'K_eq': 5.0, 'K': 5, 'kF': 10, 'kR': 2, 'reversible': True}
+
 
 
 def test_describe():
     sr = SpeciesRegistry(ids=["R", "P"])
 
-    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr,
-                             delta_H=0.5, delta_S=-3, temp=100,
+    rxn_defn = ReactionDefinition(reactants="R", products="P", species_registry=sr,
+                             thermodynamic_parameters={"delta_H": 0.5, "delta_S": -3, "temp": 100},
                              reaction_model="mass action", kinetic_parameters={"kF": 10})
-    assert rxn.describe(concise=True) == "R <-> P"
-    print(rxn.describe(concise=False))
-    assert rxn.describe(concise=False) == \
-            "R <-> P  Elementary Unimolecular rearrangement/isomerization reaction\n" \
-            "         (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K = 0.38206 | Temp = -173.1 C | kinetics_type = 'mass action' | kF = 10 | kR = 26.174 | reversible = True)"
+    assert rxn_defn.describe(concise=True) == "R <-> P"
 
-"""
+    #print(rxn.describe(concise=False))
+    assert rxn_defn.describe(concise=False) ==  \
+        'R <-> P\n'  \
+        '        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"\n'  \
+        '        Thermodynamics - passed:    (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | Temp = -173.1 C)\n'  \
+        '        Thermodynamics - derived:   (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K_eq = 0.38206 | Temp = -173.1 C)\n'  \
+        '        Kinetics - passed:   (kF = 10)\n'  \
+        '        Kinetics - derived:  1 derived reaction\n'  \
+        '            "mass action"   (kF = 10 | kR = 26.174 | K = 0.38206 | reversible = True)'
+
+
+    # Reaction: # E + S <-> ES -> E + P, with SingleSubstrateMechanism model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn_defn = ReactionDefinition(id=85, reactants=["S", "E"], products=["P", "E"],
+                                  species_registry=sr, autoregister_species=True,
+                                  reaction_model="single substrate mechanism",
+                                  kinetic_parameters={"k1_F": 18, "k1_R": 100, "k2_F": 49})
+    assert rxn_defn.describe(concise=True) == "S + E -> P + E"
+    assert rxn_defn.describe(concise=False) ==  \
+        'S + E -> P + E\n'  \
+        '        Enzymatic reaction, with Reaction Model: "single substrate mechanism"   (Reaction ID 85)\n'  \
+        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - derived: None\n'  \
+        '        Kinetics - passed:   (k1_F = 18 | k1_R = 100 | k2_F = 49)\n'  \
+        '        Kinetics - derived:  2 derived reactions\n'  \
+        '            (1)  "mass action"   (kF = 18 | kR = 100 | K = 0.18 | reversible = True)\n'  \
+        '            (2)  "mass action"   (kF = 49 | reversible = False)'
+
+
+
 
 def test_set_thermodynamic_data():
     sr = SpeciesRegistry(ids=["A", "B"])
@@ -903,7 +998,7 @@ def test_extract_intermediate():
 
     rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True,
                                   reaction_model="single substrate mechanism")
-    assert rxn_defn.extract_intermediate() == "SE*"
+    assert rxn_defn.extract_intermediate() == "ES*"
 
 
 
@@ -993,7 +1088,18 @@ def test_extract_species_in_reaction():
     assert rxn.extract_species_in_reaction() == {"A", "B", "C"}
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
-    assert rxn.extract_species_in_reaction() == {"S", "P", "E"}
+    assert rxn.extract_species_in_reaction(include_intermediaries=False) == {"S", "P", "E"}
+    assert rxn.extract_species_in_reaction(include_intermediaries=True) == {"S", "P", "E"}
+
+    rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True,
+                             reaction_model="michaelis menten")
+    assert rxn.extract_species_in_reaction(include_intermediaries=False) == {"S", "P", "E"}
+    assert rxn.extract_species_in_reaction(include_intermediaries=True) == {"S", "P", "E"}
+
+    rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True,
+                             reaction_model="single substrate mechanism")
+    assert rxn.extract_species_in_reaction(include_intermediaries=False) == {"S", "P", "E"}
+    assert rxn.extract_species_in_reaction(include_intermediaries=True) == {"S", "P", "E", "ES*"}
 
 
 

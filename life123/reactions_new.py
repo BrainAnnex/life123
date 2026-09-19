@@ -578,8 +578,8 @@ class ReactionCompiler_MassAction:
         :param species_registry:
         :return:
         """
-        print("In compile() method of class 'ReactionCompiler_MassAction'")
-        print("analytic_solution_family: ", analytic_solution_family)
+        #print("In compile() method of class 'ReactionCompiler_MassAction'")
+        #print("analytic_solution_family: ", analytic_solution_family)
 
         ALLOWED_KEYS = {"kR", "kF", "K"}
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
@@ -710,8 +710,8 @@ class ReactionCompiler_SingleSubstrateMechanism:
 
         E = stoichiometry.catalysts[0]
 
-        SE = S + E + "*"
-        species_registry.add_species(id= SE,
+        ES = E + S + "*"
+        species_registry.add_species(id= ES,
                                      annotation="reaction intermediary from single substrate mechanism")
 
         # Reaction 1: S + E <-> SE
@@ -719,13 +719,13 @@ class ReactionCompiler_SingleSubstrateMechanism:
         m1.set_parameters(parameters={"kF": kinetic_parameters.get("k1_F"),
                                       "kR": kinetic_parameters.get("k1_R")})
         r1 = SimulationReaction(model=m1,
-                                stoichiometry=Stoichiometry(vector={S: -1, E: -1, SE: 1}),
+                                stoichiometry=Stoichiometry(vector={S: -1, E: -1, ES: 1}),
                                 source_id=source_id)
 
         # Reaction 2: SE -> P + E
         m2 = MassAction_Model()
         m2.set_parameters(parameters={"kF": kinetic_parameters.get("k2_F")})
-        r2 = SimulationReaction(model=m2, stoichiometry=Stoichiometry(vector={SE: -1, P: 1, E: 1}),
+        r2 = SimulationReaction(model=m2, stoichiometry=Stoichiometry(vector={ES: -1, P: 1, E: 1}),
                                 source_id=source_id)
 
         return (r1, r2)
@@ -1139,11 +1139,21 @@ class ReactionDefinition:
             - ΔH, ΔS, ΔG,
             - K (equilibrium constant)
 
-        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.130505, 'K': 1.5}
+        :return:    EXAMPLE: {'reaction_model': 'mass action', 'delta_H': -30, 'K_eq': 5.0, 'K': 5, 'kF': 10, 'kR': 2, 'reversible': True}
         """
-        #TODO: this is no longer well-defined as a single dict; maybe return a more complex data structure?
         thermo_properties = self.thermodynamics.to_dict()
-        kinetic_properties = self.kinetics.to_dict()
+        sim_rxn_tuple = self.sim_reactions
+        if len(sim_rxn_tuple) == 1:
+            sim_rxn = sim_rxn_tuple[0]
+            kinetic_properties = sim_rxn.model.get_parameters()
+            kinetic_properties["reaction_model"] = sim_rxn.model.name
+        else:
+            kinetic_properties = {}
+            for i, sim_rxn in enumerate(sim_rxn_tuple):
+                kinetic_properties[f"Rxn{i}: reaction_model"] = sim_rxn.model.name
+                for k, v in sim_rxn.model.get_parameters().items():
+                    kinetic_properties[f"Rxn{i}: {k}"] = v
+
 
         return thermo_properties | kinetic_properties   # Combine the two dictionaries
 
@@ -1195,7 +1205,7 @@ class ReactionDefinition:
         st_0 = sim_rxn_tuple[0].stoichiometry.to_dict()
         st_1 = sim_rxn_tuple[1].stoichiometry.to_dict()
         overlap = set(st_0) & set(st_1)     # Set intersection
-        #print("overlap: ", overlap)        # EXAMPLE: {'SE*', 'E'}
+        #print("overlap: ", overlap)        # EXAMPLE: {'ES*', 'E'}
 
         overlap -= sim_rxn_tuple[0].stoichiometry.get_reactant_ids()     # Set difference
         overlap -= sim_rxn_tuple[1].stoichiometry.get_product_ids()      # Set difference
@@ -1220,32 +1230,60 @@ class ReactionDefinition:
         :param concise:     If True, less detail is shown
         :return:            A string with a description of this reaction
         """
-        if self.kinetics.law == "mass action":
-            reactants = self.stoichiometry.get_reactant_list()
-            products = self.stoichiometry.get_product_list()
-            left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
-            right = self._standard_form_chem_eqn(products)       # Right side of the equation
+        reactants = self.stoichiometry.get_reactant_list()
+        products = self.stoichiometry.get_product_list()
 
-            if self.kinetics.parameters["reversible"]:
-                rxn_description = f"{left} <-> {right}"
-            else:
-                rxn_description = f"{left} -> {right}"
+        left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
+        right = self._standard_form_chem_eqn(products)       # Right side of the equation
 
-            if concise:
-                return rxn_description      # Minimalist description
+        sim_rxn_tuple = self.sim_reactions
 
-            # If we get this far, we're looking for a more detailed description
-            rxn_description += "  "
+        arrow = "->"
+        if len(sim_rxn_tuple) == 1:
+            sim_rxn = sim_rxn_tuple[0]
+            if sim_rxn.model.reversible:
+                arrow = "<->"
 
-            rxn_description += self.reaction_category + " reaction\n       "
+        rxn_description = f"{left} {arrow} {right}"
 
-            rxn_properties = self.extract_rxn_properties()     # A dict
-            rxn_description += self.format_reaction_details(rxn_properties)
-
-            return rxn_description
+        if concise:
+            return rxn_description      # Minimalist description
 
 
-        return "TBA" # TODO: expand
+        # If we get this far, we're looking for a more detailed description
+
+        INDENT = "        "
+
+        rxn_description += "\n" + INDENT + self.reaction_category + " reaction"
+        if self.reaction_model:
+            rxn_description += f', with Reaction Model: "{self.reaction_model}"'
+
+        if self.id:
+             rxn_description += f"   (Reaction ID {self.id})"
+
+
+        rxn_description += f"\n{INDENT}Thermodynamics - passed:  "
+        s = self.format_reaction_details(self.source_thermodynamic_parameters)
+        rxn_description += s if s else "None"
+
+        rxn_description += f"\n{INDENT}Thermodynamics - derived: "
+        s = self.format_reaction_details(self.thermodynamics.to_dict())
+        rxn_description += s if s else "None"
+
+        rxn_description += f"\n{INDENT}Kinetics - passed: {self.format_reaction_details(self.source_kinetic_parameters)}"
+        rxn_description += f"\n{INDENT}Kinetics - derived:  {len(sim_rxn_tuple)} derived reaction"
+        if len(sim_rxn_tuple) > 1:
+            rxn_description += "s"  # The plural form
+
+        for i, sim_rxn in enumerate(sim_rxn_tuple):
+            rxn_description += f"\n{INDENT}    "
+            if len(sim_rxn_tuple) > 1:
+                rxn_description += f"({i+1})  "     # Show the numbering, if more than one
+
+            rxn_description += f'"{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
+
+
+        return rxn_description
 
 
 
@@ -1311,14 +1349,23 @@ class ReactionDefinition:
 
 
 
-    def extract_species_in_reaction(self) -> Set[str]:
+    def extract_species_in_reaction(self, include_intermediaries=True) -> Set[str]:
         """
         Return a SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the id's of the species involved in this reaction
+        :return:    A SET of the id's of the species involved in this reaction.
                         Note: being a set, it's NOT in any particular order
         """
-        return self.stoichiometry.get_all_species_ids()
+        species = self.stoichiometry.get_all_species_ids()
+
+        if not include_intermediaries:
+            return species
+
+        sim_rxn_list = self.sim_reactions
+        for sim_rxn in sim_rxn_list:
+            species |= sim_rxn.stoichiometry.get_all_species_ids()         # set union
+
+        return species
 
 
 
@@ -1627,18 +1674,22 @@ class ReactionDefinition:
         """
         Format and return a string with some details about the parameters of this reaction,
         contained in the passed dictionary.
-        Any property named "temp" gets converted from degree K to C.
+        Also, add units of measurements; any property named "temp" gets converted from degree K to C.
 
-        :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
-                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': 1.2345, 'K': 1.5}
+        :param rxn_properties:  A dictionary with numerical properties of interest for the reaction.
+                                    Any None value will be dropped
+                                    EXAMPLE: {'kF': 3.0, 'kR': None, 'delta_G': 1.2345, 'K': 1.5}
 
         :return:                A string with some details about the parameters of this reaction
-                                    EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
+                                    EXAMPLE: "  (kF = 3 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
         """
-        print("rxn_properties: ", rxn_properties)
+        #print("rxn_properties: ", rxn_properties)
         details = []    # Running list of strings with each of the individual details
 
         for k,v in rxn_properties.items():
+            if v is None:
+                continue
+
             if k == "temp":
                 single_detail = f"Temp = {convert(v, from_unit=K, to_unit=C):,.4g} C"
                 # EXAMPLE: "Temp = 25 C"

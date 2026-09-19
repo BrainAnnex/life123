@@ -620,11 +620,11 @@ def test_step_simulation_ReactionEnzyme_2():
          # Check the reaction rates
         assert result[1] == (result1[1], result2[1])
 
-        # Update the system concentrations (advancing the simulation)
+        # Update the system concentrations (thus advancing the simulation)
         for k, v in incr_dict.items():
             conc[k] += v
 
-        #print("conc:", conc)
+        print("conc:", conc)
 
 
 
