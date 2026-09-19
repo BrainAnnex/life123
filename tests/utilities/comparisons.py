@@ -1,5 +1,6 @@
 # Utilities for comparisons
 
+import math
 import collections
 
 
@@ -52,7 +53,7 @@ def compare_recordsets(rs1: [{}], rs2: [{}]) -> bool:
 
 
 
-def compare_unordered_lists(l1: [], l2: []) -> bool:
+def compare_unordered_lists(l1 :dict, l2 :dict) -> bool:
     """
     Compare two lists regardless of order of elements.
     Duplicates elements, if present, are treated as completely separate.
@@ -72,3 +73,20 @@ def compare_unordered_lists(l1: [], l2: []) -> bool:
     :return:    True if there's a match, or False otherwise
     """
     return collections.Counter(l1) == collections.Counter(l2)
+
+
+
+def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
+    """
+    Return True if the two dictionaries have the same keys,
+    and approximately equality of their corresponding values
+
+    :param d1:
+    :param d2:
+    :param kwargs:  [OPTIONAL] Extra arguments of math.isclose(),
+                        such as rel_tol or abs_tol
+    :return:
+    """
+    return d1.keys() == d2.keys() and all(
+        math.isclose(d1[k], d2[k], **kwargs) for k in d1
+    )

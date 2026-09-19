@@ -161,7 +161,7 @@ class ReactionRegistry:
         :return:    A list of pairs of the form (stoichiometry, chem labels)
         """
         rxn = self.get_reaction(i)
-        return rxn.extract_reactants()
+        return rxn.stoichiometry.get_reactant_list()
 
 
     def get_reactants_formula(self, i :int) -> str:
@@ -182,10 +182,10 @@ class ReactionRegistry:
         Each pair represents a "complex" of the reaction products
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of pairs of the form (stoichiometry, species label)
+        :return:    A list of pairs of the form (stoichiometry, species id)
         """
         rxn = self.get_reaction(i)
-        return rxn.extract_products()
+        return rxn.stoichiometry.get_product_list()
 
 
     def get_products_formula(self, i :int) -> str:
@@ -845,7 +845,7 @@ class ReactionRegistry:
 
 
             # Process all the PRODUCTS of this reaction
-            products = rxn.extract_products()
+            products = rxn.stoichiometry.get_product_list()
             for term in products:
                 species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
@@ -863,7 +863,7 @@ class ReactionRegistry:
 
 
             # Process all the REACTANTS of this reaction
-            reactants = rxn.extract_reactants()
+            reactants = rxn.stoichiometry.get_reactant_list()
             for term in reactants:
                 species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-34"

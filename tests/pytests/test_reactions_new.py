@@ -8,6 +8,21 @@ from tests.utilities.comparisons import *
 
 
 
+def update_concentrations(conc, delta_conc) -> None:
+    """
+    Update the values of the dict `conc` based on the increments in `delta_conc` for the corresponding keys
+
+    TODO: eventually move to one of the libraries
+
+    :param conc:
+    :param delta_conc:
+    :return:            None
+    """
+    for k in conc:
+        conc[k] += delta_conc.get(k, 0)     # Missing values default to zero
+
+
+
 
 ############################  class Stoichiometry  ############################
 
@@ -116,6 +131,16 @@ def test_get_reactant_list():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_reactant_list() == [(2, "A"), (2, "B"), (1, "E")]
 
+    sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
+    assert rxn_defn.stoichiometry.get_reactant_list() == [(1, "A")]
+
+    sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                  products=["CO2", (2, "H2O")], species_registry=sr)
+    assert rxn_defn.stoichiometry.get_reactant_list() == [(1, "CH4"), (2, "O2")]
+
+
 def test_get_reactant_ids():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
     assert s.get_reactant_ids() == {"A", "B"}
@@ -124,12 +149,23 @@ def test_get_reactant_ids():
     assert s.get_reactant_ids() == {"A", "B", "E"}
 
 
+
 def test_get_product_list():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
     assert s.get_product_list() == [(3, "P")]
 
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_product_list() == [(3, "P"), (1, "E")]
+
+    sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
+    assert rxn_defn.stoichiometry.get_product_list() == [(1, "B")]
+
+
+    sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                  products=["CO2", (2, "H2O")], species_registry=sr)
+    assert rxn_defn.stoichiometry.get_product_list() == [(1, "CO2"), (2, "H2O")]
 
 
 def test_get_product_ids():
@@ -412,10 +448,14 @@ def test_step_simulation_1():
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.analytic_solution_family == "TWO_TO_ONE"
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": -1, "C": 1})
 
-    result = sim_rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
-    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
-    assert result[1] == 5*10*50 - 2 * 20        # 2460
+    conc_initial = {"A": 10, "B": 50, "C": 20}
+    delta, rate = sim_rxn.step_simulation(delta_time=0.002, conc_dict=conc_initial)
+    assert delta == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert rate == 5 * 10 * 50 - 2 * 20        # 2460 , i.e.  kF [A] [B] - kR [C]
+    for k in delta:
+        assert delta[k] == rate * 0.002 * np.sign(sim_rxn.stoichiometry.to_dict()[k])
 
 
     # Reaction : C <-> A + B
@@ -472,34 +512,27 @@ def test_step_simulation_2():
     conc = initial_conc
 
     # Update the system concentrations (thus advancing the simulation)
-    for k, v in incr_dict_1.items():
-        conc[k] += v
-    for k, v in incr_dict_2.items():
-        conc[k] += v
+    update_concentrations(conc, incr_dict_1)
+    update_concentrations(conc, incr_dict_2)
 
     assert conc == {'E': 0.28, 'S': 19.28, 'P': 0.0, 'ES*': 0.72}
 
     incr_dict_1, rate_1 = upstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=conc)
     assert math.isclose(rate_1, 25.1712)    # 18 * 0.28 * 19.28 - 100 * 0.72
     expected_incr = {'E': -0.0503424, 'S': -0.0503424, 'ES*': 0.0503424}    # Delta_conc = 25.1712 * 0.002 = 0.0503424
-    for k, _ in incr_dict_1.items():
-        assert math.isclose(incr_dict_1[k], expected_incr[k])
+    compare_dicts(incr_dict_1, expected_incr)
 
     incr_dict_2, rate_2 = downstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc)
     assert math.isclose(rate_2, 35.28)      # 49 * 0.72
     expected_incr = {'ES*': -0.07056, 'E': 0.07056, 'P': 0.07056}           # Delta_conc = 35.28 * 0.002 = 0.07056
-    for k, _ in incr_dict_2.items():
-        assert math.isclose(incr_dict_2[k], expected_incr[k])
+    compare_dicts(incr_dict_2, expected_incr)
 
     # Update the system concentrations (thus advancing the simulation)
-    for k, v in incr_dict_1.items():
-        conc[k] += v
-    for k, v in incr_dict_2.items():
-        conc[k] += v
+    update_concentrations(conc, incr_dict_1)
+    update_concentrations(conc, incr_dict_2)
 
     expected = {'E': 0.3002176, 'S': 19.2296576, 'P': 0.07056, 'ES*': 0.6997824}
-    for k, _ in conc.items():
-        assert math.isclose(conc[k], expected[k])
+    compare_dicts(conc, expected)
 
 
 
@@ -529,14 +562,40 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     with pytest.raises(Exception):
         ReactionDefinition(reactants="R", products="Y", species_registry=sr)  # Un-registered product
 
+    # Missing products or reactants
     with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products=123, species_registry=sr)  # Bad product
+        ReactionDefinition(reactants=["R"], products=None, species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=None, products="P", species_registry=sr)
 
+    # Bad products or reactants
     with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products="R", species_registry=sr, reaction_model="mass action")     # Cannot be same
+        ReactionDefinition(reactants={"k": 666}, products="P", species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants="R", products=123, species_registry=sr)
 
+
+    # Reactants and the products can't be the same
     with pytest.raises(Exception):
-        ReactionDefinition(reactants=("R", (2, "P")), products=[(2, "P"), "R"], species_registry=sr , reaction_model="mass action")     # Cannot be same
+        ReactionDefinition(reactants=["A"], products=["A"], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A"], products=[("A")], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A"], products=[(1, "A")], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants="R", products="R", species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=[(2, "B")], products=[(2, "B")], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A", "B"], products=["A", "B"], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A", (3, "B")], products=["A", (3, "B")], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A", "B"], products=["B", "A"], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=[(2, "A"), "B", "C"], products=["B", (1, "C"), (2, "A")], species_registry=sr)
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=("R", (2, "P")), products=[(2, "P"), "R"], species_registry=sr)
 
 
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
@@ -839,7 +898,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
 
 
 
-def test_constructor_ReactionDefinition_4():
+def test_CONSTRUCTOR_ReactionDefinition_4():
     # Thermodynamic data passed, with temperature
 
     sr = SpeciesRegistry()
@@ -902,6 +961,32 @@ def test_constructor_ReactionDefinition_4():
 
 
 
+
+    # Add a reaction with thermodynamic data;
+    # the reverse reaction rate will get computed from the thermodynamic data
+    rxn_defn = ReactionDefinition(reactants=["A"], products=[(2, "B")], species_registry=sr, autoregister_species=True,
+                                  thermodynamic_parameters={"delta_H": 0.005, "delta_S": 0.4, "temp": 200},
+                                  reaction_model="mass action", kinetic_parameters={"kF": 10})
+    assert rxn_defn.stoichiometry.get_reactant_list() == [(1, "A")]
+    assert rxn_defn.stoichiometry.get_product_list()  == [(2, "B")]
+
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'A': -1, 'B': 2})
+
+    assert math.isclose(rxn_defn.thermodynamics.delta_H, 0.005)
+    assert math.isclose(rxn_defn.thermodynamics.delta_S, 0.4)
+    assert math.isclose(rxn_defn.thermodynamics.delta_G, -0.075)        # In kJ/mol :  0.005 - 200 * 0.4/1000
+    assert math.isclose(rxn_defn.thermodynamics.K_eq, 1.046134699475)   # exp(75/(8.31446261815324 * 200))
+    assert rxn_defn.thermodynamics.derived_pars == {"delta_G", "K_eq"}
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert math.isclose(sim_rxn.model.K, 1.046134699475)        # From thermodynamics
+    assert math.isclose(sim_rxn.model.kF, 10)
+    assert math.isclose(sim_rxn.model.kR, 9.5589984779)         # 10. / 1.046134699475
+    assert sim_rxn.model.reversible == True
+    assert sim_rxn.model.derived_pars == {'K', 'kR', 'reversible'}
+
+
+
 def test_extract_rxn_properties():
     sr = SpeciesRegistry(ids=["A", "B"])
 
@@ -950,6 +1035,9 @@ def test_describe():
         '            (2)  "mass action"   (kF = 49 | reversible = False)'
 
 
+    # Reaction: CH4 + 2 O2 <-> CO2 + 2 H2O
+    # TODO
+    
 
 
 def test_set_thermodynamic_data():
@@ -1025,19 +1113,14 @@ def test_extract_reactant_ids():
 
 
 
-def test_extract_reactants():
-    sr = SpeciesRegistry(ids=["A", "B"])
-
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_reactants() == [(1, "A")]
-
-
 def test_extract_reactants_formula():
     sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
+    assert rxn_defn.extract_reactants_formula() == "A"
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_reactants_formula() == "A"
-
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                 products=["CO2", (2, "H2O")], species_registry=sr, autoregister_species=True)
+    assert rxn_defn.extract_reactants_formula() == "CH4 + 2 O2"
 
 
 def test_extract_product_ids():
@@ -1059,19 +1142,14 @@ def test_extract_product_ids():
     assert rxn.extract_product_ids() == {"P", "E"}
 
 
-
-def test_extract_products():
-    sr = SpeciesRegistry(ids=["A", "B"])
-
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_products() == [(1, "B")]
-
-
 def test_extract_products_formula():
     sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
+    assert rxn_defn.extract_products_formula() == "B"
 
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
-    assert rxn.extract_products_formula() == "B"
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                  products=["CO2", (2, "H2O")], species_registry=sr, autoregister_species=True)
+    assert rxn_defn.extract_products_formula() == "CO2 + 2 H2O"
 
 
 

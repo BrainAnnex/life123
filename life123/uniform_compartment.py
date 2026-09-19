@@ -1363,8 +1363,8 @@ class UniformCompartment:
 
 
         # TODO: adapt the following to simpler reactions
-        reactants = rxn.extract_reactants() # A list of triplets of the form (stoichiometry, species name, reaction order)
-        products = rxn.extract_products()   # A list of triplets of the form (stoichiometry, species name, reaction order)
+        reactants = rxn.stoichiometry.get_reactant_list() # A list of pairs of the form (stoichiometry, species id)
+        products = rxn.stoichiometry.get_product_list()   # A list of triplets of the form (stoichiometry, species id)
 
 
         """

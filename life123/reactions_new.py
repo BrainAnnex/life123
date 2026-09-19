@@ -1297,15 +1297,6 @@ class ReactionDefinition:
         return self.stoichiometry.get_reactant_ids()
 
 
-    def extract_reactants(self) -> list[(int, str)]:
-        """
-        Return a list of pairs with details of the reactants of the given reaction,
-        incl. their stoichiometry and species id
-
-        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
-        """
-        return self.stoichiometry.get_reactant_list()
-
 
     def extract_reactants_formula(self) -> str:
         """
@@ -1327,15 +1318,6 @@ class ReactionDefinition:
         """
         return self.stoichiometry.get_product_ids()
 
-
-    def extract_products(self) -> list[(int, str)]:
-        """
-        Return a list of pairs with details of the products of the given reaction,
-        incl. their stoichiometry and species id
-
-        :return:    A list of pairs of the form (stoichiometry coefficient, species id)
-        """
-        return self.stoichiometry.get_product_list()
 
 
     def extract_products_formula(self) -> str:
