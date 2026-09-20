@@ -75,13 +75,13 @@ def test_get_reaction_vector():
     rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
     assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "P": 1}
 
-    rxn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr)
+    rxn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
     assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "S": -1, "P": 1}
 
     rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
     assert rxn.stoichiometry.get_reaction_vector() == {"R": -1, "P": 1, "Q": 1}
 
-    rxn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
+    rxn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
                              species_registry=sr)
     assert rxn.stoichiometry.get_reaction_vector() == {"S": -1, "P": 1}
 
@@ -108,13 +108,13 @@ def test_get_reaction_complexes():
     rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1})
 
-    rxn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr)
+    rxn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1, "S": 1}, {"P": 1})
 
     rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1, "Q": 1})
 
-    rxn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
+    rxn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
                              species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"S": 1, "E": 1}, {"P": 1, "E": 1})
 
@@ -595,7 +595,7 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     with pytest.raises(Exception):
         ReactionDefinition(reactants=[(2, "A"), "B", "C"], products=["B", (1, "C"), (2, "A")], species_registry=sr)
     with pytest.raises(Exception):
-        ReactionDefinition(reactants=("R", (2, "P")), products=[(2, "P"), "R"], species_registry=sr)
+        ReactionDefinition(reactants=["R", (2, "P")], products=[(2, "P"), "R"], species_registry=sr)
 
 
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
@@ -609,7 +609,7 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
 
     # Reaction R + S -> P
-    rxn_defn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr)
+    rxn_defn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
     assert rxn_defn.stoichiometry.to_dict() == {"R": -1, "S": -1, "P": 1}
 
     # Reaction R -> P + Q
@@ -633,12 +633,12 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     rxn_defn = ReactionDefinition(reactants=["R", "R"], products="P", species_registry=sr)
     assert rxn_defn.stoichiometry.to_dict() == {"R": -2, "P": 1}
 
-    rxn_defn = ReactionDefinition(reactants=("E", "S"), products=("E", "P"),
-                             species_registry=sr)
+    rxn_defn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
+                                  species_registry=sr)
     assert rxn_defn.stoichiometry.to_dict() == {"S": -1, "P": 1, "E": 0}
 
     rxn_defn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
-                             species_registry=sr)
+                                  species_registry=sr)
     assert rxn_defn.stoichiometry.to_dict() == {"A": -2, "B":- 2, "P": 3, "Q": 1, "E": 0}
 
 
@@ -997,6 +997,9 @@ def test_extract_rxn_properties():
     assert rxn.extract_rxn_properties() == {'reaction_model': 'mass action', 'delta_H': -30, 'K_eq': 5.0, 'K': 5, 'kF': 10, 'kR': 2, 'reversible': True}
 
 
+def foo():
+    pass
+
 
 def test_describe():
     sr = SpeciesRegistry(ids=["R", "P"])
@@ -1006,7 +1009,6 @@ def test_describe():
                              reaction_model="mass action", kinetic_parameters={"kF": 10})
     assert rxn_defn.describe(concise=True) == "R <-> P"
 
-    #print(rxn.describe(concise=False))
     assert rxn_defn.describe(concise=False) ==  \
         'R <-> P\n'  \
         '        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"\n'  \
@@ -1014,7 +1016,7 @@ def test_describe():
         '        Thermodynamics - derived:   (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K_eq = 0.38206 | Temp = -173.1 C)\n'  \
         '        Kinetics - passed:   (kF = 10)\n'  \
         '        Kinetics - derived:  1 derived reaction\n'  \
-        '            "mass action"   (kF = 10 | kR = 26.174 | K = 0.38206 | reversible = True)'
+        '            (1) Type: "mass action"   (kF = 10 | kR = 26.174 | K = 0.38206 | reversible = True)'
 
 
     # Reaction: # E + S <-> ES -> E + P, with SingleSubstrateMechanism model
@@ -1031,13 +1033,68 @@ def test_describe():
         '        Thermodynamics - derived: None\n'  \
         '        Kinetics - passed:   (k1_F = 18 | k1_R = 100 | k2_F = 49)\n'  \
         '        Kinetics - derived:  2 derived reactions\n'  \
-        '            (1)  "mass action"   (kF = 18 | kR = 100 | K = 0.18 | reversible = True)\n'  \
-        '            (2)  "mass action"   (kF = 49 | reversible = False)'
+        '            (1) Type: "mass action"   (kF = 18 | kR = 100 | K = 0.18 | reversible = True)\n'  \
+        '            (2) Type: "mass action"   (kF = 49 | reversible = False)'
 
 
     # Reaction: CH4 + 2 O2 <-> CO2 + 2 H2O
-    # TODO
-    
+    sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr)
+    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 -> CO2 + 2 H2O"
+
+    assert rxn_defn.describe(concise=False) ==  \
+        'CH4 + 2 O2 -> CO2 + 2 H2O\n'  \
+        '        General one-step reaction, with no Reaction Model specified\n'  \
+        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - derived: None\n'  \
+        '        Kinetics - passed: None\n'  \
+        '        Kinetics - derived:  None'
+
+
+    # Same reaction, with more parameters
+    rxn_defn = ReactionDefinition(id=777,
+                                  reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
+                                  reaction_model="custom")
+    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 -> CO2 + 2 H2O"
+    assert rxn_defn.describe(concise=False) ==  \
+        'CH4 + 2 O2 -> CO2 + 2 H2O\n'  \
+        '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 777)\n'  \
+        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - derived: None\n'  \
+        '        Kinetics - passed: None\n'  \
+        '        Kinetics - derived:  1 derived reaction\n'  \
+        '            (1) Type: "custom"   (reversible = False)'
+
+
+    # Same reaction, with yet more parameters
+    rxn_defn = ReactionDefinition(id=999,
+                                  reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
+                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": foo})
+    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
+    assert rxn_defn.describe(concise=False) ==  \
+        'CH4 + 2 O2 <-> CO2 + 2 H2O\n'  \
+        '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 999)\n'  \
+        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - derived:   (K_eq = 5)\n'  \
+        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = foo())\n'  \
+        '        Kinetics - derived:  1 derived reaction\n'  \
+        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = foo() | reversible = True)'
+
+    # Same reaction, with yet more parameters
+    rxn_defn = ReactionDefinition(id=1001,
+                                  reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
+                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": foo},
+                                  thermodynamic_parameters={"temp": 200})
+    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
+    assert rxn_defn.describe(concise=False) ==  \
+        'CH4 + 2 O2 <-> CO2 + 2 H2O\n'  \
+        '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 1001)\n'  \
+        '        Thermodynamics - passed:    (Temp = -73.15 C)\n'  \
+        '        Thermodynamics - derived:   (delta_G = -2.6763 kJ/mol | K_eq = 5 | Temp = -73.15 C)\n'  \
+        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = foo())\n'  \
+        '        Kinetics - derived:  1 derived reaction\n'  \
+        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = foo() | reversible = True)'
+
 
 
 def test_set_thermodynamic_data():
@@ -1074,7 +1131,7 @@ def test_extract_intermediate():
     rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
     assert rxn_defn.extract_intermediate() is None
 
-    rxn_defn = ReactionDefinition(reactants=("R", "S"), products="P", species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr, autoregister_species=True,
                                   reaction_model="mass action")
     assert rxn_defn.extract_intermediate() is None
 
@@ -1111,6 +1168,11 @@ def test_extract_reactant_ids():
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
     assert rxn.extract_reactant_ids() == {"S", "E"}
 
+    rxn = ReactionDefinition(reactants=["A", "B"], products=["B", "C"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_reactant_ids() == {"A", "B"}
+
+    rxn = ReactionDefinition(reactants=[(2, "D"), "C"], products=["C", (3, "E")], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_reactant_ids() == {"D", "C"}
 
 
 def test_extract_reactants_formula():
@@ -1140,6 +1202,13 @@ def test_extract_product_ids():
 
     rxn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr, autoregister_species=True)
     assert rxn.extract_product_ids() == {"P", "E"}
+
+    rxn = ReactionDefinition(reactants=["A", "B"], products=["B", "C"], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_product_ids() == {"B", "C"}
+
+    rxn = ReactionDefinition(reactants=[(2, "D"), "C"], products=["C", (3, "E")], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_product_ids() == {"C", "E"}
+
 
 
 def test_extract_products_formula():
@@ -1178,6 +1247,9 @@ def test_extract_species_in_reaction():
                              reaction_model="single substrate mechanism")
     assert rxn.extract_species_in_reaction(include_intermediaries=False) == {"S", "P", "E"}
     assert rxn.extract_species_in_reaction(include_intermediaries=True) == {"S", "P", "E", "ES*"}
+
+    rxn = ReactionDefinition(reactants=[(2, "D"), "C"], products=["C", (3, "E")], species_registry=sr, autoregister_species=True)
+    assert rxn.extract_species_in_reaction() == {"C", "D", "E"}
 
 
 
@@ -1232,6 +1304,11 @@ def test_reaction_quotient():
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1/5., quotient)
     assert formula == ' [A]^2  / [B]'
+
+    rxn = ReactionDefinition(reactants=[(2, "B")], products=[(3, "A")], species_registry=sr,
+                             reaction_model="custom", autoregister_species=True)
+    with pytest.raises(Exception):
+        rxn.reaction_quotient(conc=c)       # Not "mass action"
 
 
 
@@ -1320,3 +1397,23 @@ def test_find_equilibrium_conc():
     assert np.allclose(result["A"], 9.49568869375716)
     rxn.stoichiometry.consistency_checker(conc_before={"C": 40., "A":200.},
                                           conc_after={"C": 135.2521556531214, "A": 9.49568869375716})
+
+
+    rxn = ReactionDefinition(reactants=[(2, "B")], products=[(3, "A")], species_registry=sr,
+                             reaction_model="custom", autoregister_species=True)
+    with pytest.raises(Exception):
+        rxn.find_equilibrium_conc(conc_dict={"A":10., "B": 50})     # Not "mass action"
+
+
+
+
+##########  For PRIVATE methods  ##########
+
+def test__standard_form_chem_eqn():
+    sr = SpeciesRegistry()
+    rxn = ReactionDefinition(reactants="A", products="B",
+                             species_registry=sr, autoregister_species=True)     # Won't actually use reactants/products
+
+    assert rxn._standard_form_chem_eqn([(1, "Fe"), (2, "Cl")]) == "Fe + 2 Cl"
+
+    assert rxn._standard_form_chem_eqn([(3, "Fe"), (5, "G")]) == "3 Fe + 5 G"

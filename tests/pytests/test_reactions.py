@@ -993,8 +993,7 @@ def test_find_equilibrium_conc_ReactionGeneric():
 
 
 
-
-#######  For PRIVATE methods  #######
+##########  For PRIVATE methods  ##########
 
 def test__standard_form_chem_eqn():
     rxn = ReactionGeneric(reactants="A", products="B")     # Won't actually use reactants/products

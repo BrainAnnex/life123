@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, asdict
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
 from life123.species_registry import SpeciesRegistry
-from life123.kinetics import MichaelisMenten_Model, MassAction_Model
+from life123.kinetics import MassAction_Model, MichaelisMenten_Model, Custom_Model
 from life123.units import show_standard_units, convert, K, C
 
 
@@ -674,6 +674,7 @@ class ReactionCompiler_MichaelisMenten:
         return (r1,)
 
 
+
 class ReactionCompiler_SingleSubstrateMechanism:
     @staticmethod
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id,
@@ -733,6 +734,76 @@ class ReactionCompiler_SingleSubstrateMechanism:
 
 
 
+class ReactionCompiler_Custom:
+    @staticmethod
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id,
+               species_registry=None, analytic_solution_family=None) -> tuple:
+        """
+
+        :param stoichiometry:
+        :param kinetic_parameters:
+        :param thermodynamics_data:
+        :param source_id:
+        :param species_registry:
+        :return:
+        """
+        #print("In compile() method of class 'ReactionCompiler_Custom'")
+        #print("analytic_solution_family: ", analytic_solution_family)
+
+        ALLOWED_KEYS = {"kR", "kF", "K", "rate_function"}
+        unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
+
+        if unexpected_keys:
+            raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+
+        m = Custom_Model()
+
+        pars = kinetic_parameters.copy()    # Clone the dictionary
+        derived_pars = set()
+
+        # If available and feasible, propagate the thermodynamic value K_eq to the kinetic model
+        if (thermodynamics_data.K_eq is not None) and (m.supports_equilibrium_constant):
+            if pars.get("K") is not None:
+                # Check for inconsistency
+                assert np.allclose(pars["K"], thermodynamics_data.K_eq), \
+                       "ReactionCompiler_MassAction(): conflict between thermodynamic value K_eq and kinetic value K"
+            else:
+                # Enrich the kinetic data, from thermodynamic values
+                pars["K"] =  thermodynamics_data.K_eq
+                derived_pars = {"K"}
+
+
+        m.set_parameters(parameters=pars, derived_pars=derived_pars)     # Pass thru the parameters (possibly enhanced by additional parameters derived from the thermodynamics)
+        #print(f"    name of model being used: {m.name!r}")
+
+        sim_rxn = SimulationReaction(model=m, stoichiometry=stoichiometry,
+                                     source_id=source_id,
+                                     derivation="direct",
+                                     analytic_solution_family=analytic_solution_family)
+                                     # "Directly modeled as specified by the user"
+                                     # "this simulation reaction corresponds directly to the reaction defined by the user"
+
+        # TODO: try out:
+        #Reconciler.reconcile(thermodynamics_data=thermodynamics_data, model=m)
+
+        # If available and feasible, propagate the kinetic value K to the thermodynamic K_eq
+        if m.supports_equilibrium_constant:
+            if (m.K is not None) and (m.K != math.inf):     # If the kinetic value K is available
+                #print(m.K)
+                if thermodynamics_data.K_eq:
+                    assert np.allclose(m.K, thermodynamics_data.K_eq), \
+                       "ReactionCompiler_MassAction(): conflict between the kinetic value K and the thermodynamic value K_eq"
+                else:
+                    thermodynamics_data.K_eq = m.K      # Thermodynamic K_eq can be set from kinetic K
+                    thermodynamics_data.derived_pars.add("K_eq")
+                    thermodynamics_data.set_temperature(thermodynamics_data.temp)
+        # TODO: END of part to replace
+
+        return (sim_rxn,)
+
+
+
+
 
 ###########################################################################
 
@@ -747,7 +818,8 @@ class ReactionModelRegistry:
         {
             "mass action": ReactionCompiler_MassAction,
             "michaelis menten": ReactionCompiler_MichaelisMenten,
-            "single substrate mechanism": ReactionCompiler_SingleSubstrateMechanism
+            "single substrate mechanism": ReactionCompiler_SingleSubstrateMechanism,
+            "custom": ReactionCompiler_Custom
         }
 
         # "single substrate mechanism" means  S + E <-> SE -> P + E  , with 3 parameters
@@ -928,11 +1000,17 @@ class ReactionDefinition:
             "ReactionDefinition() instantiation: the argument `reactants` is a required one"
         if type(reactants) == str:
             reactants = [reactants]
+        else:
+            assert type(reactants) is list, \
+                "ReactionDefinition() instantiation: the argument `reactants` must be a list or a string"
 
         assert products is not None, \
             "ReactionDefinition() instantiation: the argument `products` is a required one"
         if type(products) == str:
             products = [products]
+        else:
+            assert type(products) is list, \
+                "ReactionDefinition() instantiation: the argument `products` must be a list or a string"
 
 
         # Normalize the elements of each list to be (int, str) pairs; i.e. turn any single string "X" into the pair (1, "X")
@@ -1257,6 +1335,8 @@ class ReactionDefinition:
         rxn_description += "\n" + INDENT + self.reaction_category + " reaction"
         if self.reaction_model:
             rxn_description += f', with Reaction Model: "{self.reaction_model}"'
+        else:
+            rxn_description += ', with no Reaction Model specified'
 
         if self.id:
              rxn_description += f"   (Reaction ID {self.id})"
@@ -1270,17 +1350,23 @@ class ReactionDefinition:
         s = self.format_reaction_details(self.thermodynamics.to_dict())
         rxn_description += s if s else "None"
 
-        rxn_description += f"\n{INDENT}Kinetics - passed: {self.format_reaction_details(self.source_kinetic_parameters)}"
-        rxn_description += f"\n{INDENT}Kinetics - derived:  {len(sim_rxn_tuple)} derived reaction"
+        rxn_description += f"\n{INDENT}Kinetics - passed: "
+        s = self.format_reaction_details(self.source_kinetic_parameters)
+        rxn_description += s if s else "None"
+
+        rxn_description += f"\n{INDENT}Kinetics - derived:  "
+        s = f"{len(sim_rxn_tuple)} derived reaction"
+        rxn_description += s if len(sim_rxn_tuple) > 0 else "None"
+
         if len(sim_rxn_tuple) > 1:
             rxn_description += "s"  # The plural form
 
         for i, sim_rxn in enumerate(sim_rxn_tuple):
             rxn_description += f"\n{INDENT}    "
-            if len(sim_rxn_tuple) > 1:
-                rxn_description += f"({i+1})  "     # Show the numbering, if more than one
+            #if len(sim_rxn_tuple) > 1:
+            rxn_description += f"({i+1}) "     # Show the numbering, if more than one
 
-            rxn_description += f'"{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
+            rxn_description += f'Type: "{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
 
 
         return rxn_description
@@ -1371,7 +1457,7 @@ class ReactionDefinition:
         """
         #TODO: probably move to "SimulationReaction" class
         assert self.reaction_model == "mass action", \
-            "reaction_quotient(): only implemented for reactions that have \"mass action\" kinetics"
+            "reaction_quotient(): only 'mass action' reaction models are currently supported"
 
         return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
                                                         product_data=self.stoichiometry.get_product_list(),
@@ -1678,11 +1764,14 @@ class ReactionDefinition:
                 details.append(single_detail)
                 continue
 
-            if type(v) == str:
+            if type(v) is str:
                 single_detail = f"{k} = '{v}'"
-            elif type(v) == bool:
+            elif type(v) is bool:
                 single_detail = f"{k} = {v}"
-            else:
+            elif callable(v):
+                #single_detail = f'{k} = function "{v.__name__}"'
+                single_detail = f'{k} = {v.__name__}()'
+            else:   # Numeric
                 single_detail = f"{k} = {v:,.5g}"   # EXAMPLES: "kF = 3"
                                                     #           "delta_G = 1.2345"
             units = show_standard_units(k)
