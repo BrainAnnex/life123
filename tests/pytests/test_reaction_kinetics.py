@@ -568,6 +568,38 @@ def test_estimate_rate_constants_synthesis():
 
 
 
+def test_kinetic_rate_first_order():
+
+    # Reaction A <-> B
+    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": 1}),
+                                                       kinetic_parameters={"kF": 20., "kR": 2},
+                                                       conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": 1}),
+                                                       kinetic_parameters={"kF": 20.},
+                                                       conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5)             # 100.0
+
+
+    # Reaction A + B <-> C + D , with 1st-order kinetics for each species
+    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
+                                                       kinetic_parameters={"kF": 10},
+                                                       conc_dict={"A": 2, "B": 4, "C": 0, "D": 3})
+    assert np.allclose(result, 80)      #  10. * 2 * 4   (no reverse reaction)
+
+    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
+                                                       kinetic_parameters={"kF": 5., "kR": 2},
+                                                       conc_dict={"A": 3.5, "B": 9., "C": 11., "D": 7.})
+    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
+
+    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
+                                                       kinetic_parameters={"kF": 5, "kR": 2},
+                                                       conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
+    assert np.allclose(result,  -10.)   # 5. * 5 * 8 - 2. * 15 * 7
+
+
+
 def test_compute_rate_elementary():
     # All reactions below are elementary reactions
     # that have 1st-order kinetics with respect to all the involved chemicals
@@ -631,10 +663,6 @@ def test_compute_rate_mass_action_kinetics():
                                             conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
     assert np.allclose(result,  -10.)
 
-
-
-def test_compute_rate_first_order():
-    pass    #TODO
 
 
 

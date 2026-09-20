@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-import math
 from life123.species_registry import SpeciesRegistry
+from life123.reaction_kinetics import ReactionKinetics
 from life123.reactions_new import Stoichiometry, ReactionThermodynamics, \
 ReactionDefinition, SimulationReaction, MassAction_Model, MichaelisMenten_Model
 from tests.utilities.comparisons import *
@@ -339,6 +339,7 @@ def test_CONSTRUCTOR_SimulationReaction():
 def test_determine_reaction_rate():
     sr = SpeciesRegistry(ids=["A", "B"])
 
+    # Reaction A <-> B , with "mass action"
     rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF": 20., "kR": 2.})
@@ -353,7 +354,7 @@ def test_determine_reaction_rate():
     assert np.allclose(result, 20. * 5.)            # 100.0
 
 
-    # Reaction A + B -> C
+    # Reaction A + B -> C , with "mass action"
     rxn_defn = ReactionDefinition(reactants=["A", "B"], products="C",
                              species_registry=sr, autoregister_species=True,
                              reaction_model="mass action", kinetic_parameters={"kF": 20})
@@ -368,7 +369,7 @@ def test_determine_reaction_rate():
     assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
 
 
-    # Reaction A <-> B + C
+    # Reaction A -> B + C , with "mass action"
     rxn_defn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 20})
 
@@ -380,6 +381,26 @@ def test_determine_reaction_rate():
     sim_rxn.model.set_parameters({"kR": 2.})
     result = sim_rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
     assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
+
+
+    # Reaction: # A + B -> C + D , with custom reaction model
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
+    rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
+                             reaction_model="custom",
+                             kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+     #print(rxn_defn.describe(concise=False))
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+    assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
+
+    initial_conc = {"A": 2, "B": 4, "C": 5, "D": 3}
+    result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
+    assert result == 80       #  10. * 2 * 4   (no reverse reaction)
+
+     # Make reversible
+    sim_rxn.model.set_parameters({"kR": 2})
+    result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
+    assert np.allclose(result, 80. - 2. * 5 * 3)
 
 
 
@@ -415,7 +436,7 @@ def test_step_simulation_1():
     assert result[1] == -70
 
 
-    # Reaction : A -> B
+    # Reaction : A -> B  (no reverse reaction)
     rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
                                   reaction_model="mass action", kinetic_parameters={"kF": 3.})
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
@@ -533,6 +554,25 @@ def test_step_simulation_2():
 
     expected = {'E': 0.3002176, 'S': 19.2296576, 'P': 0.07056, 'ES*': 0.6997824}
     compare_dicts(conc, expected)
+
+
+def test_step_simulation_3():
+
+    # Reaction: # A + B -> C + D , with custom reaction model
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
+    rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
+                             reaction_model="custom",
+                             kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+
+    print(rxn_defn.describe(concise=False))
+
+    initial_conc = {"A": 2, "B": 4, "C": 0, "D": 3}
+    dt = 0.01
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    incr_dict, rate = sim_rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert rate == 80       #  10. * 2 * 4   (no reverse reaction)
 
 
 
@@ -997,7 +1037,9 @@ def test_extract_rxn_properties():
     assert rxn.extract_rxn_properties() == {'reaction_model': 'mass action', 'delta_H': -30, 'K_eq': 5.0, 'K': 5, 'kF': 10, 'kR': 2, 'reversible': True}
 
 
-def foo():
+
+def kinetic_test_func(stoichiometry, kinetic_parameters, conc_dict):
+    # USed as place-holder custom kinetic rate function
     pass
 
 
@@ -1069,21 +1111,21 @@ def test_describe():
     # Same reaction, with yet more parameters
     rxn_defn = ReactionDefinition(id=999,
                                   reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
-                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": foo})
+                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": kinetic_test_func})
     assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
     assert rxn_defn.describe(concise=False) ==  \
         'CH4 + 2 O2 <-> CO2 + 2 H2O\n'  \
         '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 999)\n'  \
         '        Thermodynamics - passed:  None\n'  \
         '        Thermodynamics - derived:   (K_eq = 5)\n'  \
-        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = foo())\n'  \
+        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
         '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = foo() | reversible = True)'
+        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
 
     # Same reaction, with yet more parameters
     rxn_defn = ReactionDefinition(id=1001,
                                   reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
-                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": foo},
+                                  reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": kinetic_test_func},
                                   thermodynamic_parameters={"temp": 200})
     assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
     assert rxn_defn.describe(concise=False) ==  \
@@ -1091,9 +1133,9 @@ def test_describe():
         '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 1001)\n'  \
         '        Thermodynamics - passed:    (Temp = -73.15 C)\n'  \
         '        Thermodynamics - derived:   (delta_G = -2.6763 kJ/mol | K_eq = 5 | Temp = -73.15 C)\n'  \
-        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = foo())\n'  \
+        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
         '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = foo() | reversible = True)'
+        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
 
 
 

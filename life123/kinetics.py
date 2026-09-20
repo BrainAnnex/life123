@@ -203,6 +203,7 @@ class MassAction_Model:
         pass
 
 
+
 ################################################################################
 
 class MichaelisMenten_Model:
@@ -334,6 +335,7 @@ class MichaelisMenten_Model:
 
     def rate(self, concentrations):
         pass
+
 
 
 ################################################################################
@@ -529,6 +531,20 @@ class Custom_Model:
 
 
 
-    def rate(self, concentrations):
-        pass
+    def rate(self, stoichiometry, conc_dict):
+        """
 
+        :param stoichiometry:
+        :param conc_dict:
+        :return:
+        """
+        function_to_call = self.rate_function
+        assert function_to_call is not None, \
+            f"Custom_Model.rate(): no kinetic rate function was provide for this reaction.  " \
+            f"Use set_parameters() to specify one"
+
+        #print(f"Custom_Model.rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
+
+        return function_to_call(stoichiometry = stoichiometry,
+                                kinetic_parameters = {"kF": self.kF, "kR": self.kR},
+                                conc_dict = conc_dict)             # Carry out the invocation of the custom function call

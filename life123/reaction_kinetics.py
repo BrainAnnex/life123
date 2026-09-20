@@ -578,7 +578,7 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def compute_rate_elementary(reactants :[str], products :[str],
+    def compute_rate_elementary(reactants :list[str], products :list[str],
                                 kF :float, kR :float, reversible :bool,
                                 conc_dict :dict) -> float:
         """
@@ -588,12 +588,11 @@ class ReactionKinetics:
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
 
-        Warning: even though arbitrary lists of reactants and products are accepted as arguments,
-                 this kinetic model will generally only hold for unimolecular reactions A <-> P,
-                 synthesis reactions A + B <-> P, and decomposition reactions A <-> B + C
+        CAUTION: even though arbitrary lists of reactants and products are accepted as arguments,
+                 this kinetic model will generally only hold for elementary reactions
 
-        :param reactants:   List of labels of the reactants
-        :param products:    List of labels of the products of the reaction
+        :param reactants:   List of the species id's of the reactants
+        :param products:    List of the species id's of the products
         :param kF:          Forward reaction rate
         :param kR:          Reverse reaction rate; ignored if irreversible
         :param reversible:  True if the reaction is reversible; False otherwise
@@ -603,6 +602,8 @@ class ReactionKinetics:
 
         :return:            The differences between the reaction's forward and reverse rates
         """
+        """
+        # TODO: this warning doesn't belong here
         issue_warning = False
         if len(reactants) > 2 or len(products) > 2:
             issue_warning = True
@@ -616,6 +617,7 @@ class ReactionKinetics:
         if issue_warning:
             print("compute_rate_elementary(): WARNING - using 1st order kinetic modeling "
                   "for a reaction that's probably not elementary")
+        """
 
         forward_rate = kF        # The initial multiplicative factor
         for r in reactants:
@@ -713,6 +715,29 @@ class ReactionKinetics:
         reactants = [t[1] for t in reactant_terms]
         products  = [t[1] for t in product_terms]
         return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products, kF=kF, kR=kR, reversible=True, conc_dict=conc_dict)
+
+
+
+    @staticmethod
+    def kinetic_rate_first_order(stoichiometry,
+                                 kinetic_parameters :dict,
+                                 conc_dict :dict) -> float:
+        """
+        If the reactions isn't elementary, this is a HYPOTHETICAL scenario (mostly for testing and analysis)
+        where the reaction is first order in EACH of the reactants and EACH of products
+        """
+        kF = kinetic_parameters.get("kF")
+        kR = kinetic_parameters.get("kR")
+        reversible = True if kR else False
+
+        # Pretend that the reaction is an elementary one
+        reactants = stoichiometry.get_reactant_ids()
+        products  = stoichiometry.get_product_ids()
+        return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products,
+                                                        kF=kF, kR=kR, reversible=reversible,
+                                                        conc_dict=conc_dict)
+
+
 
 
     @staticmethod

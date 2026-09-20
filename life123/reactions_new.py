@@ -141,7 +141,7 @@ class Stoichiometry:
 
     def get_reactant_ids(self) -> Set[str]:
         """
-        Return the list of all reactant species
+        Return the set of all reactant species id's
 
         :return:
         """
@@ -167,7 +167,7 @@ class Stoichiometry:
 
     def get_product_ids(self) -> Set[str]:
         """
-        Return the list of all product species
+        Return the set of all product species id's
 
         :return:
         """
@@ -431,16 +431,7 @@ class SimulationReaction:
                                                             reversible=self.model.reversible,
                                                             conc_dict=conc_dict)
 
-        function_to_call = self.kinetics.rate_function
-        assert function_to_call is not None, \
-            f"determine_reaction_rate(): no kinetic rate function was provide for the reaction `{self.describe(concise=True)}` isn't set; " \
-            f"make sure to first call set_rate_function()"
-        #print(f"determine_reaction_rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
-
-        return function_to_call(reactant_terms=self.stoichiometry.get_reactant_ids(),
-                               product_terms=self.stoichiometry.get_product_ids(),
-                                kF = self.model.kF, kR=self.model.kR,
-                                conc_dict=conc_dict)                        # Carry out the function call
+        return self.model.rate(stoichiometry = self.stoichiometry, conc_dict=conc_dict)
 
 
 
@@ -695,7 +686,7 @@ class ReactionCompiler_SingleSubstrateMechanism:
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
 
         if unexpected_keys:
-            raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+            raise TypeError(f"ReactionCompiler_SingleSubstrateMechanism.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
         assert stoichiometry.reaction_pattern() == (1, 1, 1), \
             "ReactionCompiler_SingleSubstrateMechanism.compile(): reaction stoichiometry " \
@@ -754,7 +745,7 @@ class ReactionCompiler_Custom:
         unexpected_keys = set(kinetic_parameters.keys()) - ALLOWED_KEYS
 
         if unexpected_keys:
-            raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
+            raise TypeError(f"ReactionCompiler_Custom.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
         m = Custom_Model()
 
