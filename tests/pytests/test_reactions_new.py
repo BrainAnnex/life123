@@ -336,7 +336,7 @@ def test_CONSTRUCTOR_SimulationReaction():
 
 
 
-def test_determine_reaction_rate():
+def test_determine_reaction_rate_1():
     sr = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction A <-> B , with "mass action"
@@ -383,6 +383,11 @@ def test_determine_reaction_rate():
     assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
 
 
+
+def kinetic_constant_rate(stoichiometry, kinetic_parameters, conc_dict):
+    return 8
+
+def test_determine_reaction_rate_2():
     # Reaction: # A + B -> C + D , with custom reaction model
     sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
@@ -397,10 +402,28 @@ def test_determine_reaction_rate():
     result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
     assert result == 80       #  10. * 2 * 4   (no reverse reaction)
 
-     # Make reversible
+    # Make reversible
     sim_rxn.model.set_parameters({"kR": 2})
     result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
     assert np.allclose(result, 80. - 2. * 5 * 3)
+
+
+    # Reaction: # A + B -> C + D , with custom reaction model
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
+    rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
+                             reaction_model="custom",
+                             kinetic_parameters={"kF": 10})     # rate_function not provided
+     #print(rxn_defn.describe(concise=False))
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    initial_conc = {"A": 2, "B": 4, "C": 5, "D": 3}
+    with pytest.raises(Exception):
+        sim_rxn.determine_reaction_rate(conc_dict=initial_conc)     # Missing rate_function
+
+    sim_rxn.set_parameters({'rate_function': kinetic_constant_rate})
+    result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
+    assert result == 8
 
 
 
@@ -563,16 +586,22 @@ def test_step_simulation_3():
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                              reaction_model="custom",
                              kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
-
-    print(rxn_defn.describe(concise=False))
-
-    initial_conc = {"A": 2, "B": 4, "C": 0, "D": 3}
-    dt = 0.01
+    #print(rxn_defn.describe(concise=False))
 
     sim_rxn = rxn_defn.sim_reactions[0]
 
+    initial_conc = {"A": 2, "B": 4, "C": 5, "D": 3}
+    dt = 0.1
+
     incr_dict, rate = sim_rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
     assert rate == 80       #  10. * 2 * 4   (no reverse reaction)
+    assert incr_dict == {'A': -8, 'B': -8, 'C': 8, 'D': 8}      # 80 * 0.1 = 8
+
+    # Make reversible
+    sim_rxn.set_parameters({"kR": 2})
+    incr_dict, rate = sim_rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert rate == 50      # 80 - 2. * 5 * 3
+    assert incr_dict == {'A': -5, 'B': -5, 'C': 5, 'D': 5}      # 50 * 0.1 = 5
 
 
 
@@ -1039,7 +1068,7 @@ def test_extract_rxn_properties():
 
 
 def kinetic_test_func(stoichiometry, kinetic_parameters, conc_dict):
-    # USed as place-holder custom kinetic rate function
+    # Used as place-holder custom kinetic rate function
     pass
 
 

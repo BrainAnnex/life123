@@ -1,5 +1,6 @@
 from __future__ import annotations      # To facilitate type annotations
 import math
+from life123.reaction_kinetics import ReactionKinetics
 
 
 
@@ -199,8 +200,23 @@ class MassAction_Model:
 
 
 
-    def rate(self, concentrations):
-        pass
+    def rate(self, stoichiometry, conc_dict) -> float:
+        """
+        For the specified reaction and its species concentrations,
+        determine the instantaneous reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the current system state.
+
+        :param stoichiometry:
+        :param conc_dict:
+        :return:
+        """
+        reactants = stoichiometry.get_reactant_ids()
+        products  = stoichiometry.get_product_ids()
+        return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products,
+                                                        kF=self.kF, kR=self.kR, reversible=self.reversible,
+                                                        conc_dict=conc_dict)
+
 
 
 
@@ -333,7 +349,17 @@ class MichaelisMenten_Model:
 
 
 
-    def rate(self, concentrations):
+    def rate(self, stoichiometry, conc_dict) -> float:
+        """
+        For the specified reaction and its species concentrations,
+        determine the instantaneous reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the current system state.
+
+        :param stoichiometry:
+        :param conc_dict:
+        :return:
+        """
         pass
 
 
@@ -531,8 +557,12 @@ class Custom_Model:
 
 
 
-    def rate(self, stoichiometry, conc_dict):
+    def rate(self, stoichiometry, conc_dict) -> float:
         """
+        For the specified reaction and its species concentrations,
+        determine the instantaneous reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the current system state.
 
         :param stoichiometry:
         :param conc_dict:
@@ -540,8 +570,8 @@ class Custom_Model:
         """
         function_to_call = self.rate_function
         assert function_to_call is not None, \
-            f"Custom_Model.rate(): no kinetic rate function was provide for this reaction.  " \
-            f"Use set_parameters() to specify one"
+            "Custom_Model.rate(): no kinetic rate function was provide for this reaction.  " \
+            "Use set_parameters({'rate_function': YOUR_FUNCTION_NAME}) to specify one"
 
         #print(f"Custom_Model.rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
 

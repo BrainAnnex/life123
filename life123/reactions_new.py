@@ -395,7 +395,7 @@ class SimulationReaction:
 
         :param model:           Object of type such as "MassAction_Model" or "MichaelisMenten_Model"
         :param stoichiometry:   Object of type "Stoichiometry"
-        :param source_id:
+        :param source_id:       Provenance info: the ID of the "ReactionDefinition" source object
         :param derivation:      [OPTIONAL] To explain how this object came about:
                                     either "direct" or "generated"
         """
@@ -414,31 +414,33 @@ class SimulationReaction:
 
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        For the specified concentrations of the chemicals in the generic reaction,
+        For the specified concentrations of the species in the reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
-        at the start of the time step.
+        at the current system state.
 
-        :param conc_dict:   A dict mapping specie id's to their concentrations,
+        :param conc_dict:   A dict mapping species id's to their concentrations,
                                 for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
-        if self.model.name == "mass action":
-            return ReactionKinetics.compute_rate_elementary(reactants = self.stoichiometry.get_reactant_ids(),
-                                                            products = self.stoichiometry.get_product_ids(),
-                                                            kF = self.model.kF, kR=self.model.kR,
-                                                            reversible=self.model.reversible,
-                                                            conc_dict=conc_dict)
-
         return self.model.rate(stoichiometry = self.stoichiometry, conc_dict=conc_dict)
+
+
+
+    def get_parameters(self) -> dict:
+        return self.get_parameters()
+
+
+    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
+        self.model.set_parameters(parameters=parameters, derived_pars=derived_pars)
 
 
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> Tuple[dict, float]:
         """
         Simulate the generic reaction, over the specified time interval.
-        The forward Euler method is used
+        If exact=False, the forward Euler method is used.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
@@ -459,7 +461,6 @@ class SimulationReaction:
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
-
 
         reactants = self.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
         products = self.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
