@@ -1,5 +1,6 @@
 from __future__ import annotations      # To facilitate type annotations
 import math
+import numpy as np
 from life123.reaction_kinetics import ReactionKinetics
 
 
@@ -399,11 +400,118 @@ class MichaelisMenten_Model:
         :param conc_dict:
         :return:
         """
-        V_max = self.kcat * conc_dict[self.E]
+        E_tot = conc_dict[self.E]   # Note: self.E represents E_tot in this model
+        V_max = self.kcat * E_tot
+
+        #if self.morrison:      # TODO: phase it in as an option
+            #S_tot = conc_dict[self.S]   # Note: self.S represents S_tot in this model
+            #return self.rate_morrison(S_tot=S_tot, E_tot=E_tot, V_max=V_max)
 
         S_conc = conc_dict[self.S]
 
         return (V_max * S_conc) / (self.kM + S_conc)
+
+
+
+    def rate_morrison(self, S_tot :float, E_tot :float, V_max :float) -> float:
+        """
+        Based on the Morrison model.
+        Especially useful in scenarios with high concentrations of enzyme.
+        The arguments may also be Numpy arrays.
+
+        Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1",
+                   by F. Xavier Malcata, Wiley, 2023
+
+        :param S_tot:   The total concentration of free Substrate and Substrate bound to Enzyme
+                            (i.e. [S] + [ES])
+        :param E_tot:   Total Enzyme concentration (bound and unbound enzyme);
+                            at times referred to as E0
+        :return:        The corresponding reaction rate, in terms of production of the product P
+        """
+
+        S_over_E = S_tot / E_tot
+
+        kM_over_E = self.kM / E_tot
+
+        radicand = (1 + S_over_E + kM_over_E)**2 - 4 * S_over_E
+
+        term = 1 + S_over_E + kM_over_E - np.sqrt(radicand)
+
+        return 0.5 * V_max * term
+
+
+
+    def compute_k1_forward(self, kM, kcat, k1_reverse, verbose=False):
+        """
+        Compute and return the value for k1_forward, given kM, kcat and k1_reverse.
+        Note that this is a linear affine transformation : k1_forward = k1_reverse * (1 / kM) + (kcat / kM)
+
+        :param kM:
+        :param kcat:
+        :param k1_reverse:
+        :param verbose:
+        :return:
+        """
+        #TODO: unclear if actually useful
+
+        k1_forward = (k1_reverse + kcat) / kM
+        if verbose:
+                K = k1_forward / k1_reverse
+                print(f"k1_forward: {k1_forward} , K (k1_f / k1_r) = {K}")
+
+        return k1_forward
+
+
+
+    def compute_k1_reverse(self, kM, kcat, k1_forward: float|np.ndarray, verbose=False):
+        """
+        Compute and return the value for k1_reverse, given kM, kcat and k1_forward
+        Note that this is a linear affine transformation : k1_reverse = k1_forward * kM  - kcat
+
+        :param kM:
+        :param kcat:
+        :param k1_forward:
+        :param verbose:
+        :return:
+        """
+        #TODO: unclear if actually useful
+
+        # Verify that the combination of given parameter is physically possible
+        min_value_k1_f = self.min_k1_forward(kM, kcat)
+        if type(k1_forward) == np.ndarray:
+            assert (k1_forward >= min_value_k1_f).all(), \
+                f"compute_k1_reverse(): given the specified kM ({kM}) and kcat ({kcat}), some of the k1_forward values " \
+                f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
+                f"The minimum valid value for k1_forward is {min_value_k1_f}"
+        else:
+            assert k1_forward >= min_value_k1_f, \
+                f"compute_k1_reverse(): the given values for kM ({kM}), kcat ({kcat}) and k1_forward ({k1_forward}) " \
+                f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
+                f"The minimum valid value for k1_forward is {min_value_k1_f}"
+
+        k1_reverse = k1_forward * kM - kcat
+        if verbose:
+            if np.allclose(k1_reverse, 0):
+                print (f"k1_reverse: {k1_reverse} , K (k1_f / k1_r) = INFINITE")
+            else:
+                K = k1_forward / k1_reverse
+                print(f"k1_reverse: {k1_reverse} , K (k1_f / k1_r) = {K}")
+
+        return k1_reverse
+
+
+
+    def min_k1_forward(self, kM :float, kcat :float) -> float:
+        """
+        Return the minimum physically-possible value for k1_forward,
+        for the given kinetic parameters kM and kcat
+
+        :param kM:
+        :param kcat:
+        :return:
+        """
+        return kcat / kM
+
 
 
 
