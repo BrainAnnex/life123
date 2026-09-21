@@ -460,6 +460,15 @@ class SimulationReaction:
 
 
 
+    def get_parameters(self) -> dict:
+        return self.get_parameters()
+
+
+    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
+        self.model.set_parameters(parameters=parameters, derived_pars=derived_pars)
+
+
+
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
         For the specified concentrations of the species in the reaction,
@@ -473,15 +482,6 @@ class SimulationReaction:
         :return:            The differences between the reaction's forward and reverse rates
         """
         return self.model.rate(conc_dict=conc_dict)
-
-
-
-    def get_parameters(self) -> dict:
-        return self.get_parameters()
-
-
-    def set_parameters(self, parameters :dict, derived_pars=None) -> None:
-        self.model.set_parameters(parameters=parameters, derived_pars=derived_pars)
 
 
 
@@ -675,6 +675,18 @@ class ReactionCompiler_MassAction:
 
 
 class ReactionCompiler_MichaelisMenten:
+    """
+    Coarse-grained model based on the Michaelis-Menten mechanism:
+        E + S <-> ES* -> E + P
+
+    -- reduced model
+    -- kM + kcat
+    -- ES* intermediate eliminated (i.e. not represented)
+
+    More details under "class MichaelisMenten_Model"
+
+    SEE ALSO:  class ReactionCompiler_SingleSubstrateMechanism
+    """
     @staticmethod
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id,
                species_registry=None, analytic_solution_family=None):
@@ -717,6 +729,19 @@ class ReactionCompiler_MichaelisMenten:
 
 
 class ReactionCompiler_SingleSubstrateMechanism:
+    """
+    Finer-grained model based on the Michaelis-Menten mechanism:
+        E + S <-> ES* -> E + P
+
+    It uses an explicit ES* intermediate.
+
+        -- explicit mechanism
+        -- k1_F + k1_R + k2_F
+        -- ES* represented
+        -- compiles to 2 mass-action reactions
+
+    SEE ALSO:  class ReactionCompiler_MichaelisMenten
+    """
     @staticmethod
     def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id,
                species_registry, analytic_solution_family=None):
@@ -1356,8 +1381,7 @@ class ReactionDefinition:
         reversible = False
         if len(sim_rxn_tuple) == 1:
             sim_rxn = sim_rxn_tuple[0]
-            if sim_rxn.model.reversible:
-                reversible = True
+            reversible = getattr(sim_rxn.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
 
         rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
 

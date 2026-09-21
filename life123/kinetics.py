@@ -224,6 +224,27 @@ class MassAction_Model:
 ################################################################################
 
 class MichaelisMenten_Model:
+    """
+    Coarse-grained model based on the Michaelis-Menten mechanism:
+        E + S <-> ES* -> E + P
+
+    The intermediate ES* is not represented as a separate state variable;
+    its dynamics are eliminated through the Michaelis-Menten approximation.
+    The concentration [E] represents the total concentration of active enzyme available to this reaction,
+    corresponding to [E] + [ES*] in the underlying mechanistic model;
+    it therefore does NOT represent the instantaneous concentration of free enzyme E.
+
+    This model is primarily intended for cases where the available kinetic parameters are
+    kM (Michaelis constant) and kcat (catalytic rate constant),
+    while the underlying mechanistic rate constants k1_F, k1_R, and k2_F
+    are unknown or are deliberately not being modeled explicitly.
+
+    The approximation is generally most appropriate when enzyme concentration is
+    small relative to the relevant substrate and kinetic scales,
+    so that the ES* intermediate rapidly approaches a quasi-steady state.
+    It may be less accurate during initial transients, at very high enzyme-to-substrate ratios,
+    or whenever the transient dynamics or concentration of ES* itself are important.
+    """
     name = "Michaelis-Menten"
     supports_equilibrium_constant = False
 
@@ -248,7 +269,8 @@ class MichaelisMenten_Model:
                 raise Exception(f"MichaelisMenten_Model instantiation: Too many enzymes ({len(stoichiometry.catalysts)}) "
                                 f"in reaction {stoichiometry.standard_chemical_formula()}")
 
-        self.E = stoichiometry.catalysts[0]
+        self.E = stoichiometry.catalysts[0]     # Represents the total active enzyme for this coarse-grained model,
+                                                # not mechanistic free enzyme
 
         reactants = stoichiometry.get_reactant_ids(exclude_catalysts=True)
         assert len(reactants) == 1, \
@@ -261,7 +283,7 @@ class MichaelisMenten_Model:
             f"in reaction {stoichiometry.standard_chemical_formula()}"
 
         (self.S, ) = reactants  # Unpack
-        (self.P, ) = products  # Unpack
+        (self.P, ) = products   # Unpack
 
 
 
@@ -294,15 +316,6 @@ class MichaelisMenten_Model:
         if derived_pars:
             self.derived_pars |= derived_pars   # Set union
 
-        # Validate that at most only the allowed key were passed
-        #ALLOWED_KEYS = {"kM", "kcat"}
-        """
-
-        """
-        #unexpected_keys = set(parameters.keys()) - ALLOWED_KEYS
-        #if unexpected_keys:
-        #    raise TypeError(f"set_parameters(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
-
 
         #self.parameters = {"k1_F": k1_F, "k1_R": k1_R, "k2_F": k2_F, "kM": kM, "kcat": kcat}
         #self.kM = parameters.get("kM")
@@ -312,6 +325,7 @@ class MichaelisMenten_Model:
             parameters = {}
 
         # Validate values
+        # TODO: also validate kM > 0
         for name, value in parameters.items():
             if value is None:
                 continue

@@ -428,8 +428,8 @@ def test_determine_reaction_rate_2():
     # Reaction: # A + B -> C + D , with custom reaction model
     sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
-                             reaction_model="custom",
-                             kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  reaction_model="custom",
+                                  kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
      #print(rxn_defn.describe(concise=False))
 
     sim_rxn = rxn_defn.sim_reactions[0]
@@ -450,7 +450,7 @@ def test_determine_reaction_rate_2():
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                              reaction_model="custom",
                              kinetic_parameters={"kF": 10})     # rate_function not provided
-     #print(rxn_defn.describe(concise=False))
+    #print(rxn_defn.describe(concise=False))
 
     sim_rxn = rxn_defn.sim_reactions[0]
 
@@ -461,6 +461,21 @@ def test_determine_reaction_rate_2():
     sim_rxn.set_parameters({'rate_function': kinetic_constant_rate})
     result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
     assert result == 8
+
+
+def test_determine_reaction_rate_3():
+    # E + S -> E + P, with "michaelis menten" model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn_defn = ReactionDefinition(id=22, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                                  reaction_model="michaelis menten",
+                                  kinetic_parameters={'kM': 2, 'kcat': 5})
+    #print(rxn_defn.describe(concise=False))
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    initial_conc = {"E": 0.1, "S": 10, "P": 2}
+    result = sim_rxn.determine_reaction_rate(conc_dict=initial_conc)
+    assert math.isclose(result, 5/12)       # (5 * 0.1 * 10) / (2 + 10)
 
 
 
@@ -1193,7 +1208,23 @@ def test_describe():
         '            (2) Type: "mass action"   (kF = 49 | reversible = False)'
 
 
-    # Reaction: CH4 + 2 O2 <-> CO2 + 2 H2O
+    # Reaction: # E + S <-> ES -> E + P, with "michaelis menten" model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn_defn = ReactionDefinition(id=22, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                                  reaction_model="michaelis menten",
+                                  kinetic_parameters={'kM': 2, 'kcat': 5})
+    assert rxn_defn.describe(concise=True) == "S + E -> P + E"
+    assert rxn_defn.describe(concise=False) ==  \
+        'S + E -> P + E\n'  \
+        '        Enzymatic reaction, with Reaction Model: "michaelis menten"   (Reaction ID 22)\n'  \
+        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - derived: None\n'  \
+        '        Kinetics - passed:   (kM = 2 | kcat = 5)\n'  \
+        '        Kinetics - derived:  1 derived reaction\n'  \
+        '            (1) Type: "Michaelis-Menten"   (kM = 2 | kcat = 5 | Substrate = \'S\' | Enzyme = \'E\' | Product = \'P\')'
+
+
+    # Reaction: CH4 + 2 O2 <-> CO2 + 2 H2O (no model specified)
     sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
     rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr)
     assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 -> CO2 + 2 H2O"
