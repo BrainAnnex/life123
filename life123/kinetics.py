@@ -18,7 +18,7 @@ class MassAction_Model:
     supports_equilibrium_constant = True
 
 
-    def __init__(self):
+    def __init__(self, stoichiometry):
         self.kF: float | None = None
         self.kR: float | None = None
         self.K: float | None = None
@@ -26,6 +26,8 @@ class MassAction_Model:
 
         self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
                                                 # not directly supplied by the user
+        self.stoichiometry = stoichiometry
+
 
 
     def __str__(self):
@@ -200,19 +202,18 @@ class MassAction_Model:
 
 
 
-    def rate(self, stoichiometry, conc_dict) -> float:
+    def rate(self, conc_dict :dict) -> float:
         """
         For the specified reaction and its species concentrations,
         determine the instantaneous reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the current system state.
 
-        :param stoichiometry:
         :param conc_dict:
         :return:
         """
-        reactants = stoichiometry.get_reactant_ids()
-        products  = stoichiometry.get_product_ids()
+        reactants = self.stoichiometry.get_reactant_ids()
+        products  = self.stoichiometry.get_product_ids()
         return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products,
                                                         kF=self.kF, kR=self.kR, reversible=self.reversible,
                                                         conc_dict=conc_dict)
@@ -227,7 +228,7 @@ class MichaelisMenten_Model:
     supports_equilibrium_constant = False
 
 
-    def __init__(self):
+    def __init__(self, stoichiometry):
         self.kM: float|None = None      # "Michaelis constant"
         self.kcat: float|None = None    # "Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
 
@@ -237,6 +238,31 @@ class MichaelisMenten_Model:
 
         self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
                                                 # not directly supplied by the user
+        self.stoichiometry = stoichiometry
+
+        if len(stoichiometry.catalysts) != 1:
+            if stoichiometry.catalysts == []:
+                raise Exception(f"MichaelisMenten_Model instantiation: "
+                                f"Missing enzyme in reaction {stoichiometry.standard_chemical_formula()}")
+            else:
+                raise Exception(f"MichaelisMenten_Model instantiation: Too many enzymes ({len(stoichiometry.catalysts)}) "
+                                f"in reaction {stoichiometry.standard_chemical_formula()}")
+
+        self.E = stoichiometry.catalysts[0]
+
+        reactants = stoichiometry.get_reactant_ids(exclude_catalysts=True)
+        assert len(reactants) == 1, \
+            f"MichaelisMenten_Model instantiation: Incorrect number of reactants " \
+            f"in reaction {stoichiometry.standard_chemical_formula()}"
+
+        products = stoichiometry.get_product_ids(exclude_catalysts=True)
+        assert len(products) == 1, \
+            f"MichaelisMenten_Model instantiation: Incorrect number of products " \
+            f"in reaction {stoichiometry.standard_chemical_formula()}"
+
+        (self.S, ) = reactants  # Unpack
+        (self.P, ) = products  # Unpack
+
 
 
     def __str__(self):
@@ -249,7 +275,7 @@ class MichaelisMenten_Model:
         Return the model's parameters
         :return:
         """
-        return {"kM": self.kM, "kcat": self.kcat}
+        return {"kM": self.kM, "kcat": self.kcat, "Substrate": self.S, "Enzyme": self.E, "Product": self.P}
 
 
 
@@ -349,18 +375,23 @@ class MichaelisMenten_Model:
 
 
 
-    def rate(self, stoichiometry, conc_dict) -> float:
+    def rate(self, conc_dict :dict) -> float:
         """
         For the specified reaction and its species concentrations,
         determine the instantaneous reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the current system state.
 
-        :param stoichiometry:
         :param conc_dict:
         :return:
         """
-        pass
+        V_max = self.kcat * conc_dict[self.E]
+
+        S_conc = conc_dict[self.S]
+
+        return (V_max * S_conc) / (self.kM + S_conc)
+
+
 
 
 
@@ -372,7 +403,7 @@ class Custom_Model:
     supports_equilibrium_constant = True
 
 
-    def __init__(self):
+    def __init__(self, stoichiometry):
         self.kF: float | None = None
         self.kR: float | None = None
         self.K: float | None = None
@@ -381,6 +412,8 @@ class Custom_Model:
 
         self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
                                                 # not directly supplied by the user
+        self.stoichiometry = stoichiometry
+
 
 
     def __str__(self):
@@ -394,7 +427,8 @@ class Custom_Model:
         :return:
         """
         # TODO: maybe take out "reversible", and implement is_reversible() instead??
-        return {"kF": self.kF, "kR": self.kR, "K": self.K, "rate_function": self.rate_function, "reversible": self.reversible}
+        return {"kF": self.kF, "kR": self.kR, "K": self.K, "rate_function": self.rate_function,
+                "reversible": self.reversible}
 
 
 
@@ -557,14 +591,13 @@ class Custom_Model:
 
 
 
-    def rate(self, stoichiometry, conc_dict) -> float:
+    def rate(self, conc_dict :dict) -> float:
         """
         For the specified reaction and its species concentrations,
         determine the instantaneous reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the current system state.
 
-        :param stoichiometry:
         :param conc_dict:
         :return:
         """
@@ -575,6 +608,6 @@ class Custom_Model:
 
         #print(f"Custom_Model.rate() - function being invoked to determine the reaction's rate: `{function_to_call.__name__}()`")
 
-        return function_to_call(stoichiometry = stoichiometry,
+        return function_to_call(stoichiometry = self.stoichiometry,
                                 kinetic_parameters = {"kF": self.kF, "kR": self.kR},
                                 conc_dict = conc_dict)             # Carry out the invocation of the custom function call

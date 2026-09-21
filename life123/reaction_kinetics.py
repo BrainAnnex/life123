@@ -711,6 +711,7 @@ class ReactionKinetics:
         :param conc_dict:
         :return:
         """
+        # TODO: ditch, in favor of kinetic_rate_first_order()
         # Pretend that the reaction is an elementary one
         reactants = [t[1] for t in reactant_terms]
         products  = [t[1] for t in product_terms]

@@ -97,33 +97,6 @@ def test_get_reaction_vector():
 
 
 
-def test_get_reaction_complexes():
-    st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"])
-
-    assert st.get_reaction_complexes() == ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
-
-
-    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
-
-    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
-    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1})
-
-    rxn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
-    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1, "S": 1}, {"P": 1})
-
-    rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
-    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1, "Q": 1})
-
-    rxn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
-                             species_registry=sr)
-    assert rxn.stoichiometry.get_reaction_complexes() == ({"S": 1, "E": 1}, {"P": 1, "E": 1})
-
-    rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
-                             species_registry=sr)
-    assert rxn.stoichiometry.get_reaction_complexes() == ({"A": 2, "B": 2, "E": 1}, {"P": 3, "Q": 1, "E": 1})
-
-
-
 def test_get_reactant_list():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
     assert s.get_reactant_list() == [(2, "A"), (2, "B")]
@@ -147,6 +120,9 @@ def test_get_reactant_ids():
 
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_reactant_ids() == {"A", "B", "E"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_reactant_ids(exclude_catalysts=True) == {"A", "B"}
 
 
 
@@ -175,6 +151,10 @@ def test_get_product_ids():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_product_ids() == {"P", "E"}
 
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_product_ids(exclude_catalysts=True) == {"P"}
+
+
 
 def test_get_all_species_ids():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
@@ -182,6 +162,63 @@ def test_get_all_species_ids():
 
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
     assert s.get_all_species_ids() == {"A", "B", "P", "E"}
+
+
+
+def test_get_reaction_complexes():
+    st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"])
+
+    assert st.get_reaction_complexes() == ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
+
+
+    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
+
+    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1})
+
+    rxn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1, "S": 1}, {"P": 1})
+
+    rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"R": 1}, {"P": 1, "Q": 1})
+
+    rxn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
+                             species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"S": 1, "E": 1}, {"P": 1, "E": 1})
+
+    rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+                             species_registry=sr)
+    assert rxn.stoichiometry.get_reaction_complexes() == ({"A": 2, "B": 2, "E": 1}, {"P": 3, "Q": 1, "E": 1})
+
+
+
+def test__standard_form_complex():
+    pass    # TODO
+
+
+def test_standard_chemical_formula():
+    st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"])
+    assert st.standard_chemical_formula() == "A + E -> 2 P + Q + E"
+
+
+    sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
+
+    rxn = ReactionDefinition(reactants="R", products="P", species_registry=sr)
+    assert rxn.stoichiometry.standard_chemical_formula() == "R -> P"
+
+    rxn = ReactionDefinition(reactants=["R", "S"], products="P", species_registry=sr)
+    assert rxn.stoichiometry.standard_chemical_formula() == "R + S -> P"
+
+    rxn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr)
+    assert rxn.stoichiometry.standard_chemical_formula() == "R -> P + Q"
+
+    rxn = ReactionDefinition(reactants=["E", "S"], products=["E", "P"],
+                             species_registry=sr)
+    assert rxn.stoichiometry.standard_chemical_formula() == "S + E -> P + E"
+
+    rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
+                             species_registry=sr)
+    assert rxn.stoichiometry.standard_chemical_formula(reversible=True) == "2 A + 2 B + E <-> 3 P + Q + E"
 
 
 
@@ -531,12 +568,14 @@ def test_step_simulation_2():
     rxn_sim_1, rxn_sim_2 = rxn_sim_tuple
 
     incr_dict_1, rate_1 = rxn_sim_1.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert incr_dict_1 == {'E': -0.72, 'S': -0.72, 'ES*': 0.72}
     assert rate_1 == 360       # 18 * 1 * 20 - 100 * 0
+    assert incr_dict_1 == {'E': -0.72, 'S': -0.72, 'ES*': 0.72}
+
 
     incr_dict_2, rate_2 = rxn_sim_2.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert incr_dict_2 == {'E': 0, 'ES*': 0, 'P': 0}
     assert rate_2 == 0          # 49 * 0
+    assert incr_dict_2 == {'E': 0, 'ES*': 0, 'P': 0}
+
     
     # Simulating by hand each of the 2 sub-reactions will give the same results
     upstream_rxn_defn = ReactionDefinition(reactants=["E", "S"], products="ES*", species_registry=sr,
@@ -792,8 +831,27 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert sim_rxn.source_definition_id == 17
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
     assert type(sim_rxn.model) == MichaelisMenten_Model
-    assert sim_rxn.model.get_parameters() == {'kM': 2, 'kcat': 5}
+    assert sim_rxn.model.get_parameters() == {'kM': 2, 'kcat': 5, 'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S'}
 
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["S", "X"], products=["P", "E"],
+                           species_registry=sr, autoregister_species=True,
+                           reaction_model="michaelis menten")       # Bad stoichiometry
+
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["S", "E", "E2"], products=["P", "E", "E2"],
+                           species_registry=sr, autoregister_species=True,
+                           reaction_model="michaelis menten")           # Bad stoichiometry (too many enzymes)
+
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["A", "B", "E"], products=["P", "E"],
+                           species_registry=sr, autoregister_species=True,
+                           reaction_model="michaelis menten")       # Bad stoichiometry
+
+    with pytest.raises(Exception):
+        ReactionDefinition(reactants=["S", "E"], products=["E"],
+                           species_registry=sr, autoregister_species=True,
+                           reaction_model="michaelis menten")       # Bad stoichiometry
 
 
     # E + S <-> ES -> P + E, with SingleSubstrateMechanism model
@@ -899,7 +957,35 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
 
 
-    # E + S -> E + P, with MM model
+    # Enz + Sub -> Enz + Prod, with MM model
+    sr = SpeciesRegistry(ids=["Sub", "Prod", "Enz"])
+
+    rxn_defn = ReactionDefinition(id=43, reactants=["Sub", "Enz"], products=["Prod", "Enz"], species_registry=sr,
+                                  thermodynamic_parameters={"delta_H": -20},
+                                  reaction_model="michaelis menten",
+                                  kinetic_parameters={'kM': 2, 'kcat': 3})
+    assert rxn_defn.source_kinetic_parameters == {'kM': 2, 'kcat': 3}
+    assert rxn_defn.source_thermodynamic_parameters == {"delta_H": -20}
+    assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=-20, delta_S=None, delta_G=None, K_eq=None, derived_pars=set())
+    assert rxn_defn.reaction_category == "Enzymatic"
+    assert rxn_defn.analytic_solution_family is None
+
+    sim_rxn_tuple = rxn_defn.sim_reactions
+    assert len(sim_rxn_tuple) == 1
+    sim_rxn = sim_rxn_tuple[0]
+    assert type(sim_rxn) == SimulationReaction
+    assert sim_rxn.source_definition_id == 43
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"Sub": -1, "Prod": 1}, catalysts=["Enz"])
+    assert type(sim_rxn.model) == MichaelisMenten_Model
+    assert sim_rxn.model.get_parameters() == {'Enzyme': 'Enz', 'Product': 'Prod', 'Substrate': 'Sub', 'kM': 2, 'kcat': 3}
+    assert sim_rxn.model.derived_pars == set()
+    assert sim_rxn.model.E == "Enz"
+    assert sim_rxn.model.S == "Sub"
+    assert sim_rxn.model.P == "Prod"
+
+
+
+    # E + S -> E + P, with MM model (but passing "k1_F", "k1_R" and "k2_F")
     sr = SpeciesRegistry(ids=["S", "P", "E"])
 
     rxn_defn = ReactionDefinition(id=44, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
@@ -919,7 +1005,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert sim_rxn.source_definition_id == 44
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
     assert type(sim_rxn.model) == MichaelisMenten_Model
-    assert sim_rxn.model.get_parameters() == {'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
+    assert sim_rxn.model.get_parameters() == {'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S', 'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
     assert sim_rxn.model.derived_pars == {'kM', 'kcat'}
 
 
@@ -971,7 +1057,6 @@ def test_CONSTRUCTOR_ReactionDefinition_4():
     # Thermodynamic data passed, with temperature
 
     sr = SpeciesRegistry()
-
 
     # Reaction R -> P + Q
     rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,

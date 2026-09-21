@@ -86,7 +86,8 @@ class Stoichiometry:
                  the reactant complex y is:     A + E
                  while product complex y′ is:   2P + Q + E
                  and the corresponding reaction vector y′ - y is:  2P + Q - A
-                 The non-zero components of the reaction vector, written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
+                 The non-zero components of the reaction vector,
+                 written as a mapping, are: {"A": -1, "P": 2, "Q": 1}
         ~~~
 
         :return:    The non-zero components of the reaction vector,
@@ -95,6 +96,82 @@ class Stoichiometry:
         # Note that catalysts, if any, are NOT included
         return dict(self.vector)
 
+
+
+    def get_reactant_list(self) -> list:
+        """
+        Return all reactants as a list of pairs
+        of the form (stoichiometry coefficient, species id).
+        Catalysts, if any, are also included.
+        ~~~
+        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
+                 would return to [(2, "A"), (2, "B"), (1, "E")]
+        :return:
+        """
+        # TODO: consider returning a set instead of a list
+        return [  (-v, k) for k,v in self.vector.items() if v < 0]  \
+                + [(1, c) for c in self.catalysts]
+
+
+
+    def get_reactant_ids(self, exclude_catalysts=False) -> Set[str]:
+        """
+        Return the set of all reactant species id's
+
+        :param exclude_catalysts:
+        :return:
+        """
+        s = { k for k,v in self.vector.items()  if v < 0 }    #  Set construction
+
+        if not exclude_catalysts:
+            s |= { c for c in self.catalysts}   # Set union
+
+        return s
+
+
+    def get_product_list(self) -> list:
+        """
+        Return all products as a list of pairs
+        of the form (stoichiometry coefficient, species id).
+        Catalysts, if any, are also included.
+        ~~~
+        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
+                 would return to [(3, "P"), (1, "E")]
+        :return:
+        """
+        # TODO: consider returning a set instead of a list
+        return [   (v, k) for k,v in self.vector.items() if v > 0] \
+                + [(1, c) for c in self.catalysts]
+
+
+
+    def get_product_ids(self, exclude_catalysts=False) -> Set[str]:
+        """
+        Return the set of all product species id's
+
+        :param exclude_catalysts:
+        :return:
+        """
+        s = { k for k,v in self.vector.items()  if v > 0 }    #  Set construction
+
+        if not exclude_catalysts:
+            s |= { c for c in self.catalysts}   # Set union
+
+        return s
+
+
+
+
+    def get_all_species_ids(self) -> Set[str]:
+        """
+        Return a SET of the id's of ALL the species appearing in this reaction
+
+        :return:    A SET of the id's of the species involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        # Use set construction and set union
+        return    { k for k,_ in self.vector.items() }  \
+                | { c for c in self.catalysts}
 
 
     def get_reaction_complexes(self) -> tuple:
@@ -124,69 +201,40 @@ class Stoichiometry:
 
 
 
-    def get_reactant_list(self) -> list:
+    def _standard_form_complex(self, complex :dict[str]) -> str:
         """
-        Return all reactants as a list of pairs
-        of the form (stoichiometry coefficient, species id)
-        ~~~
-        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
-                 would return to [(2, "A"), (2, "B"), (1, "E")]
-        :return:
+        Return a user-friendly form of a "complex" (a side of a chemical equation)
+
+        EXAMPLE:  turn {"Fe": 1,  "Cl": 2]  into  "Fe + 2 Cl"
+
+        :param complex:     A dictionary encoding either side of a chemical equation
+        :return:            A string with a user-friendly form of a side of a chemical equation
         """
-        # TODO: consider returning a set instead of a list
-        return [  (-v, k) for k,v in self.vector.items() if v < 0]  \
-                + [(1, c) for c in self.catalysts]
+        formula_list = []
+        for species_name, stoichiometry in complex.items():
+
+            if stoichiometry == 1:
+                term = species_name
+            else:
+                term = f"{stoichiometry} {species_name}"
+
+            formula_list.append(term)
+
+        return " + ".join(formula_list)
 
 
 
-    def get_reactant_ids(self) -> Set[str]:
+    def standard_chemical_formula(self, reversible=False) -> str:
         """
-        Return the set of all reactant species id's
-
-        :return:
-        """
-        # Use set construction and set union
-        return    { k for k,v in self.vector.items() if v < 0}  \
-                | { c for c in self.catalysts}
-
-
-    def get_product_list(self) -> list:
-        """
-        Return all products as a list of pairs
-        of the form (stoichiometry coefficient, species id)
-        ~~~
-        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
-                 would return to [(3, "P"), (1, "E")]
-        :return:
-        """
-        # TODO: consider returning a set instead of a list
-        return [   (v, k) for k,v in self.vector.items() if v > 0] \
-                + [(1, c) for c in self.catalysts]
-
-
-
-    def get_product_ids(self) -> Set[str]:
-        """
-        Return the set of all product species id's
+        Return,  as a string, a user-friendly plain-text form of the reaction
 
         :return:
         """
-        # Use set construction and set union
-        return    { k for k,v in self.vector.items() if v > 0}  \
-                | { c for c in self.catalysts}
+        reactants, products = self.get_reaction_complexes()
 
+        arrow = " <-> " if reversible else " -> "
 
-
-    def get_all_species_ids(self) -> Set[str]:
-        """
-        Return a SET of the id's of ALL the species appearing in this reaction
-
-        :return:    A SET of the id's of the species involved in this reaction
-                        Note: being a set, it's NOT in any particular order
-        """
-        # Use set construction and set union
-        return    { k for k,_ in self.vector.items() }  \
-                | { c for c in self.catalysts}
+        return self._standard_form_complex(reactants) + arrow + self._standard_form_complex(products)
 
 
 
@@ -424,7 +472,7 @@ class SimulationReaction:
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
-        return self.model.rate(stoichiometry = self.stoichiometry, conc_dict=conc_dict)
+        return self.model.rate(conc_dict=conc_dict)
 
 
 
@@ -579,7 +627,7 @@ class ReactionCompiler_MassAction:
         if unexpected_keys:
             raise TypeError(f"ReactionCompiler_MassAction.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
-        m = MassAction_Model()
+        m = MassAction_Model(stoichiometry)
 
         pars = kinetic_parameters.copy()    # Clone the dictionary
         derived_pars = set()
@@ -658,7 +706,8 @@ class ReactionCompiler_MichaelisMenten:
             """
             print("INFO: ", advisory)
 
-        m = MichaelisMenten_Model()
+        m = MichaelisMenten_Model(stoichiometry)
+
         m.set_parameters(parameters=kinetic_parameters)     # Pass thru the parameters
         #print(f"    name of model being used: {m.name!r}")
 
@@ -707,18 +756,20 @@ class ReactionCompiler_SingleSubstrateMechanism:
         species_registry.add_species(id= ES,
                                      annotation="reaction intermediary from single substrate mechanism")
 
-        # Reaction 1: S + E <-> SE
-        m1 = MassAction_Model()
+        # Reaction 1: S + E <-> ES
+        st = Stoichiometry(vector={S: -1, E: -1, ES: 1})
+        m1 = MassAction_Model(stoichiometry=st)
         m1.set_parameters(parameters={"kF": kinetic_parameters.get("k1_F"),
                                       "kR": kinetic_parameters.get("k1_R")})
         r1 = SimulationReaction(model=m1,
-                                stoichiometry=Stoichiometry(vector={S: -1, E: -1, ES: 1}),
+                                stoichiometry=st,
                                 source_id=source_id)
 
-        # Reaction 2: SE -> P + E
-        m2 = MassAction_Model()
+        # Reaction 2: ES -> P + E
+        st = Stoichiometry(vector={ES: -1, P: 1, E: 1})
+        m2 = MassAction_Model(stoichiometry=st)
         m2.set_parameters(parameters={"kF": kinetic_parameters.get("k2_F")})
-        r2 = SimulationReaction(model=m2, stoichiometry=Stoichiometry(vector={ES: -1, P: 1, E: 1}),
+        r2 = SimulationReaction(model=m2, stoichiometry=st,
                                 source_id=source_id)
 
         return (r1, r2)
@@ -748,7 +799,7 @@ class ReactionCompiler_Custom:
         if unexpected_keys:
             raise TypeError(f"ReactionCompiler_Custom.compile(): Unexpected parameter keys:  {sorted(unexpected_keys)} ")
 
-        m = Custom_Model()
+        m = Custom_Model(stoichiometry)
 
         pars = kinetic_parameters.copy()    # Clone the dictionary
         derived_pars = set()
@@ -1300,21 +1351,15 @@ class ReactionDefinition:
         :param concise:     If True, less detail is shown
         :return:            A string with a description of this reaction
         """
-        reactants = self.stoichiometry.get_reactant_list()
-        products = self.stoichiometry.get_product_list()
-
-        left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
-        right = self._standard_form_chem_eqn(products)       # Right side of the equation
-
         sim_rxn_tuple = self.sim_reactions
 
-        arrow = "->"
+        reversible = False
         if len(sim_rxn_tuple) == 1:
             sim_rxn = sim_rxn_tuple[0]
             if sim_rxn.model.reversible:
-                arrow = "<->"
+                reversible = True
 
-        rxn_description = f"{left} {arrow} {right}"
+        rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
 
         if concise:
             return rxn_description      # Minimalist description
@@ -1357,9 +1402,7 @@ class ReactionDefinition:
             rxn_description += f"\n{INDENT}    "
             #if len(sim_rxn_tuple) > 1:
             rxn_description += f"({i+1}) "     # Show the numbering, if more than one
-
             rxn_description += f'Type: "{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
-
 
         return rxn_description
 
@@ -1666,6 +1709,7 @@ class ReactionDefinition:
         :return:            A string with a user-friendly form of a side of a chemical equation
         """
         # TODO: probably switch to using the new Stoichiometry dataclass
+        #       -> See the new Stoichiometry._standard_form_complex()
 
         assert type(eqn_side) == list, \
             f"Reaction._standard_form_chem_eqn(): the argument must be a list (it was of type {type(eqn_side)})"
