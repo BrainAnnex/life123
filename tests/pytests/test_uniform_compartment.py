@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, ReactionKinetics
+from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, ReactionKinetics, ReactionDefinition
 from life123.species_registry import MacroMolecules
 
 
@@ -214,7 +214,6 @@ def test_reaction_step_common_fixed_step_1():
     # Based on experiment "reactions_single_compartment/react_1"
     uc.add_reaction(reactants="A", products="B",
                     reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
-                    #kF=3., kR=2.)
 
     result = uc.reaction_step_common_fixed_step(delta_time=0.1)
     assert np.allclose(result, [ 7. , -7.])     # The increment vector
@@ -262,7 +261,7 @@ def test_reaction_step_common_fixed_step_2():
     # Now let's consider a different system, with a reaction A <-> B , with 1st-order kinetics in both directions
     uc = UniformCompartment(names=["A", "B", "C"])
     uc.add_reaction(reactants="A", products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 300., "kR": 2.})
+                    reaction_model="mass action", kinetic_parameters={"kF": 300., "kR": 2.})
 
     uc.set_conc(conc=[10., 50., 20.], snapshot=False)
 
@@ -297,8 +296,7 @@ def test__reaction_elemental_step_1():
     # Elementary unimolecular reaction A <-> B
     # Based on experiment "reactions_single_compartment/react_1"
     uc.add_reaction(reactants="A", products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=3., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [ 7. , -7.])
@@ -306,13 +304,11 @@ def test__reaction_elemental_step_1():
 
 
     uc.clear_reactions()       # Re-start with a blank slate of reactions
-    # Reaction A <-> 3B , hypothetically with 1st-order kinetics in both directions.
+    # Reaction A <-> 3B , hypothetically with 1st-order kinetics for each species
     # Based on experiment "1D/reactions/reaction2"
     uc.add_reaction(reactants="A", products=[(3,"B")],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=5., kR=2.)
-    r = uc.get_single_reaction(0)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [5. , -15.])
@@ -320,13 +316,11 @@ def test__reaction_elemental_step_1():
 
 
     uc.clear_reactions()       # Re-start with a blank slate of reactions
-    # Reaction 2A <-> 3B , hypothetically with 1st-order kinetics in both directions.
+    # Reaction 2A <-> 3B ,hypothetically with 1st-order kinetics for each species
     # Based on experiment "1D/reactions/reaction3"
     uc.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      #kF=5., kR=2.)
-    r = uc.get_single_reaction(0)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [10., -15.])
@@ -342,8 +336,8 @@ def test__reaction_elemental_step_2():
     # Unimolecular elementary reaction A <-> B , with 1st-order kinetics in both directions.
     # Based on experiment "reactions_single_compartment/react_1"
     uc.add_reaction(reactants="A", products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      #kF=3., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [ 7. , -7. , 0.])    # Chemical "C" not participating in this reaction; its delta conc. is 0
@@ -354,8 +348,7 @@ def test__reaction_elemental_step_2():
     # Synthesis reaction A + B <-> C , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction4"
     uc.add_reaction(reactants=["A" , "B"], products="C",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                    #kF=5., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
 
     result = uc._reaction_elemental_step(delta_time=0.002)
     assert np.allclose(result, [-4.92, -4.92, 4.92])
@@ -372,10 +365,8 @@ def test__reaction_elemental_step_3():
     # Reaction A <-> 2C + D , HYPOTHETICALLY with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction5"
     uc.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                    #kF=5., kR=2.)
-    r = uc.get_single_reaction(0)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.05)
     assert np.allclose(result, [0.4 , -0.8 , -0.4])
@@ -392,10 +383,8 @@ def test__reaction_elemental_step_4():
     # Reaction 2A + 5B <-> 4C + 3D , HYPOTHETICALLY with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction6"
     uc.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                     #kF=5., kR=2.)
-    r = uc.get_single_reaction(0)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.001)
     assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
@@ -413,8 +402,7 @@ def test__reaction_elemental_step_5():
     # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse.
     # Based on experiment "1D/reactions/reaction7"
     uc.add_reaction(reactants=[(2, "A")], products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=5., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
 
     result = uc._reaction_elemental_step(delta_time=0.02)
     assert np.allclose(result, [-1.4 , 0.7])
@@ -430,11 +418,11 @@ def test__reaction_elemental_step_6():
     # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction8"
     uc.add_reaction(reactants=["A", "B"], products="C",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=5., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+
     uc.add_reaction(reactants=["C", "D"], products="E",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=8., kR=4.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
+
     assert uc.number_of_reactions() == 2
 
     result = uc._reaction_elemental_step(delta_time=0.02)
@@ -455,17 +443,16 @@ def test_single_compartment_react_variable_steps_1():
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
-    r = ReactionGeneric(reactants=[(2, "S")], products="U", kF=8., kR=2.)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
-
+    r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=chem_data,
+                           reaction_model="custom",
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     rxns.register_reaction(r)
 
     uc = UniformCompartment(species_data=chem_data, preset=None, reactions=rxns)
 
-    # Elementary unimolecular reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    # Elementary unimolecular reaction S <-> X , with mass-action kinetics (mostly forward)
     uc.add_reaction(reactants="S", products="X",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=6., kR=3.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
      
     uc.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
@@ -490,8 +477,6 @@ def test_single_compartment_react_variable_steps_1():
     assert np.allclose(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
                        [0.2050,  55.600598,   69.127620,  19.671183], rtol=1e-03)
 
-    #print(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'))
-
 
 
 def test_single_compartment_correct_neg_conc():
@@ -503,19 +488,16 @@ def test_single_compartment_correct_neg_conc():
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
-    r = ReactionGeneric(reactants=[(2, "S")], products="U",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      #  kF=8., kR=2.)
-    r.set_rate_function(ReactionKinetics.compute_rate_first_order)
-
+    r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=chem_data,
+                           reaction_model="custom",
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     rxns.register_reaction(r)
 
     uc = UniformCompartment(species_data=chem_data, reactions=rxns)
 
-    # Unimolecular elementary reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    # Unimolecular elementary reaction S <-> X , with mass action kinetics (mostly forward)
     uc.add_reaction(reactants="S", products="X",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=6., kR=3.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
     
     uc.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
@@ -543,6 +525,7 @@ def test_single_compartment_correct_neg_conc():
 
 
 
+
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
@@ -565,15 +548,15 @@ def test__fetch_concs_for_rnx():
     result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
     assert result == {"A": 12, "C": 31, "F": 3}
 
-    r_uni = ReactionUnimolecular(reactant="C", product="A",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+    r_uni = ReactionDefinition(reactants="C", products="A", species_registry=chem_data,
+                               reaction_model="mass action")
     rxns.register_reaction(r_uni)
     r = uc.get_single_reaction(2)
     result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
     assert result == {"A": 12, "C": 31}
 
-    r_syn = ReactionSynthesis(reactants=["C", "D"], product="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+    r_syn = ReactionDefinition(reactants=["C", "D"], products="B", species_registry=chem_data,
+                               reaction_model="mass action")
     rxns.register_reaction(r_syn)
     r = uc.get_single_reaction(3)
     result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
@@ -587,15 +570,15 @@ def test_is_in_equilibrium():
 
     # Reaction 0 : A <-> B
     uc.add_reaction(reactants=["A"], products=["B"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
                       # kF=3., kR=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
-    assert uc.is_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
+    assert uc.is_in_equilibrium(rxn_index=0, conc=c, explain=False, tolerance=1)
     assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=1)      # Testing ALL reactions
 
     # Reaction 1 : A <-> F
     uc.add_reaction(reactants=["A"], products=["F"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+                      reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
                       # kF=20, kR=2.)
     c = {'A': 3, 'F': 32.999}
     assert uc.is_in_equilibrium(rxn_index=1, conc=c, explain=False, tolerance=10)   # The deviation is just below the 10% tolerance
@@ -628,15 +611,13 @@ def test_reaction_in_equilibrium():
 
     # Reaction 0 : A <-> B
     uc.add_reaction(reactants=["A"], products=["B"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=3., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
     c = {'A': 23.9931640625, 'B': 36.0068359375}
     assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
 
     # Reaction 1 : A <-> F
     uc.add_reaction(reactants=["A"], products=["F"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=20, kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
     c = {'A': 3, 'F': 32.999}
     assert uc.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)   # Just below the 10% tolerance
     c = {'A': 3, 'F': 33.001}
@@ -644,18 +625,16 @@ def test_reaction_in_equilibrium():
 
     # Reaction 2:  A + B <-> C , with 1st-order kinetics for each species
     uc.add_reaction(reactants=["A" , "B"], products="C",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=5., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
     assert uc.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
 
 
     uc.clear_reactions()   # This will reset the reaction count to 0
 
-    # Reaction 0:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
+    # Reaction 0:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction (i.e. regular mass-action kinetics)
     uc.add_reaction(reactants=[(2, "A")], products=["B"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-                      # kF=5., kR=2.)
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     c = {'A': 1.51554944, 'B': 5.74222528}
     assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, tolerance=1, explain=False)
 
@@ -665,7 +644,7 @@ def test_validate_increment():
     uc = UniformCompartment(names=["A", "B", "C"])
 
     uc.add_reaction(reactants="A", products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+                    reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
 
     uc.validate_increment(delta_conc=50., baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
     uc.validate_increment(delta_conc=-9.99, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)

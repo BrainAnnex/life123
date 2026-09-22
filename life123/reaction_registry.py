@@ -202,7 +202,7 @@ class ReactionRegistry:
         :return:    The value of the forward rate constant for the above reaction
         """
         rxn = self.get_reaction(i)
-        return rxn.extract_forward_rate()
+        return rxn.extract_forward_rate_constant()
 
 
     def get_reverse_rate(self, i :int) -> float:
@@ -213,7 +213,7 @@ class ReactionRegistry:
         :return:    The value of the reverse (back) rate constant for the above reaction
         """
         rxn = self.get_reaction(i)
-        return rxn.extract_reverse_rate()
+        return rxn.extract_reverse_rate_constant()
 
 
 

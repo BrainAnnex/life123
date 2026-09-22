@@ -72,7 +72,7 @@ class UniformCompartment:
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
         :param temp:            [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
-        :param macromolecules:  [OPTIONAL] Object of class Macromol
+        :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
         """
 
         self.species_data = None       # Object of type "SpeciesRegistry" (with data about all the species)
@@ -1356,7 +1356,6 @@ class UniformCompartment:
                                             # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        #rxn_rate = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict=conc_dict)
         rxn_rate = rxn.determine_reaction_rate(conc_dict=conc_dict)
 
         delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
@@ -1375,13 +1374,12 @@ class UniformCompartment:
         # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = rxn.extract_species(r)
+            stoichiometry, species_name = r
+
             species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if r is an enzyme for this reaction
-
-            stoichiometry = rxn.extract_stoichiometry(r)
 
             delta_conc = stoichiometry * (- delta_rxn)  # Increment to this reactant from the reaction being considered
 
@@ -1390,14 +1388,13 @@ class UniformCompartment:
 
         # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
         for p in products:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species(p)
+            # Unpack data from the product p
+            stoichiometry, species_name = p
+
             species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if p is an enzyme for this reaction
-
-            stoichiometry = rxn.extract_stoichiometry(p)
 
             delta_conc = stoichiometry * delta_rxn  # Increment to this reaction product from the reaction being considered
 
@@ -2338,13 +2335,18 @@ class UniformCompartment:
         :return:            True if the given reaction is close enough to an equilibrium,
                                 as allowed by the requested tolerance
         """
-        rxn = self.reaction_data.get_reaction(rxn_index)    # Look up the object of the requested reaction
+        # Look up the "SimulationReaction" object of the requested reaction
+        rxn = self.reaction_data.get_reaction(rxn_index)
 
-        if np.allclose(rxn.extract_reverse_rate(), 0):
+        kR = rxn.extract_reverse_rate_constant()
+        assert kR is not None, \
+            "reaction_in_equilibrium(): reverse rate constant is unknown, or may not exist for this reaction type"
+
+        if np.allclose(kR, 0):
             print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
             return False
 
-        rate_ratio = rxn.extract_forward_rate() / rxn.extract_reverse_rate()  # Ratio of forward/reverse reaction rates
+        rate_ratio = rxn.extract_forward_rate_constant() / rxn.extract_reverse_rate_constant()  # Ratio of forward/reverse reaction rates
 
         result = rxn.reaction_quotient(conc=conc, explain=explain)
 
@@ -2359,12 +2361,12 @@ class UniformCompartment:
             # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
 
-            reactants = rxn.extract_reactant_ids()
+            reactants = rxn.stoichiometry.get_reactant_ids()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
 
-            products = rxn.extract_product_ids()
+            products = rxn.stoichiometry.get_product_ids()
             for species_name in products:
                 if species_name not in reactants:           # Don't report the same concentration twice!
                     s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"
@@ -2418,15 +2420,15 @@ class UniformCompartment:
                                 chemicals involved in the specified reaction
                                 EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        rxn = self.reaction_data.get_reaction(rxn_index)            # Look up the requested reaction
-        chem_labels = list(rxn.extract_species_in_reaction()) # List of the chemicals in the requested reaction
-        return rxn.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
+        rxn = self.reaction_data.get_reaction(rxn_index)                # Look up the requested reaction
+        chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
+        return rxn.source_object.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
 
 
 
     def estimate_rate_constants_TODO(self, df, t, reactants, products):
         """
-        TODO: not yet implemented
+        TODO: not yet implemented -> It probably belongs to kinetic module
 
         EXAMPLE:  estimate_rate_constants(df, t="SYSTEM TIME", reactants=["A", "B"], products="C")
                     where df is a Pandas dataframe containing the columns "SYSTEM TIME", "A", "B" and "C"

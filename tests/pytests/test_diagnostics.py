@@ -97,9 +97,9 @@ def test_save_diagnostic_rxn_data():
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
-    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)        # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})        # Rxn 0
+    rxns.add_reaction(reactants="A", products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})        # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.}) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
     assert len(diag.diagnostic_rxn_data) == 0
@@ -198,9 +198,9 @@ def test_save_diagnostic_aborted_rxns():
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)
-    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)
-    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    rxns.add_reaction(reactants="A", products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    rxns.add_reaction(reactants=["A", "B"], products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
 
     diag = Diagnostics(reactions=rxns)
 
@@ -230,9 +230,9 @@ def test_get_diagnostic_rxn_data():
     rxns = ReactionRegistry(species_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
-    rxns.add_reaction(reactants=["A"], products="X", kF=5., kR=2.)      # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})        # Rxn 0
+    rxns.add_reaction(reactants=["A"], products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})      # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.}) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
 
@@ -334,7 +334,7 @@ def test_stoichiometry_checker():
 
     diag = Diagnostics(reactions=rxns)
 
-    rxns.add_reaction(reactants="A", products="B")                  # Reaction 0:   A <--> B
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action")    # Reaction 0:   A <--> B
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 40, 0, 0]))
@@ -343,7 +343,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B  (Synthesis)
+    rxns.add_reaction(reactants=[(2, "A")], products=["B"], reaction_model="mass action")    # Reaction 0:   2A <--> B  (Synthesis)
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
@@ -352,7 +352,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=["A", "B"], products=["C"])         # Reaction 0:   A + B <--> C
+    rxns.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")    # Reaction 0:   A + B <--> C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
@@ -360,7 +360,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 0:   A + 3B <--> C
+    rxns.add_reaction(reactants=["A", (3, "B")], products=["C"], reaction_model="mass action")     # Reaction 0:   A + 3B <--> C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
@@ -368,7 +368,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 0:   A + 3B <--> 4C
+    rxns.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")], reaction_model="mass action")   # Reaction 0:   A + 3B <--> 4C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
@@ -376,7 +376,8 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 0:   2A + 3B <--> 4C + 5D
+    rxns.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")],
+                      reaction_model="mass action")     # Reaction 0:   2A + 3B <--> 4C + 5D
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
     assert not diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))

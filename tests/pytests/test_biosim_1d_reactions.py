@@ -11,7 +11,8 @@ def test_initialization():
     chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, species_data=chem_data)
 
-    bio.reactions.add_reaction(reactants=["A", "B"], products="C", kF=8., kR=2.)
+    bio.reactions.add_reaction(reactants=["A", "B"], products="C",
+                               reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 2.})
 
     assert bio.reaction_dynamics.species_data == chem_data
 
@@ -27,7 +28,8 @@ def test_reaction_step_1():
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], 
+                               reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
     assert bio.reactions.number_of_reactions() == 1
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
@@ -48,7 +50,8 @@ def test_reaction_step_1b():
 
 
     # Elementary Unimolecular Reaction A <-> B
-    bio.reactions.add_reaction(reactants="A", products="B", kF=3., kR=2., temp=298.15)
+    bio.reactions.add_reaction(reactants="A", products="B",
+                               reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.}, temp=298.15)
 
     assert bio.reactions.number_of_reactions() == 1
     result = bio.reactions.multiple_reactions_describe()
@@ -83,7 +86,8 @@ def test_react_1():
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
     # Reaction A <-> 3B , hypothetically with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=[(3,"B")], kF=5., kR=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=[(3,"B")],
+                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
@@ -105,7 +109,8 @@ def test_react_2():
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
     # Reaction 2A <-> 3B , hypothetically with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=[(2,"A")], products=[(3,"B")], kF=5., kR=2.)
+    bio.reactions.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
+                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
@@ -132,7 +137,7 @@ def test_react_3():
 
     # Synthesis elementary reaction A + B <-> C
     bio.reactions.add_reaction(reactants=[("A") , ("B")], products=[("C")],
-                               kF=5., kR=2.)
+                               reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     assert type(rxn) == ReactionSynthesis
@@ -160,7 +165,7 @@ def test_react_4():
 
     # Reaction A <-> 2C + D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
-                               kF=5., kR=2.)
+                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
@@ -186,7 +191,8 @@ def test_react_5():
 
     # Reaction 2A + 5B <-> 4C + 3D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
-                               kF=5., kR=2.)
+                               reaction_model="custom",
+                               kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
@@ -217,7 +223,8 @@ def test_react_6():
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
     # Synthesis elementary reaction  2A <-> B
-    bio.reactions.add_reaction(reactants=[(2, "A")], products=["B"], kF=5., kR=2.)
+    bio.reactions.add_reaction(reactants=[(2, "A")], products=["B"],
+                               reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
     assert type(rxn) == ReactionSynthesis
@@ -244,7 +251,7 @@ def test_react_7():
     bio = BioSim1D(n_bins=1, species_data=chem_data)
 
     # Coupled elementary synthesis reactions A + B <-> C  and  C + D <-> E
-    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], kF=5., kR=2.)
+    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     bio.reactions.add_reaction(reactants=["C", "D"], products=["E"], kF=8., kR=4.)
     assert bio.reactions.number_of_reactions() == 2
     rxn = bio.reactions.get_reaction(0)

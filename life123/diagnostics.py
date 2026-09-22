@@ -620,33 +620,33 @@ class Diagnostics:
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
-        rxn = self.reactions.get_reaction(rxn_index)
+        rxn = self.reactions.get_reaction(rxn_index)    # Object of type "SimulationReaction"
         reactants = self.reactions.get_reactants(rxn_index)
         products = self.reactions.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
-        baseline_term = reactants[0]
-        baseline_species_name = rxn.extract_species(baseline_term)
+        baseline_stoichiometry, baseline_species_name = reactants[0]
         baseline_species_index = self.species_data.get_species_index(baseline_species_name)
-        baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
         #print("\nbaseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species_name = rxn.extract_species(term)
+                stoichiometry, species_name = term
+                #species_name = rxn.extract_species(term)
                 species_index = self.species_data.get_species_index(species_name)
-                stoichiometry = rxn.extract_stoichiometry(term)
+                #stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species_index]) / stoichiometry
                 #print(f"ratio for `{species_name}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            species_name = rxn.extract_species(term)
+            stoichiometry, species_name = term
+            #species_name = rxn.extract_species(term)
             species_index = self.species_data.get_species_index(species_name)
-            stoichiometry = rxn.extract_stoichiometry(term)
+            #stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{species_name}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):

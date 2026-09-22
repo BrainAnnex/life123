@@ -161,7 +161,6 @@ class Stoichiometry:
 
 
 
-
     def get_all_species_ids(self) -> Set[str]:
         """
         Return the SET of the id's of ALL the species appearing in this reaction
@@ -172,6 +171,7 @@ class Stoichiometry:
         # Use set construction and set union
         return    { k for k,_ in self.vector.items() }  \
                 | { c for c in self.catalysts}
+
 
 
     def get_reaction_complexes(self) -> tuple:
@@ -493,6 +493,54 @@ class SimulationReaction:
         """
         reversible = getattr(self.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
         return self.stoichiometry.standard_chemical_formula(reversible=reversible)
+
+
+
+    def extract_forward_rate_constant(self) -> float | None:
+        """
+
+        :return:    The value of the forward rate constant for this reaction,
+                        IF it exists for this reaction type, and is set
+        """
+        return getattr(self.model, "kF", None)  # Note: the "kF" attribute may or may not be present,
+                                                #       depending on the reaction type
+
+
+    def extract_reverse_rate_constant(self) -> float:
+        """
+
+        :return:    The value of the reverse (back) rate constant for this reaction,
+                        IF it exists for this reaction type, and is set
+        """
+        return getattr(self.model, "kR", None)  # Note: the "kR" attribute may or may not be present,
+                                                #       depending on the reaction type
+
+
+
+    def reaction_quotient(self, conc, explain=False) -> np.double | tuple[np.double, str]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction.
+
+        Note: this implementation only covers reactions that have "mass action" kinetics
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical labels
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        assert self.model.name == "mass action", \
+            "reaction_quotient(): only 'mass action' reaction models are currently supported"
+
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
+                                                          product_data=self.stoichiometry.get_product_list(),
+                                                          conc=conc, explain=explain)
 
 
 
@@ -1544,13 +1592,11 @@ class ReactionDefinition:
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        #TODO: probably move to "SimulationReaction" class
         assert self.reaction_model == "mass action", \
             "reaction_quotient(): only 'mass action' reaction models are currently supported"
 
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
-                                                        product_data=self.stoichiometry.get_product_list(),
-                                                        conc=conc, explain=explain)
+        sim_rxn = self.sim_reactions[0]
+        return sim_rxn.reaction_quotient(conc=conc, explain=explain)
 
 
 
@@ -1567,59 +1613,12 @@ class ReactionDefinition:
 
         :return:            A dict mapping the above chemical id's to their equilibrium concentrations
         """
+        # TODO: move to "SimulationReaction" object
         reactants = self.stoichiometry.get_reactant_list()
         products = self.stoichiometry.get_product_list()
 
         if self.reaction_model != "mass action":
             raise Exception("find_equilibrium_conc(): only 'mass action' reaction models are currently supported")
-            """
-            assert self.kinetics.kinetic_rate_function == ReactionKinetics.compute_rate_first_order, \
-                "find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
-                "it's only implemented when the kinetic rate function is `ReactionKinetics.compute_rate_first_order` \n" \
-                "if that's the case, make sure to first invoke:   set_rate_function(ReactionKinetics.compute_rate_first_order)"
-
-            # To conform with ReactionKinetics._compute_equilibrium_conc_first_order(),
-            # we'll express the reaction in the form aA + bB <-> bC + dD
-
-            assert len(reactants) == 2, \
-                f"find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
-                f"this function is only implemented for case with 2 reactants (we have {len(reactants)})"
-
-            assert len(products) == 2, \
-                f"find_equilibrium_conc(): for reactions that don't exhibit mass-action kinetics, " \
-                f"this function is only implemented for case with 2 products (we have {len(products)})"
-
-            r1, r2 = reactants      # Each value is a pair (stoichiometry coefficient, species id)
-            p1, p2 = products       # Each value is a pair (stoichiometry coefficient, species id)
-
-            A0 = conc_dict.get(r1[1])
-            assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the reactant `{r1[1]}` was not provided"
-
-            B0 = conc_dict.get(r2[1])
-            assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the reactant `{r2[1]}` was not provided"
-
-
-            C0 = conc_dict.get(p1[1])
-            assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the product `{p1[1]}` was not provided"
-
-            D0 = conc_dict.get(p2[1])
-            assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                   f"concentration of the product `{p2[1]}` was not provided"
-
-
-            eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=self.kinetics.parameters["kF"], kR=sim_rxm.model.kR,
-                                                                             a=r1[0], b=r2[0],
-                                                                             p=p1[0], q=p1[0],
-                                                                             A0=A0, B0=B0, P0=C0, Q0=D0)
-
-            # eq_dict contains the keys "A", "B", "P", "Q";
-            # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
-            return  {r1[1]: eq_dict["A"], r2[1]: eq_dict["B"],
-                     p1[1]: eq_dict["P"], p2[1]: eq_dict["Q"]}
-            """
 
 
         """
@@ -1771,8 +1770,6 @@ class ReactionDefinition:
         formula_list = []
         for t in eqn_side:
             stoichiometry, species_name = t
-            #stoichiometry = self.extract_stoichiometry(t)
-            #species_name = self.extract_species(t)
 
             if stoichiometry == 1:
                 term = species_name
