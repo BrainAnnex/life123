@@ -87,6 +87,21 @@ def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
                         such as rel_tol or abs_tol
     :return:
     """
+    if d1.keys() != d2.keys():
+        return False
+
+    for key, value in d1.items():
+        other_value = d2[key]
+        if (value is None) or (other_value is None):
+            if value != other_value:
+                return False
+
+        elif not math.isclose(value, other_value, **kwargs):
+            return  False
+
+    return True
+    """
     return d1.keys() == d2.keys() and all(
         math.isclose(d1[k], d2[k], **kwargs) for k in d1
     )
+    """

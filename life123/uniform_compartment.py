@@ -10,6 +10,7 @@ from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_kinetics import VariableTimeSteps
+from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -1310,20 +1311,19 @@ class UniformCompartment:
 
 
 
-    def _fetch_concs_for_rnx(self, rxn, conc_array :np.ndarray):
+    def _fetch_concs_for_rnx(self, rxn :SimulationReaction, conc_array :np.ndarray):
         """
         Extract, out of the Numpy array of the given system concentrations,
         just the concentrations of relevance for the specified reaction
 
-        :param rxn:         An object of one of the available reaction classes, such as
-                                "ReactionGeneric" or "ReactionUnimolecular"
+        :param rxn:         An object of type "SimulationReaction"
         :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
         :return:            A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         """
-        # Get the SET of the chemical labels of all the chemicals appearing in this reaction
-        chem_labels = rxn.extract_species_in_reaction()   # EXAMPLE: {"B", "F", "D"}
+        # Get the SET of the id's of ALL the species appearing in this reaction
+        chem_labels = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
 
         conc_dict = {}
         for label in chem_labels:

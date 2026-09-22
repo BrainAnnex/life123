@@ -46,6 +46,11 @@ class MassAction_Model:
 
 
 
+    def overwrite_parameters(self, parameters :dict) -> None:
+        pass    # TODO
+
+
+
     def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
         Validate and set the passed kinetic parameters,
@@ -126,10 +131,12 @@ class MassAction_Model:
                 K = derived_K
                 self.derived_pars.add("K")  # add an element to a set
 
-            elif not (math.isclose(K, derived_K)) or (math.isinf(K) and math.isinf(derived_K)):
+            elif not (math.isclose(K, derived_K)
+                      or (math.isinf(K) and math.isinf(derived_K))
+                     ):
                 raise ValueError(
-                    f"set_parameters(): Inconsistent kinetic parameters: "
-                    f"kF={kF}, kR={kR}, K={K}"
+                    f"MassAction_Model.set_parameters(): Inconsistent kinetic parameters: "
+                    f"kF={kF}, kR={kR}, K={K}, derived_K={derived_K}"
                 )
 
 
@@ -144,7 +151,7 @@ class MassAction_Model:
             elif K == 0:
                 if kF > 0:
                     raise ValueError(
-                        f"set_parameters(): Inconsistent kinetic parameters: "
+                        f"MassAction_Model.set_parameters(): Inconsistent kinetic parameters: "
                         f"kF={kF} cannot coexist with K=0"
                     )
 
@@ -177,12 +184,12 @@ class MassAction_Model:
                 else:
                     # kR == 0, K == 0:
                     # 0 / 0 is undefined.
-                    raise ValueError("set_parameters(): K=0 is inconsistent with kR=0")
+                    raise ValueError("MassAction_Model.set_parameters(): K=0 is inconsistent with kR=0")
 
             else:
                 # K == + infinity
                 if kR > 0:
-                    raise ValueError(f"set_parameters(): K=inf is inconsistent with kR={kR}")
+                    raise ValueError(f"MassAction_Model.set_parameters(): K=inf is inconsistent with kR={kR}")
 
                 # kR == 0, K == +inf:
                 # kF can be any positive value, so it cannot
@@ -213,11 +220,14 @@ class MassAction_Model:
         :param conc_dict:
         :return:
         """
-        reactants = self.stoichiometry.get_reactant_ids()
-        products  = self.stoichiometry.get_product_ids()
-        return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products,
-                                                        kF=self.kF, kR=self.kR, reversible=self.reversible,
-                                                        conc_dict=conc_dict)
+        reactants = self.stoichiometry.get_reactant_list()
+        products  = self.stoichiometry.get_product_list()
+
+        kR = 0 if self.kR is None else self.kR
+
+        return ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=reactants, product_terms=products,
+                                                                  kF=self.kF, kR=kR,
+                                                                  conc_dict=conc_dict)
 
 
 
@@ -332,10 +342,10 @@ class MichaelisMenten_Model:
                 continue
 
             if not isinstance(value, (int, float)):
-                raise TypeError(f"set_parameters(): `{name}` must be a number or None; value passed was of type {type(value)}")
+                raise TypeError(f"MichaelisMenten_Model.set_parameters(): `{name}` must be a number or None; value passed was of type {type(value)}")
 
             if value < 0:
-                raise ValueError(f"set_parameters(): `{name}` must be non-negative; value passed was {value}")
+                raise ValueError(f"MichaelisMenten_Model.set_parameters(): `{name}` must be non-negative; value passed was {value}")
 
 
         # Resolve what can be resolved
@@ -366,7 +376,7 @@ class MichaelisMenten_Model:
                       "Consider using the more accurate reaction model 'single substrate mechanism'")
 
                 assert not math.isclose(k1_F, 0), \
-                        f"set_parameters(): Cannot use the reaction model 'michaelis menten' when k1_F is zero"
+                        f"MichaelisMenten_Model.set_parameters(): Cannot use the reaction model 'michaelis menten' when k1_F is zero"
 
                 derived_kM = (k2_F + k1_R) / k1_F
 
@@ -595,20 +605,20 @@ class Custom_Model:
                 continue
 
             if not isinstance(value, (int, float)):
-                raise TypeError(f"set_parameters(): `{name}` must be a number or None; value passed was of type {type(value)}")
+                raise TypeError(f"Custom_Model.set_parameters(): `{name}` must be a number or None; value passed was of type {type(value)}")
 
             if value < 0:
-                raise ValueError(f"set_parameters(): `{name}` must be non-negative; value passed was {value}")
+                raise ValueError(f"Custom_Model.set_parameters(): `{name}` must be non-negative; value passed was {value}")
 
 
         K = values["K"]
 
         if K is not None:
             if not isinstance(K, (int, float)) or math.isnan(K):
-                raise TypeError(f"set_parameters(): `K` must be a number or None or math.inf; value passed was of type {type(K)}")
+                raise TypeError(f"Custom_Model.set_parameters(): `K` must be a number or None or math.inf; value passed was of type {type(K)}")
 
             if K < 0:
-                raise ValueError(f"set_parameters(): `K` must be non-negative; value passed was {K}")      # # +inf is explicitly allowed
+                raise ValueError(f"Custom_Model.set_parameters(): `K` must be non-negative; value passed was {K}")      # # +inf is explicitly allowed
 
 
         # --------------------------------------------------------------
@@ -635,10 +645,12 @@ class Custom_Model:
                 K = derived_K
                 self.derived_pars.add("K")  # add an element to a set
 
-            elif not (math.isclose(K, derived_K)) or (math.isinf(K) and math.isinf(derived_K)):
+            elif not (math.isclose(K, derived_K)
+                      or (math.isinf(K) and math.isinf(derived_K))
+                     ):
                 raise ValueError(
-                    f"set_parameters(): Inconsistent kinetic parameters: "
-                    f"kF={kF}, kR={kR}, K={K}"
+                    f"Custom_Model.set_parameters(): Inconsistent kinetic parameters: "
+                    f"kF={kF}, kR={kR}, K={K}, derived_K={derived_K}"
                 )
 
 
@@ -653,7 +665,7 @@ class Custom_Model:
             elif K == 0:
                 if kF > 0:
                     raise ValueError(
-                        f"set_parameters(): Inconsistent kinetic parameters: "
+                        f"Custom_Model.set_parameters(): Inconsistent kinetic parameters: "
                         f"kF={kF} cannot coexist with K=0"
                     )
 
@@ -668,7 +680,7 @@ class Custom_Model:
                 else:
                     # kF == 0, K == infinity is impossible:
                     # 0 / 0 is undefined.
-                    raise ValueError("set_parameters(): K=inf is inconsistent with kF=0")
+                    raise ValueError("Custom_Model.set_parameters(): K=inf is inconsistent with kF=0")
 
 
 
@@ -686,12 +698,12 @@ class Custom_Model:
                 else:
                     # kR == 0, K == 0:
                     # 0 / 0 is undefined.
-                    raise ValueError("set_parameters(): K=0 is inconsistent with kR=0")
+                    raise ValueError("Custom_Model.set_parameters(): K=0 is inconsistent with kR=0")
 
             else:
                 # K == + infinity
                 if kR > 0:
-                    raise ValueError(f"set_parameters(): K=inf is inconsistent with kR={kR}")
+                    raise ValueError(f"Custom_Model.set_parameters(): K=inf is inconsistent with kR={kR}")
 
                 # kR == 0, K == +inf:
                 # kF can be any positive value, so it cannot

@@ -1,6 +1,8 @@
+import math
+
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import DisplayNetwork
-from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
+from life123.reactions import ReactionDefinition, SimulationReaction
 from life123.species_registry import SpeciesRegistry
 
 
@@ -45,8 +47,9 @@ class ReactionRegistry:
         else:
             self.species_data = species_data
 
-        self.reaction_list = []     # List of objects of the various individual reaction classes,
-                                    # such as "ReactionGeneric" and "ReactionEnzyme"
+
+        self.reaction_defn_list = []    # List of "ReactionDefinition" objects
+        self.reaction_list = []         # List of "SimulationReaction" objects
 
 
         self.active_chemicals = set()   # Set of the labels of the chemicals - not counting pure catalysts - involved
@@ -54,39 +57,27 @@ class ReactionRegistry:
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
 
-        #self.active_enzymes = set()    # Set of the labels of the enzymes (catalysts) involved
-                                        # in any of the registered reactions
-                                        # CAUTION: the concept of "active enzyme" might change in future versions, where only SOME of
-                                        #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
-
-
 
 
     def number_of_reactions(self, include_inactive=False) -> int:
         """
         Return the number of registered chemical reactions
+        (the number of DERIVED "SimulationReaction" objects)
 
-        :param include_inactive:    If True, disabled reactions are also included
+        :param include_inactive:    [NO LONGER IN USE] If True, disabled reactions are also included
         :return:                    The number of registered chemical reactions
         """
-        if include_inactive:
-            return len(self.reaction_list)
-
-        count = 0
-        for rxn in self.reaction_list:
-            if rxn.active:
-                count += 1
-
-        return count
+        return len(self.reaction_list)
 
 
 
     def get_all_reactions(self):
         """
-        Return the list of all the reactions that have been registered
+        Return the list of all the "simulation reactions" that have been created.
+        Note: this number might be higher than the number of reactions specified by the user,
+              because some overall reactions are modeled by means of multiple "simulation reactions"
 
-        :return:    A list of various types of reaction objects,
-                        such as ReactionUnimolecular, ReactionSynthesis, etc.
+        :return:    A list of "SimulationReaction" objects
         """
         return self.reaction_list
 
@@ -94,14 +85,18 @@ class ReactionRegistry:
 
     def active_reaction_indices(self) -> [int]:
         """
-        Return a list of the reaction index numbers of all the active reactions
+        TODO: OBSOLETE
+
+        Return a list of the reaction index numbers of all the reactions
+
+        DEPRECATION: no active/inactive distinction is kept anymore.  All reactions are regarded as "active"
 
         :return:    A list of integers, to identify the active reactions by their indices
         """
         l = []
         for i, rxn in enumerate(self.reaction_list):
-            if rxn.active:
-                l.append(i)
+            #if rxn.active:
+            l.append(i)
 
         return l
 
@@ -137,14 +132,13 @@ class ReactionRegistry:
 
 
 
-    def get_reaction(self, i :int):
+    def get_reaction(self, i :int) -> SimulationReaction:
         """
         Return the data structure of the i-th reaction,
         in the order in which reactions were added (numbering starts at 0)
 
         :param i:   An integer that indexes the reaction of interest (numbering starts at 0)
-        :return:    An object of one of the various individual reaction classes,
-                    such as "ReactionGeneric" and "ReactionEnz"
+        :return:    A "SimulationReaction object
         """
         self.assert_valid_rxn_index(i)
 
@@ -232,9 +226,10 @@ class ReactionRegistry:
         :return:            A SET of indices of the chemicals involved in the above reaction
                                 Note: being a set, it's NOT in any particular order
         """
-        rxn = self.get_reaction(rxn_index)
+        #rxn = self.get_reaction(rxn_index)
+        rxn_defn = self.reaction_defn_list[rxn_index]
 
-        name_set = rxn.extract_species_in_reaction()
+        name_set = rxn_defn.extract_species_in_reaction()
 
         index_set = {self.species_data.get_species_index(name) for name in name_set}
 
@@ -256,24 +251,26 @@ class ReactionRegistry:
 
 
 
-    def get_reactions_participating_in(self, chem_label :str, side :str) -> list:
+    def get_reactions_participating_in(self, species_id :str, side :str) -> list[ReactionDefinition]:
         """
         Return a list of all the reactions that the given chemical species
         is involved in
 
-        :param chem_label:  To identify a particular chemical
+        :param species_id:  To identify a particular species
         :param side:        Either "reagent" or "product"
-        :return:            List of various types of "Reaction" objects
+        :return:            List of "ReactionDefinition" objects
         """
-        assert side == "reagent" or side == "product"
+        assert side == "reagent" or side == "product", \
+            "get_reactions_participating_in(): argument `side` must be either 'reagent' or 'product'"
+
         rxns_found_in = []
-        for rxn in self.reaction_list:
+        for rxn_defn in self.reaction_defn_list:
             if side == "reagent":
-                if chem_label in rxn.extract_reactant_ids():
-                    rxns_found_in.append(rxn)
+                if species_id in rxn_defn.extract_reactant_ids():
+                    rxns_found_in.append(rxn_defn)
             else:
-                 if chem_label in rxn.extract_product_ids():
-                    rxns_found_in.append(rxn)
+                 if species_id in rxn_defn.extract_product_ids():
+                    rxns_found_in.append(rxn_defn)
 
 
         return rxns_found_in
@@ -300,7 +297,8 @@ class ReactionRegistry:
 
         :param reactants:       A string or pair of strings; for reactions such as 2 A -> P, pass ["A", "A"]
         :param products:        A string or pair of strings; for reactions such as A -> 2 P, pass ["P", "P"]
-        :param reaction_type:   A string with one of the following values:
+        :param reaction_type:   [OPTIONAL] TODO: OBSOLETE.
+                                    A string with one of the following values:
                                     "ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"
 
         :param temp:            [OPTIONAL] Temperature in Kelvins
@@ -336,9 +334,18 @@ class ReactionRegistry:
             elif n_reactants == 1 and n_products == 2:
                 reaction_type = "ReactionDecomposition"
             else:
-                raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to any elementary reaction")
+                raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to an elementary reaction")
 
 
+        assert reaction_type in ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"], \
+            f"add_elementary_reaction(): unknown reaction type ({reaction_type})"
+
+        rxn_defn = ReactionDefinition(reactants=reactants, products=products,
+                                      species_registry=self.species_data, autoregister_species=True,
+                                      reaction_model="mass action",
+                                      thermodynamic_parameters={"temp": temp})
+
+        """
         match reaction_type:
             case "ReactionUnimolecular":
                 rxn = ReactionUnimolecular(reactant=reactants[0], product=products[0], temp=temp, **kwargs)
@@ -348,19 +355,20 @@ class ReactionRegistry:
                 rxn = ReactionDecomposition(reactant=reactants[0], products=products, temp=temp, **kwargs)
             case _:
                 raise Exception(f"add_elementary_reaction(): unknown reaction type ({reaction_type})")
-
+        """
 
         #print(f"add_elementary_reaction(): adding reaction of type `{reaction_type}`")
 
-        return self.register_reaction(rxn=rxn, temp=temp)
+        return self.register_reaction(rxn_defn=rxn_defn)
 
 
 
     def add_reaction(self, reactants :str|list, products :str|list,
-                     kF=None, kR=None,
-                     enzyme=None, k1_F=None, k1_R=None, k2_F=None,
-                     temp=None,
-                     **kwargs) -> int:
+                     reaction_model :str,
+                     autoregister_species=True,
+                     thermodynamic_parameters=None,
+                     kinetic_parameters=None,
+                     temp=None) -> int:
         """
         Create and register a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -384,70 +392,36 @@ class ReactionRegistry:
                                     or simplified terms in various formats; for details, see above
 
         :param temp:            [OPTIONAL] Temperature in Kelvins
-        :param kwargs:          [OPTIONAL] Other named arguments to pass to instantiate the various reaction
-                                objects, such as `ReactionSynthesis`.
-                                For list, see documentation of the classes in reactions.py
 
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
         #TODO: add an optional `reaction_type` argument;
         #      the dispatching might best be done elsewhere
+        if temp is not None:
+            if thermodynamic_parameters is None:
+                thermodynamic_parameters = {"temp": temp}
+            else:
+                if not "temp" in thermodynamic_parameters:
+                    thermodynamic_parameters["temp"] = temp
+                else:
+                    assert math.isclose(temp, thermodynamic_parameters["temp"]), \
+                        "add_reaction(): inconsistent `temp` and `thermodynamic_parameters` arguments"
 
-        # Determine and assign the specific type of reaction, and instantiate an object of that class
-        if enzyme is not None:
-            reaction_type = "ReactionEnzyme"
-            assert type(reactants) == str
-            assert type(products) == str
-            rxn = ReactionEnzyme(enzyme=enzyme, substrate=reactants, product=products,
-                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
-        else:
-            reactant_list = self._standardize_reaction_side(reactants, arg_name="reactants")
-            product_list = self._standardize_reaction_side(products, arg_name="products")
+        rxn = ReactionDefinition(reactants=reactants, products=products,
+                                 species_registry=self.species_data,
+                                 autoregister_species=autoregister_species,
+                                 reaction_model=reaction_model,
+                                 thermodynamic_parameters=thermodynamic_parameters,
+                                 kinetic_parameters=kinetic_parameters)
 
-            single_reactant = None
-            if len(reactant_list) == 1 and reactant_list[0][0] == 1:    # A single reactant, with stoichiometry 1
-                single_reactant = reactant_list[0][1]
+        #print(f"add_reaction(): detected reaction type `{reaction_type}`")
 
-            single_product = None
-            if len(product_list) == 1 and product_list[0][0] == 1:      # A single product, with stoichiometry 1
-                single_product = product_list[0][1]
-
-            reaction_type = "ReactionGeneric"       # Default value, possibly changed below
-
-            if single_reactant:    # A single reactant, with stoichiometry 1
-                if single_product:      # A single product, with stoichiometry 1
-                    reaction_type = "ReactionUnimolecular"
-                    rxn = ReactionUnimolecular(reactant=single_reactant, product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
-                elif len(product_list) == 2 and product_list[0][0] == 1 and product_list[1][0] == 1:      # Two products, both with stoichiometry 1
-                    reaction_type = "ReactionDecomposition"
-                    rxn = ReactionDecomposition(reactant=single_reactant, products=[product_list[0][1], product_list[1][1]],
-                                                kF=kF, kR=kR, temp=temp, **kwargs)
-                elif len(product_list) == 1 and product_list[0][0] == 2:      # A product with stoichiometry 2  (EXAMPLE : A <-> 2 B)
-                    reaction_type = "ReactionDecomposition"
-                    rxn = ReactionDecomposition(reactant=single_reactant, products=[product_list[0][1], product_list[0][1]],
-                                                kF=kF, kR=kR, temp=temp, **kwargs)
-            elif single_product:
-                if len(reactant_list) == 2 and reactant_list[0][0] == 1 and reactant_list[1][0] == 1:      # Two reactants, both with stoichiometry 1
-                    reaction_type = "ReactionSynthesis"
-                    rxn = ReactionSynthesis(reactants=[reactant_list[0][1], reactant_list[1][1]],
-                                            product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
-                elif len(reactant_list) == 1 and reactant_list[0][0] == 2:  # A reactant with stoichiometry 2  (EXAMPLE : 2A <-> P)
-                    reaction_type = "ReactionSynthesis"
-                    rxn = ReactionSynthesis(reactants=[reactant_list[0][1], reactant_list[0][1]],
-                                            product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
-
-            if reaction_type == "ReactionGeneric":
-                 rxn = ReactionGeneric(reactants=reactant_list, products=product_list, kF=kF, kR=kR, temp=temp, **kwargs)
-
-
-        print(f"add_reaction(): detected reaction type `{reaction_type}`")
-
-        return self.register_reaction(rxn=rxn, temp=temp)
+        return self.register_reaction(rxn_defn=rxn)      # , temp=temp
 
 
 
-    def register_reaction(self, rxn, temp=None) -> int:
+    def register_reaction(self, rxn_defn :ReactionDefinition, temp=None) -> int:
         """
         Register a SINGLE chemical reaction from its reaction-specific object,
         and set all its kinetic and/or thermodynamic data from the available information,
@@ -456,37 +430,38 @@ class ReactionRegistry:
         All the involved chemicals can be either previously registered, or not;
         if not, they will get automatically registered.
 
-        :param rxn: Object of one of the specific Reaction classes, such as
-                        ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
-                        ReactionEnz, ReactionGeneric
-        :param temp:Temperature in degree Kelvin
+        :param rxn_defn:    Object of type "ReactionDefinition"
+        :param temp:        TODO: OBSOLETE.  NO LONGER IN USE.  Temperature in degree Kelvin
 
-        :return:    Integer index of the newly-added reaction
-                        (in the list self.reaction_list, stored as object variable)
+        :return:            Integer index of the newly-added reaction
+                                (in the list self.reaction_list, stored as object variable)
         """
-        self.reaction_list.append(rxn)
+        reaction_id = len(self.reaction_list)
 
+        rxn_defn.id = reaction_id
+
+        self.reaction_defn_list.append(rxn_defn)
+
+        sim_rxn_tuple = rxn_defn.sim_reactions
+        for sim_rxn in sim_rxn_tuple:
+            self.reaction_list.append(sim_rxn)
+            involved_chemicals = sim_rxn.stoichiometry.get_all_species_ids()    # Set of species ID's
+            # Update the set of "active chemicals"
+            self.active_chemicals |= involved_chemicals     # Union of sets
+
+        """
         # Register any newly-encountered reactant not already registered
-        # for aesthetic reasons, we'll do 1) catalyst, 2) reactants, 3) products
-
-        #catalyst = rxn.extract_catalyst()
-
-        #if catalyst:
-            # Register the catalyst, if not already registered
-            #self.species_data.add_species(id=catalyst, skip_duplicates=True)
-
-        # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_ids()
+        rxn_reactants = rxn_defn.extract_reactant_ids()
         for label in rxn_reactants:
             self.species_data.add_species(id=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction product not already registered
-        rxn_products = rxn.extract_product_ids()
+        rxn_products = rxn_defn.extract_product_ids()
         for label in rxn_products:
             self.species_data.add_species(id=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction intermediates not already registered
-        rxn_intermediate = rxn.extract_intermediate()
+        rxn_intermediate = rxn_defn.extract_intermediate()
         if rxn_intermediate:
             new_index = self.species_data.add_species(id=rxn_intermediate, skip_duplicates=True)
             if new_index is not None:
@@ -495,29 +470,28 @@ class ReactionRegistry:
             if self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate") is None:
                 # Attempt to estimate the diffusion rate constant of the reaction intermediate
                 D_enzyme = self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate")
-                D_substrate = self.species_data.get_value(species_id=rxn.substrate, field="diffusion_rate")
+                D_substrate = self.species_data.get_value(species_id=rxn_defn.substrate, field="diffusion_rate")
                 # TODO: this might best belong elsewhere; also, review its validity
                 if (D_enzyme is not None) and (D_substrate is not None):
                     D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
                     print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
                     self.species_data.set_value(species_id=rxn_intermediate, field="diffusion_rate", value=D_ES_rough_estimate)
+        """
 
-
+        """
         involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
         if  rxn_intermediate:
              involved_chemicals = involved_chemicals | {rxn_intermediate}     # Union of sets
-
-        #if catalyst is not None:
-            #involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
-            #self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
-
+    
         # Update the set of "active chemicals"
         self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
+        """
 
-        if temp is not None:
-            rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
+        #if temp is not None:
+        #    rxn_defn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
 
-        return len(self.reaction_list) - 1
+        #return len(self.reaction_list) - 1
+        return reaction_id
 
 
 
@@ -529,34 +503,8 @@ class ReactionRegistry:
         :return:    None
         """
         self.reaction_list = []
+        self.reaction_defn_list = []
         self.active_chemicals = set()
-        #self.active_enzymes = set()
-
-
-
-    def inactivate_reaction(self, i :int) -> None:
-        """
-        Mark the i-th reaction as "inactive/disabled" (essentially, "deleted", but holding its positional
-        index, to avoid a change in index in other reactions)
-
-        TODO: Not yet supported by the dynamical modules; DON'T USE YET in simulations!
-
-        :param i:   Zero-based index of the reaction to disable
-        :return:    None
-        """
-        rxn = self.get_reaction(i)
-        rxn.active = False
-
-        # Re-construct self.active_chemicals and self.active_enzymes
-        self.active_chemicals = set()
-        #self.active_enzymes = set()
-
-        for rxn in self.reaction_list:
-            involved_chemicals = rxn.extract_species_in_reaction()
-            involved_chemicals = involved_chemicals - {rxn.catalyst}        # Set difference
-            self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
-            #if rxn.catalyst is not None:
-                #self.active_enzymes.add(rxn.catalyst)       # Add the new entry to a set
 
 
 
@@ -726,9 +674,9 @@ class ReactionRegistry:
         :param concise:     If True, less detail is shown
         :return:            A string with a description of the specified reaction
         """
-        rxn = self.get_reaction(rxn_index)
+        rxn_defn = self.reaction_defn_list[rxn_index]
 
-        return rxn.describe(concise)    # Invoke the individual reaction object
+        return rxn_defn.describe(concise)    # Invoke the individual "ReactionDefinition" object
 
 
 
@@ -831,23 +779,28 @@ class ReactionRegistry:
         # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
         #       the graph nodes representing Reactions will be given an id such as "R-456" and a label "Reaction"
 
-        for i, rxn in enumerate(self.reaction_list):    # Consider each REACTION in turn
+        for i, rxn in enumerate(self.reaction_list):    # Consider each "SimulationReaction" object in turn
             # Add a node representing the reaction
             rxn_id = f"RXN-{i}"               # Example: "RXN-456"
-            node_data = {'name': 'RXN', 'formula': rxn.describe(concise=True)}
+            node_data = {'name': 'RXN', 'formula': rxn.standard_chemical_formula()}
 
             # Show the parameter of the reaction
-            rxn_properties = rxn.extract_rxn_properties()
+            rxn_properties = rxn.source_object.extract_rxn_properties()
+            #print(rxn_properties)
+
             for k,v in rxn_properties.items():
-                node_data[k] = f"{v:,.6g}"
+                if type(v) is float:
+                    node_data[k] = f"{v:,.6g}"
+                else:
+                     node_data[k] = f"{v}"
 
             graph.add_node(node_id=rxn_id, labels='Reaction', properties=node_data)
 
 
             # Process all the PRODUCTS of this reaction
             products = rxn.stoichiometry.get_product_list()
-            for term in products:
-                species_name = rxn.extract_species(term)
+            for stoich, species_name in products:
+                #species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
 
                 # Add each product to the graph as a node (if not already present)
@@ -859,13 +812,13 @@ class ReactionRegistry:
 
                 # Append edge from "reaction node" to "product node"
                 graph.add_edge(from_node=rxn_id, to_node=chemical_id, name="produces",
-                               properties={'stoich': rxn.extract_stoichiometry(term)})
+                               properties={'stoich': stoich})
 
 
             # Process all the REACTANTS of this reaction
             reactants = rxn.stoichiometry.get_reactant_list()
-            for term in reactants:
-                species_name = rxn.extract_species(term)
+            for stoich, species_name in reactants:
+                #species_name = rxn.extract_species(term)
                 chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-34"
 
                 # Add each reactant to the graph as a node (if not already present)
@@ -877,7 +830,7 @@ class ReactionRegistry:
 
                 # Append edge from "reactant node" to "reaction node"
                 graph.add_edge(from_node=chemical_id, to_node=rxn_id, name="reacts",
-                               properties={'stoich': rxn.extract_stoichiometry(term)})
+                               properties={'stoich': stoich})
 
 
         graph.assign_color_mapping(label='Chemical', color='graph_green')

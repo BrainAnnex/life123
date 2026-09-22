@@ -10,7 +10,7 @@
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc8"
+__version__ = "1.0.0rc9"    # IN-PROGRESS
 
 
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
@@ -31,11 +31,15 @@ from life123.history import (
 from life123.numerical import Numerical
 from life123.random_reactions import RandomReactionNetwork
 from life123.reactions import (
-    ReactionDecomposition,
-    ReactionGeneric,
-    ReactionEnzyme,
-    ReactionUnimolecular,
-    ReactionSynthesis
+    Stoichiometry,
+    ReactionThermodynamics,
+    SimulationReaction,
+    ReactionCompiler_MassAction,
+    ReactionCompiler_MichaelisMenten,
+    ReactionCompiler_SingleSubstrateMechanism,
+    ReactionCompiler_Custom,
+    ReactionModelRegistry,
+    ReactionDefinition
 )
 from life123.reaction_registry import ReactionRegistry
 from life123.thermodynamics import ThermoDynamics
@@ -71,15 +75,14 @@ __all__ = [
     'Membranes2D',
     'Numerical',
     'RandomReactionNetwork',
-    'ReactionDecomposition',
-    'ReactionEnzyme',
-    'ReactionGeneric',
-    'ReactionUnimolecular',
-    'ReactionSynthesis',
-    'ReactionRegistry',
+    'ReactionDefinition',
     'ReactionKinetics',
+    'ReactionRegistry',
+    'ReactionThermodynamics',
+    'SimulationReaction',
     'Species',
     'SpeciesRegistry',
+    'Stoichiometry',
     'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',

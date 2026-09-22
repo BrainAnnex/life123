@@ -17,8 +17,6 @@ class ReactionKinetics:
     For background, see https://life123.science/reactions
     """
 
-
-
     @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
         """
@@ -663,8 +661,8 @@ class ReactionKinetics:
         Warning: generally speaking, this is NOT a valid kinetic modeling
         of any reaction that isn't elementary
 
-        :param reactant_terms:  A list of pairs (stoichiometry coefficient , label) for the reactants
-        :param product_terms:   A list of pairs (stoichiometry coefficient , label) for the products
+        :param reactant_terms:  A list of pairs (stoichiometry coefficient , species id) for the reactants
+        :param product_terms:   A list of pairs (stoichiometry coefficient , species id) for the products
         :param kF:              Forward reaction rate
         :param kR:              Reverse reaction rate; zero if the reaction is irreversible
 

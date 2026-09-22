@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import math
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-from life123 import ThermoDynamics, ReactionGeneric
-from life123.reactions_new import Stoichiometry
+from life123.reactions import Stoichiometry, ReactionDefinition
+from life123.species_registry import SpeciesRegistry
 
 
 
@@ -57,7 +57,12 @@ def test_exact_advance_unimolecular_reversible_2():
 
 def test_exact_advance_unimolecular_reversible_3():
     # Compare the exact solution against a fine-grained forward-Euler approximation
-    rxn = ReactionGeneric(reactants="A", products="P", kF=3., kR=2.)
+    sr = SpeciesRegistry()
+    rxn_defn = ReactionDefinition(reactants="A", products="P",
+                                  species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action",
+                                  kinetic_parameters={"kF": 3., "kR": 2.})
+    rxn = rxn_defn.sim_reactions[0]
 
     t_final = 0.2
     n_steps = 50000
@@ -309,7 +314,12 @@ def test_exact_advance_synthesis_reversible_2():
 def test_exact_advance_synthesis_reversible_3():
     # Compare the exact solution against a fine-grained forward Euler approximation
     # Reaction A + B <-> P
-    rxn = ReactionGeneric(reactants=["A", "B"], products="P", kF=5., kR=2.)
+    sr = SpeciesRegistry()
+    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="P",
+                                  species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action",
+                                  kinetic_parameters={"kF": 5., "kR": 2.})
+    rxn = rxn_defn.sim_reactions[0]
 
     t_final = 0.001
     n_steps = 1800
@@ -440,7 +450,12 @@ def test_exact_advance_synthesis_irreversible_2():
 def test_exact_advance_synthesis_irreversible_3():
     # Compare the exact solution against a fine-grained forward Euler approximation
     # Reaction A + B -> P
-    rxn = ReactionGeneric(reactants=["A", "B"], products="P", kF=5., kR=0)
+    sr = SpeciesRegistry()
+    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="P",
+                                  species_registry= sr, autoregister_species=True,
+                                  reaction_model="mass action",
+                                  kinetic_parameters={"kF": 5., "kR": 0})
+    rxn = rxn_defn.sim_reactions[0]
 
     t_final = 0.01
     n_steps = 10000

@@ -2,7 +2,7 @@
 # for general tests of 1D system, see "test_biosim_1d.py"
 
 import numpy as np
-from life123 import SpeciesRegistry, ReactionKinetics, ReactionSynthesis, ReactionDecomposition
+from life123 import SpeciesRegistry, ReactionKinetics
 from life123 import BioSim1D
 
 
