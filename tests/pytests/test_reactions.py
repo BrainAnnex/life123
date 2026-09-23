@@ -897,7 +897,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_definition_id == 942
+    assert sim_rxn.source_object.id == 942
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"R": -1, "P": 1})
     assert sim_rxn.model.get_parameters() == {'kF': 20, 'kR': 4, 'K': 5.0, 'reversible': True}
@@ -924,7 +924,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_definition_id == 8
+    assert sim_rxn.source_object.id == 8
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
@@ -949,7 +949,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_definition_id == 17
+    assert sim_rxn.source_object.id == 17
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'kM': 2, 'kcat': 5, 'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S'}
@@ -991,13 +991,13 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
-    assert sim_rxn_1.source_definition_id == 123
+    assert sim_rxn_1.source_object.id == 123
     assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
-    assert sim_rxn_2.source_definition_id == 123
+    assert sim_rxn_2.source_object.id == 123
     assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
@@ -1042,7 +1042,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_definition_id == 41
+    assert sim_rxn.source_object.id == 41
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
@@ -1062,7 +1062,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = rxn_defn.sim_reactions[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_definition_id == 42
+    assert sim_rxn.source_object.id == 42
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 0, 'K': math.inf, 'reversible': False}
@@ -1095,7 +1095,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_definition_id == 43
+    assert sim_rxn.source_object.id == 43
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"Sub": -1, "Prod": 1}, catalysts=["Enz"])
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'Enz', 'Product': 'Prod', 'Substrate': 'Sub', 'kM': 2, 'kcat': 3}
@@ -1123,7 +1123,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_definition_id == 44
+    assert sim_rxn.source_object.id == 44
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S', 'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
@@ -1158,13 +1158,13 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
 
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
-    assert sim_rxn_1.source_definition_id == 43
+    assert sim_rxn_1.source_object.id == 43
     assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
-    assert sim_rxn_2.source_definition_id == 43
+    assert sim_rxn_2.source_object.id == 43
     assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 

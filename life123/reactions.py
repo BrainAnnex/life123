@@ -438,23 +438,21 @@ class SimulationReaction:
     Note: at a future date, the simulation engine might have things that aren't strictly "kinetic reactions";
     for example, transport events, membrane events, diffusion operators, binding events, etc.
     """
-    def __init__(self, model, stoichiometry, source_id :int, source_object, derivation=None,
+    def __init__(self, model, stoichiometry, source_object :ReactionDefinition, derivation=None,
                  analytic_solution_family=None):
         """
 
         :param model:           Object of type such as "MassAction_Model" or "MichaelisMenten_Model"
         :param stoichiometry:   Object of type "Stoichiometry"
-        :param source_id:       Provenance info: the ID of the "ReactionDefinition" source object
         :param source_object:   Provenance info: the "ReactionDefinition" source object
         :param derivation:      [OPTIONAL] To explain how this object came about:
-                                    either "direct" or "generated"
+                                    either "direct" (essentially just an expansion of the original reaction definition)
+                                    or "generated" (one of multiple sub-reactions used to model the original reaction)
         :param analytic_solution_family:   [OPTIONAL]
         """
-        # TODO: ditch `source_id`, since we now have `source_object`
         self.model = model
         self.stoichiometry: Stoichiometry|None = stoichiometry
 
-        self.source_definition_id = source_id       # Provenance
         self.source_object = source_object          # Provenance object
         self.derivation : str | None = derivation
 
@@ -712,14 +710,14 @@ class Reconciler:
 
 class ReactionCompiler_MassAction:
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, source_object,
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_object,
                species_registry=None, analytic_solution_family=None) -> tuple:
         """
 
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_id:
+        :param source_object:
         :param species_registry:
         :return:
         """
@@ -753,7 +751,7 @@ class ReactionCompiler_MassAction:
         #print(f"    name of model being used: {m.name!r}")
 
         sim_rxn = SimulationReaction(model=m, stoichiometry=stoichiometry,
-                                     source_id=source_id, source_object=source_object,
+                                     source_object=source_object,
                                      derivation="direct",
                                      analytic_solution_family=analytic_solution_family)
                                      # "Directly modeled as specified by the user"
@@ -793,14 +791,14 @@ class ReactionCompiler_MichaelisMenten:
     SEE ALSO:  class ReactionCompiler_SingleSubstrateMechanism
     """
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, source_object,
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_object,
                species_registry=None, analytic_solution_family=None):
         """
 
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_id:
+        :param source_object:
         :param species_registry:
         :param analytic_solution_family:
         :return:
@@ -828,7 +826,7 @@ class ReactionCompiler_MichaelisMenten:
         m.set_parameters(parameters=kinetic_parameters)     # Pass thru the parameters
         #print(f"    name of model being used: {m.name!r}")
 
-        r1 = SimulationReaction(model=m, stoichiometry=stoichiometry, source_id=source_id, source_object=source_object)
+        r1 = SimulationReaction(model=m, stoichiometry=stoichiometry, source_object=source_object)
         return (r1,)
 
 
@@ -848,14 +846,14 @@ class ReactionCompiler_SingleSubstrateMechanism:
     SEE ALSO:  class ReactionCompiler_MichaelisMenten
     """
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_id, source_object,
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data,  source_object,
                species_registry, analytic_solution_family=None):
         """
 
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_id:
+        :param source_object:
         :param species_registry:
         :param analytic_solution_family:
         :return:
@@ -891,16 +889,15 @@ class ReactionCompiler_SingleSubstrateMechanism:
         m1 = MassAction_Model(stoichiometry=st)
         m1.set_parameters(parameters={"kF": kinetic_parameters.get("k1_F"),
                                       "kR": kinetic_parameters.get("k1_R")})
-        r1 = SimulationReaction(model=m1,
-                                stoichiometry=st,
-                                source_id=source_id, source_object=source_object)
+        r1 = SimulationReaction(model=m1, stoichiometry=st,
+                                source_object=source_object)
 
         # Reaction 2: ES -> P + E
         st = Stoichiometry(vector={ES: -1, P: 1, E: 1})
         m2 = MassAction_Model(stoichiometry=st)
         m2.set_parameters(parameters={"kF": kinetic_parameters.get("k2_F")})
         r2 = SimulationReaction(model=m2, stoichiometry=st,
-                                source_id=source_id, source_object=source_object)
+                                source_object=source_object)
 
         return (r1, r2)
 
@@ -909,14 +906,14 @@ class ReactionCompiler_SingleSubstrateMechanism:
 
 class ReactionCompiler_Custom:
     @staticmethod
-    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_id, source_object,
+    def compile(stoichiometry, kinetic_parameters, thermodynamics_data, source_object,
                species_registry=None, analytic_solution_family=None) -> tuple:
         """
 
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_id:
+        :param source_object:
         :param species_registry:
         :return:
         """
@@ -950,7 +947,7 @@ class ReactionCompiler_Custom:
         #print(f"    name of model being used: {m.name!r}")
 
         sim_rxn = SimulationReaction(model=m, stoichiometry=stoichiometry,
-                                     source_id=source_id, source_object=source_object,
+                                     source_object=source_object,
                                      derivation="direct",
                                      analytic_solution_family=analytic_solution_family)
                                      # "Directly modeled as specified by the user"
@@ -1242,10 +1239,10 @@ class ReactionDefinition:
         sr_tuple = reaction_compiler.compile(stoichiometry=self.stoichiometry,
                                              kinetic_parameters=self.source_kinetic_parameters,
                                              thermodynamics_data=self.thermodynamics,
-                                             source_id=self.id, source_object=self,
+                                             source_object=self,
                                              species_registry=self.species_registry,
                                              analytic_solution_family=self.analytic_solution_family)
-        #print("sr: ", sr)
+
         self.sim_reactions = sr_tuple
         #print("self.sim_reactions: ", self.sim_reactions)
 
