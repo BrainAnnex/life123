@@ -768,7 +768,9 @@ class ReactionDefinition:
                                 or pairs (stoichiometry coefficient , chemical label).
                                 If not a list, it will first get turned into one
         :param species_registry:
-        :param auto_register_species:
+        :param auto_register_species:   [OPTIONAL] If True, any species id encountered in the reaction parsing
+                                            will automatically get added to the species_registry object, if not already present;
+                                            if False, an Exception is raised if encountering un-registered species
         :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
                                 Allowed values are "mass action", "michaelis menten",
                                 "single substrate mechanism", "custom" - as detailed
@@ -847,61 +849,26 @@ class ReactionDefinition:
         and set the object variable self.stoichiometry accordingly.
         Possibly modify self.species_registry as needed
 
-        :param reactants:           A list of pairs (stoichiometry, species id)
-        :param products:            A list of pairs (stoichiometry, species id)
-        :param autoregister_species:
-        :return:                    None
+        :param reactants:               A list of pairs (stoichiometry, species id)
+        :param products:                A list of pairs (stoichiometry, species id)
+        :param auto_register_species:   [OPTIONAL] If True, any species id encountered in the reaction parsing
+                                            will automatically get added to the species_registry object, if not already present;
+                                            if False, an Exception is raised if encountering un-registered species
+        :return:                        None
         """
-        #TODO: replace with Stoichiometry.from_reactants_products() ;
-        #      only retain the  "Check whether all the species in the reaction are registered ones"
-        assert reactants is not None, \
-            "ReactionDefinition() instantiation: the argument `reactants` is a required one"
-        if type(reactants) == str:
-            reactants = [reactants]
-        else:
-            assert type(reactants) is list, \
-                "ReactionDefinition() instantiation: the argument `reactants` must be a list or a string"
+        # Parse the reactants and products into a "Stoichiometry" object
+        stoich_obj = Stoichiometry.from_reactants_products(reactants=reactants, products=products)
 
-        assert products is not None, \
-            "ReactionDefinition() instantiation: the argument `products` is a required one"
-        if type(products) == str:
-            products = [products]
-        else:
-            assert type(products) is list, \
-                "ReactionDefinition() instantiation: the argument `products` must be a list or a string"
-
-
-        # Normalize the elements of each list to be (int, str) pairs; i.e. turn any single string "X" into the pair (1, "X")
-        reactant_list = [(1, r) if type(r) == str else r
-                            for r in reactants]   # A list of pairs
-        product_list =  [(1, p) if type(p) == str else p
-                            for p in products]   # A list of pairs
-
-        # Catch identical reaction sides, even if terms are reshuffled
-        assert set(reactant_list) != set(product_list), \
-            f"ReactionDefinition(): the two sides of the reaction can't be identical! " \
-            f"Same reactant and product complexes: \"{self._standard_form_chem_eqn(reactant_list)}\""
-
-
-        # Check whether all the species in the reaction are registered ones
-        for _, s_id in reactant_list:
-            if not self.species_registry.species_exists(s_id):
+        # Check whether all the species in the reaction are registered ones (in the registry passed as argument)
+        for species_id in stoich_obj.get_all_species_ids():
+            if not self.species_registry.species_exists(species_id):
                 if autoregister_species:
-                    self.species_registry.add_species(id=s_id)
+                    self.species_registry.add_species(id=species_id)
                 else:
-                    raise Exception(f'No species with id "{s_id}" exists in the species registry')
+                    raise Exception(f'ReactionDefinition instantiation: No species with id "{species_id}" exists in the given species registry.  '
+                                    f'to automatically add new species to the registy, use the argument:  autoregister_species=True')
 
-        for _, s_id in product_list:
-            if not self.species_registry.species_exists(s_id):
-                if autoregister_species:
-                    self.species_registry.add_species(id=s_id)
-                else:
-                    raise Exception(f'No species with id "{s_id}" exists in the species registry')
-
-
-        c = self.get_signed_stoichiometric_coefficients(reactants=reactant_list, products=product_list)
-        self.stoichiometry = Stoichiometry(vector= {k: v for k,v in c.items() if v != 0},
-                                           catalysts =    [k  for k,v in c.items() if v == 0])
+        self.stoichiometry = stoich_obj
 
 
 

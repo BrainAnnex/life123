@@ -313,15 +313,23 @@ class Stoichiometry:
                     f"is incompatible with the reaction's stoichiometry of {self.vector}"
 
 
+
     @classmethod
     def from_reactants_products(cls, reactants :list|str, products :list|str) -> Stoichiometry:
         """
+        This serves as an "alternate constructor / factory" for the Stoichiometry dataclass.
         Notice that this is a CLASS method.
-        It serves as an "alternate constructor / factory" for the Stoichiometry dataclass.
+        ~~~
+        EXAMPLE:
+            stoich_obj = Stoichiometry.from_reactants_products(reactants="A", products=["B", (2,"C")])
 
-        :param reactants:
-        :param products:
-        :return:
+        :param reactants:   A string,
+                                or a list whose elements are either strings or pairs of the form (stoichiometry, species id);
+                                whenever strings are used, the stoichiometry coefficient is taken to be 1
+        :param products:    A string,
+                                or a list whose elements are either strings or pairs of the form (stoichiometry, species id);
+                                whenever strings are used, the stoichiometry coefficient is taken to be 1
+        :return:            A dataclass object of type "Stoichiometry"
         """
         assert reactants is not None, \
             "from_reactants_products(): the argument `reactants` is a required one"
