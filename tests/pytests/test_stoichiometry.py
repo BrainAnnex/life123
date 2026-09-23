@@ -289,3 +289,94 @@ def test_consistency_checker():
     st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
     with pytest.raises(Exception):
         st.consistency_checker(conc_before={"A": 100, "B": 100, "C": 100, "D": 100.1}, conc_after={"A": 80, "B": 70, "C": 140, "D": 150})
+
+
+
+def test_from_reactants_products():
+
+    st = Stoichiometry.from_reactants_products(reactants="A", products="B")
+    assert st == Stoichiometry(vector={'A': -1, 'B': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=["A"], products="B")
+    assert st == Stoichiometry(vector={'A': -1, 'B': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants="A", products=["B"])
+    assert st == Stoichiometry(vector={'A': -1, 'B': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=["A"], products=["B"])
+    assert st == Stoichiometry(vector={'A': -1, 'B': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=["A", "B"], products=["P"])
+    assert st == Stoichiometry(vector={'A': -1, 'B': -1, 'P': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants="R", products=["P", "Q"])
+    assert st == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=["R"], products=[(2,"P")])
+    assert st == Stoichiometry(vector={'R': -1, 'P': 2}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=[(2,"A")], products="B")
+    assert st == Stoichiometry(vector={'A': -2, 'B': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=[(2,"A")], products=[(1, "P")])
+    assert st == Stoichiometry(vector={'A': -2, 'P': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=[(2,"A"), "X"], products=[(1, "P")])
+    assert st == Stoichiometry(vector={'A': -2, 'X': -1, 'P': 1}, catalysts=[])
+
+    st = Stoichiometry.from_reactants_products(reactants=[(2,"A"), "X"], products=["X", (1, "P")])
+    assert st == Stoichiometry(vector={'A': -2, 'P': 1}, catalysts=['X'])
+
+    st = Stoichiometry.from_reactants_products(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"])  # `A` gets combined
+    assert st == Stoichiometry(vector={"A": -2, "B":- 2, "P": 3, "Q": 1}, catalysts=['E'])
+
+    st = Stoichiometry.from_reactants_products(reactants=["S", "E"], products=["P", "E"])
+    assert st == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
+
+    # Edge case: 2E + S -> E + P   (E gets consumed, and thus not regarded as a catalyst!)
+    st = Stoichiometry.from_reactants_products(reactants=[(2, "E"), (1, "S")], products=[(1, "E"), (1, "P")])
+    assert st == Stoichiometry(vector={'E': -1, 'S': -1, 'P': 1}, catalysts=[])
+
+    # Missing products or reactants
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["R"], products=None)
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=None, products="P")
+
+    # Bad products or reactants type
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants={"k": 666}, products="P")
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants="R", products=123)
+
+    # Bad list elements in products or reactants
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=[1, 2], products="P")
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants="R", products=[("X", "Y", "Z")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=[(1, 2)], products="P")
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants="R", products=[("P", "Q")])
+
+    # Reactants and the products can't be the same
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A"], products=["A"])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A"], products=[(1, "A")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants="R", products="R")
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=[(2, "B")], products=[(2, "B")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A", "B"], products=["B", "A"])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A", (3, "B")], products=["A", (3, "B")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=[(2, "A"), "B", "C"], products=["B", (1, "C"), (2, "A")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["R", (2, "P")], products=[(2, "P"), "R"])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A", "A"], products=[(2, "A")])
+    with pytest.raises(Exception):
+        Stoichiometry.from_reactants_products(reactants=["A", (2, "B"), "E", "A"], products=[(1, "E"), "B", (2, "A"), "B"])

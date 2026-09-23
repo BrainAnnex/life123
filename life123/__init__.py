@@ -31,7 +31,6 @@ from life123.history import (
 from life123.numerical import Numerical
 from life123.random_reactions import RandomReactionNetwork
 from life123.reactions import (
-    Stoichiometry,
     ReactionThermodynamics,
     SimulationReaction,
     ReactionCompiler_MassAction,
@@ -42,6 +41,7 @@ from life123.reactions import (
     ReactionDefinition
 )
 from life123.reaction_registry import ReactionRegistry
+from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)

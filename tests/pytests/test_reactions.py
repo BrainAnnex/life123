@@ -495,6 +495,9 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     # and building the reaction "Stoichiometry" dataclass.
     # No kinetics and no thermodynamics!
 
+    # TODO: all these stoichiometry tests can be ditched, as soon as Stoichiometry.from_reactants_products()
+    #       gets phased in
+
     sr = SpeciesRegistry(ids=["R", "P", "Q"])
 
     with pytest.raises(Exception):

@@ -4,6 +4,7 @@ from typing import Set, Mapping
 from dataclasses import dataclass, field
 
 
+
 @dataclass(frozen=True)
 class Stoichiometry:
     """
@@ -310,3 +311,87 @@ class Stoichiometry:
                 assert np.allclose(delta_conc[sp], ratio * self.vector[sp]), \
                     f"consistency_checker(): the delta concentration {delta_conc} " \
                     f"is incompatible with the reaction's stoichiometry of {self.vector}"
+
+
+    @classmethod
+    def from_reactants_products(cls, reactants :list|str, products :list|str) -> Stoichiometry:
+        """
+        Notice that this is a CLASS method.
+        It serves as an "alternate constructor / factory" for the Stoichiometry dataclass.
+
+        :param reactants:
+        :param products:
+        :return:
+        """
+        assert reactants is not None, \
+            "from_reactants_products(): the argument `reactants` is a required one"
+        if type(reactants) == str:
+            reactants = [reactants]
+        else:
+            assert type(reactants) is list, \
+                "from_reactants_products(): the argument `reactants` must be a list or a string"
+
+        assert products is not None, \
+            "from_reactants_products(): the argument `products` is a required one"
+        if type(products) == str:
+            products = [products]
+        else:
+            assert type(products) is list, \
+                "from_reactants_products(): the argument `products` must be a list or a string"
+
+
+        coeffs = {}     # Signed stoichiometric coefficients
+        r = {}          # Standardized reactants: used for error checking
+        p = {}          # Standardized products:  used for error checking
+
+        for term in reactants:
+            if type(term) is str:       # EXAMPLE : "R"
+                c, species = 1, term
+            else:                       # EXAMPLE : (2, "R")
+                assert (type(term) is tuple) and (len(term) == 2), \
+                    "from_reactants_products(): List elements in argument `reactants` must be strings or pairs of the form (int, string)"
+                c, species = term
+
+            assert type(c) is int, \
+                "from_reactants_products(): List elements in argument `reactants` must be strings or pairs of the form (int, string)"
+            assert type(species) is str, \
+                "from_reactants_products(): List elements in argument `reactants` must be strings or pairs of the form (int, string)"
+
+            coeffs[species] = coeffs.get(species, 0) - c    # Accumulate the sum of the SIGNED stoichiometric coefficients for this species
+            r[species] = r.get(species, 0) + c              # Accumulate the UN-signed coefficients for the reactants
+
+
+        for term in products:
+            if type(term) is str:       # EXAMPLE : "P"
+                c, species = 1, term
+            else:                       # EXAMPLE : (2, "P")
+                assert (type(term) is tuple) and (len(term) == 2), \
+                    "List elements in argument `products` must be strings or pairs of the form (int, string)"
+                c, species = term
+
+            assert type(c) is int, \
+                "from_reactants_products(): List elements in argument `reactants` must be strings or pairs of the form (int, string)"
+            assert type(species) is str, \
+                "from_reactants_products(): List elements in argument `reactants` must be strings or pairs of the form (int, string)"
+
+            coeffs[species] = coeffs.get(species, 0) + c    # Accumulate the sum of the SIGNED stoichiometric coefficients for this species
+            p[species] = p.get(species, 0) + c              # Accumulate the UN-signed coefficients for the products
+
+
+        vector = {k: v for k,v in coeffs.items() if v != 0}
+        catalysts = [k for k,v in coeffs.items() if v == 0]
+
+
+        # Catch identical reaction sides, even if terms are reshuffled
+        if r == p:      # Alternatively:    if vector == {} and catalysts != []
+            lhs = [f"{v} {k}" for k,v in r.items()]             # EXAMPLE : ["2 A" , "3 B"]
+            rhs = [f"{v} {k}" for k,v in p.items()]             # EXAMPLE : ["2 A" , "3 B"]
+            msg = f"{' + '.join(lhs)} -> {' + '.join(rhs)}"     # EXAMPLE: "2 A + 3 B  -> 2 A + 3 B"
+            raise Exception(f"from_reactants_products(): the two sides of the reaction can't be identical! \"{msg}\"")
+
+
+        # Instantiate and return a Stoichiometry dataclass
+        return cls(
+            vector=vector,
+            catalysts=catalysts,
+        )

@@ -852,7 +852,8 @@ class ReactionDefinition:
         :param autoregister_species:
         :return:                    None
         """
-        #TODO: unit test
+        #TODO: replace with Stoichiometry.from_reactants_products() ;
+        #      only retain the  "Check whether all the species in the reaction are registered ones"
         assert reactants is not None, \
             "ReactionDefinition() instantiation: the argument `reactants` is a required one"
         if type(reactants) == str:
@@ -1055,7 +1056,7 @@ class ReactionDefinition:
         :return:    A dictionary mapping the id's of the species in this reaction
                         to their SIGNED stoichiometric coefficients in this reaction
         """
-        # TODO: maybe move to class Stoichiometry (and turn it from dataclass to regular class, to allow multiple ways to initialize)
+        # TODO: maybe move to class Stoichiometry
         coeffs = {}
 
         for c, species in reactants:        # Example: (2, "A")
