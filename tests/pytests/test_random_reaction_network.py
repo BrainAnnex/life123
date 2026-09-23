@@ -45,8 +45,8 @@ def test_constructor():
 def test_constructor_2():
     net = RandomReactionNetwork(n_species=5, n_rxns=25, seed=888)
     for rxn in net.reaction_data.get_all_reactions():
-        reactants = rxn.extract_reactant_ids()
-        products = rxn.extract_product_ids()
+        reactants = rxn.stoichiometry.get_reactant_ids()
+        products = rxn.stoichiometry.get_product_ids()
         '''
         print()
         print(reactants)
@@ -205,7 +205,7 @@ def test_random_reaction_enthalpy_2():
     net = RandomReactionNetwork(n_species=20, n_rxns=30, seed=8492342, verbose=False)
 
     # Extract the delta_H values for all the reactions
-    H_list = [rxn.delta_H
+    H_list = [rxn.get_thermodynamics().delta_H
               for rxn in net.get_reaction_data().get_all_reactions()]
 
     assert len(H_list) == net.n_rxns

@@ -301,7 +301,7 @@ def test_add_reaction():
                                reaction_model="custom",
                                kinetic_parameters={"kF": 5., "kR": 1.},
                                thermodynamic_parameters={"temp": 200})
-                      #kF=5., kR=1., temp=200)
+
     assert result == 3
     assert rxns.number_of_reactions() == 4
 

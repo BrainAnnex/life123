@@ -186,8 +186,9 @@ def test_react():
 
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
+    # Reaction A <-> B , with mass-action kinetics
+    bio.reactions.add_reaction(reactants=["A"], products=["B"],
+                               reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])
@@ -215,8 +216,9 @@ def test_reaction_step():
 
     bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
+    # Reaction A <-> B , with mass-action kinetics
+    bio.reactions.add_reaction(reactants=["A"], products=["B"],
+                               reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])

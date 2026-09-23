@@ -13,7 +13,7 @@ class RandomReactionNetwork:
     """
 
     def __init__(self, n_species :int, n_rxns :int, relative_rxn_prob=None, seed=None,
-                temp=298.15, thermodynamic_ruggedness = 2.0, verbose=False):
+                 temp=298.15, thermodynamic_ruggedness = 2.0, verbose=False):
         """
         :param n_species:           Integer >=3, with the desired number of chemicals species
         :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
@@ -133,8 +133,9 @@ class RandomReactionNetwork:
                 pass        # TODO: apply a diffusion limit to kR
 
             i = self.reaction_data.add_elementary_reaction(reactants=reactants, products=products,
-                                                           delta_H=delta_enthalpy, delta_S=delta_entropy,
-                                                           kF=kF,
+                                                           thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
+                                                           #delta_H=delta_enthalpy, delta_S=delta_entropy,
+                                                           kinetic_parameters={"kF": kF},
                                                            temp=self.temp)
 
             if verbose:
@@ -214,21 +215,21 @@ class RandomReactionNetwork:
             already_used(self, reactants="B", products="A") will be True
             already_used(self, reactants=["A", "A'], products="B") will be True
 
-        :param reactants:   A list of the labels of the reactants in the reaction to look up
-        :param products:    A list of the labels of the products in the reaction to look up
+        :param reactants:   A list of the reactant species id's in the reaction to look up
+        :param products:    A list of the products species id's in the reaction to look up
         :return:            True if found, or False if not
         """
         reactant_set = set(reactants)
         product_set = set(products)
 
         for rxn in self.reaction_data.reaction_list:
-            if rxn.extract_reactant_ids() == reactant_set \
-                    and set(rxn.extract_product_ids()) == product_set:
+            if rxn.stoichiometry.get_reactant_ids() == reactant_set \
+                    and set(rxn.stoichiometry.get_product_ids()) == product_set:
                 return True
 
             # Check the reverse reaction as well
-            if rxn.extract_reactant_ids() == product_set \
-                    and set(rxn.extract_product_ids()) == reactant_set:
+            if rxn.stoichiometry.get_reactant_ids() == product_set \
+                    and set(rxn.stoichiometry.get_product_ids()) == reactant_set:
                 return True
 
         return False

@@ -55,8 +55,17 @@ def test_reaction_step_1b():
 
     assert bio.reactions.number_of_reactions() == 1
     result = bio.reactions.multiple_reactions_describe()
-
-    assert result == ["0: A <-> B  Elementary Unimolecular reaction  (kF = 3 | kR = 2 | delta_G = -1.0051 kJ/mol | K = 1.5 | Temp = 25 C)"]
+    assert result == [
+            '0: A <-> B\n'
+            '        Unimolecular rearrangement/isomerization reaction, with Reaction '
+            'Model: "mass action"\n'
+            '        Thermodynamics - passed:    (Temp = 25 C)\n'
+            '        Thermodynamics - derived:   (delta_G = -1.0051 kJ/mol | K_eq = 1.5 | '
+            'Temp = 25 C)\n'
+            '        Kinetics - passed:   (kF = 3 | kR = 2)\n'
+            '        Kinetics - derived:  1 derived reaction\n'
+            '            (1) Type: "mass action"   (kF = 3 | kR = 2 | K = 1.5 | reversible = True)'
+    ]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
@@ -87,10 +96,9 @@ def test_react_1():
 
     # Reaction A <-> 3B , hypothetically with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=["A"], products=[(3,"B")],
-                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
+                               reaction_model="custom",
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
-    rxn = bio.reactions.get_reaction(0)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
     bio.set_uniform_concentration(chem_index=1, conc=50.)
@@ -110,10 +118,9 @@ def test_react_2():
 
     # Reaction 2A <-> 3B , hypothetically with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
-                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
+                               reaction_model="custom",
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
-    rxn = bio.reactions.get_reaction(0)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
     bio.set_uniform_concentration(chem_index=1, conc=50.)
@@ -140,7 +147,6 @@ def test_react_3():
                                reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
     rxn = bio.reactions.get_reaction(0)
-    assert type(rxn) == ReactionSynthesis
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
     bio.set_uniform_concentration(chem_index=1, conc=50.)
@@ -165,10 +171,9 @@ def test_react_4():
 
     # Reaction A <-> 2C + D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
-                               reaction_model="custom", kinetic_parameters={"kF": 5., "kR": 2.})
+                               reaction_model="custom",
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
-    rxn = bio.reactions.get_reaction(0)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
 
     bio.set_all_uniform_concentrations( [4., 7., 2.] )
 
@@ -192,10 +197,8 @@ def test_react_5():
     # Reaction 2A + 5B <-> 4C + 3D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                                reaction_model="custom",
-                               kinetic_parameters={"kF": 5., "kR": 2.})
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
-    rxn = bio.reactions.get_reaction(0)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
 
     bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 
@@ -226,8 +229,7 @@ def test_react_6():
     bio.reactions.add_reaction(reactants=[(2, "A")], products=["B"],
                                reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     assert bio.reactions.number_of_reactions() == 1
-    rxn = bio.reactions.get_reaction(0)
-    assert type(rxn) == ReactionSynthesis
+    #rxn = bio.reactions.get_reaction(0)
 
     bio.set_all_uniform_concentrations( [3., 5.] )
 
@@ -252,12 +254,8 @@ def test_react_7():
 
     # Coupled elementary synthesis reactions A + B <-> C  and  C + D <-> E
     bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-    bio.reactions.add_reaction(reactants=["C", "D"], products=["E"], kF=8., kR=4.)
+    bio.reactions.add_reaction(reactants=["C", "D"], products=["E"], reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
     assert bio.reactions.number_of_reactions() == 2
-    rxn = bio.reactions.get_reaction(0)
-    assert type(rxn) == ReactionSynthesis
-    rxn = bio.reactions.get_reaction(1)
-    assert type(rxn) == ReactionSynthesis
 
 
     bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )

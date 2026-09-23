@@ -288,8 +288,8 @@ class ReactionRegistry:
 
 
     def add_elementary_reaction(self, reactants :str|list, products :str|list,
-                                reaction_type=None, temp=None,
-                                **kwargs) -> int:
+                                thermodynamic_parameters=None, temp=None,
+                                kinetic_parameters=None) -> int:
         """
         Create and register a new SINGLE elementary chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -297,14 +297,8 @@ class ReactionRegistry:
 
         :param reactants:       A string or pair of strings; for reactions such as 2 A -> P, pass ["A", "A"]
         :param products:        A string or pair of strings; for reactions such as A -> 2 P, pass ["P", "P"]
-        :param reaction_type:   [OPTIONAL] TODO: OBSOLETE.
-                                    A string with one of the following values:
-                                    "ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"
 
         :param temp:            [OPTIONAL] Temperature in Kelvins
-        :param kwargs:          [OPTIONAL] Other named arguments to pass to instantiate the various reaction
-                                objects, such as `ReactionSynthesis`.
-                                For list, see documentation of the classes in reactions.py
 
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
@@ -324,42 +318,24 @@ class ReactionRegistry:
             n_products = len(products)
             assert n_products <= 2
 
-
-        if reaction_type is None:
-            # Determine the reaction type from the number of reactants and products
-            if n_reactants == 1 and n_products == 1:
-                reaction_type = "ReactionUnimolecular"
-            elif n_reactants == 2 and n_products == 1:
-                reaction_type = "ReactionSynthesis"
-            elif n_reactants == 1 and n_products == 2:
-                reaction_type = "ReactionDecomposition"
-            else:
-                raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to an elementary reaction")
-
-
-        assert reaction_type in ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"], \
-            f"add_elementary_reaction(): unknown reaction type ({reaction_type})"
-
-        rxn_defn = ReactionDefinition(reactants=reactants, products=products,
-                                      species_registry=self.species_data, autoregister_species=True,
-                                      reaction_model="mass action",
-                                      thermodynamic_parameters={"temp": temp})
-
-        """
-        match reaction_type:
-            case "ReactionUnimolecular":
-                rxn = ReactionUnimolecular(reactant=reactants[0], product=products[0], temp=temp, **kwargs)
-            case "ReactionSynthesis":
-                rxn = ReactionSynthesis(reactants=reactants, product=products[0], temp=temp, **kwargs)
-            case "ReactionDecomposition":
-                rxn = ReactionDecomposition(reactant=reactants[0], products=products, temp=temp, **kwargs)
-            case _:
-                raise Exception(f"add_elementary_reaction(): unknown reaction type ({reaction_type})")
-        """
+        # Determine the reaction type from the number of reactants and products
+        # TODO: turn into a method
+        if n_reactants == 1 and n_products == 1:
+            reaction_type = "ReactionUnimolecular"
+        elif n_reactants == 2 and n_products == 1:
+            reaction_type = "ReactionSynthesis"
+        elif n_reactants == 1 and n_products == 2:
+            reaction_type = "ReactionDecomposition"
+        else:
+            raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to an elementary reaction")
 
         #print(f"add_elementary_reaction(): adding reaction of type `{reaction_type}`")
 
-        return self.register_reaction(rxn_defn=rxn_defn)
+        return self.add_reaction(reactants=reactants, products=products,
+                                 reaction_model="mass action",
+                                 thermodynamic_parameters=thermodynamic_parameters,
+                                 kinetic_parameters=kinetic_parameters,
+                                 temp=temp)
 
 
 
@@ -391,13 +367,17 @@ class ReactionRegistry:
         :param products:        A string or list of pairs (stoichiometry, species name),
                                     or simplified terms in various formats; for details, see above
 
+        :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
+                                Allowed values are "mass action", "michaelis menten",
+                                "single substrate mechanism", "custom" - as detailed
+                                in class ReactionModelRegistry
+
         :param temp:            [OPTIONAL] Temperature in Kelvins
 
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
-        #TODO: add an optional `reaction_type` argument;
-        #      the dispatching might best be done elsewhere
+        # Merge the temp value into the rest of the thermodynamics parameters
         if temp is not None:
             if thermodynamic_parameters is None:
                 thermodynamic_parameters = {"temp": temp}

@@ -474,15 +474,45 @@ class SimulationReaction:
         return self.model.get_parameters()
 
 
+
+    def get_thermodynamics(self) -> ReactionThermodynamics:
+        """
+        Get the "ReactionThermodynamics" object
+        associated to the source reaction
+
+        :return:
+        """
+        return self.source_object.thermodynamics
+
+
+
     def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
-        Set the kinetic parameters
+        Set the kinetic parameters (won't affect other existing values not passed here)
 
         :param parameters:
         :param derived_pars:
         :return:
         """
         self.model.set_parameters(parameters=parameters, derived_pars=derived_pars)
+
+
+
+    def describe(self, concise=False) -> str:
+        """
+        This is the "SimulationReaction" version of ReactionDefinition.describe()
+
+        :param concise:
+        :return:
+        """
+        reversible = getattr(self.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
+
+        rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
+
+        if not concise:
+            rxn_description += f'Type: "{self.model.name}" {self.source_object.format_reaction_details(self.model.get_parameters())}'
+
+        return rxn_description
 
 
 
@@ -1056,6 +1086,10 @@ class ReactionDefinition:
                                 If not a list, it will first get turned into one
         :param species_registry:
         :param auto_register_species:
+        :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
+                                Allowed values are "mass action", "michaelis menten",
+                                "single substrate mechanism", "custom" - as detailed
+                                in class ReactionModelRegistry
 
         :param name:        [OPTIONAL]
         :param id:
@@ -1064,7 +1098,7 @@ class ReactionDefinition:
         :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
         :param temp:        [OPTIONAL]
 
-        :param reaction_model:[OPTIONAL]      Primarily meant for kinetics_type
+
         """
         if thermodynamic_parameters is None:
             thermodynamic_parameters = {"delta_H": None, "delta_S": None, "delta_G": None, "K_eq": None, "temp": None}
@@ -1453,6 +1487,7 @@ class ReactionDefinition:
         :param concise:     If True, less detail is shown
         :return:            A string with a description of this reaction
         """
+        # TODO: put to good use the new describe() method of the "SimulationReaction" class
         sim_rxn_tuple = self.sim_reactions
 
         reversible = False
@@ -1838,6 +1873,7 @@ class ReactionDefinition:
         :return:                A string with some details about the parameters of this reaction
                                     EXAMPLE: "  (kF = 3 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
         """
+        # TODO: probably move to SimulationReaction
         #print("rxn_properties: ", rxn_properties)
         details = []    # Running list of strings with each of the individual details
 
