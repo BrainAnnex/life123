@@ -23,6 +23,9 @@ class Stoichiometry:
     # Maps species id -> signed stoichiometric coefficient.
     # Reactants are negative; products are positive.
     # Catalysts are not represented here, since their net coefficient is zero.
+    # The signed coefficients ν_i, given a set of species X_i,
+    #       allow the reaction to be expressed as : ∑i ν_i X_i = 0
+
     # EXAMPLE: {"A": -1, "B": 1}
 
     catalysts: list[str] = field(default_factory=list)
@@ -251,6 +254,36 @@ class Stoichiometry:
         zero_count     = len(self.catalysts)
 
         return (negative_count, positive_count, zero_count)
+
+
+
+    def is_elementary_like(self) -> bool:
+        """
+        Return True if the reaction is of the form A->B, A->B+C, A->2B, A+B->C, or 2A->B
+        IMPORTANT:  this stoichiometry check is neither sufficient nor strictly necessary for
+                    a reaction to be elementary.
+                    This function is meant as a coarse check - for example, for the purpose of
+                    providing plausible defaults for common reaction types
+
+        :return:    True if the stoichiometry is consistent with typical elementary reactions,
+                        or False otherwise
+        """
+        if len(self.vector) > 3 or self.catalysts != []:
+            return False
+
+        # If we get thus far, we have at most 3 terms in the overall reaction - and no catalysts
+
+        coeffs = sorted(self.vector.values())
+        print(coeffs)
+        patterns = [
+                        [-1, 1],        # unimolecular rearrangement/isomerization
+                        [-1, 1, 1],     # decomposition
+                        [-1, 2],        # decomposition
+                        [-1, -1, 1],    # synthesis
+                        [-2, 1]         # synthesis
+                ]
+
+        return coeffs in patterns
 
 
 

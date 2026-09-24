@@ -216,7 +216,27 @@ def test_reaction_pattern():
     # Reaction A + E -> B + E
     st = Stoichiometry(vector={"A": -1, "B": 1}, catalysts=["E"])
     assert st.reaction_pattern() == (1, 1, 1)
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+
+    st = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert st.reaction_pattern() == (2, 1, 1)
+
+
+
+def test_is_elementary_like():
+    assert Stoichiometry(vector={"R": -1, "P": 1}).is_elementary_like()
+
+    assert Stoichiometry(vector={"R": -1, "P": 1, "Q": 1}).is_elementary_like()
+    assert Stoichiometry(vector={"R": -1, "P": 2}).is_elementary_like()
+    assert not Stoichiometry(vector={"R": -1, "P": 3}).is_elementary_like()
+
+    assert Stoichiometry(vector={"R": -1, "S": -1, "P": 1}).is_elementary_like()
+    assert Stoichiometry(vector={"R": -2, "P": 1}).is_elementary_like()
+    assert not Stoichiometry(vector={"R": -3, "P": 1}).is_elementary_like()
+
+    assert not Stoichiometry(vector={"R": -2, "P": 2}).is_elementary_like()
+    assert not Stoichiometry(vector={"R": -1, "P": 1, "Q": 1, "S": 1}).is_elementary_like()
+
+    assert not Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"]).is_elementary_like()
 
 
 
@@ -327,7 +347,7 @@ def test_from_reactants_products():
     st = Stoichiometry.from_reactants_products(reactants=[(2,"A"), "X"], products=["X", (1, "P")])
     assert st == Stoichiometry(vector={'A': -2, 'P': 1}, catalysts=['X'])
 
-    st = Stoichiometry.from_reactants_products(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"])  # `A` gets combined
+    st = Stoichiometry.from_reactants_products(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), (1, "Q"), "E"])  # `A` gets combined
     assert st == Stoichiometry(vector={"A": -2, "B":- 2, "P": 3, "Q": 1}, catalysts=['E'])
 
     st = Stoichiometry.from_reactants_products(reactants=["S", "E"], products=["P", "E"])

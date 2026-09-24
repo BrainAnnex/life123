@@ -820,41 +820,42 @@ class ReactionDefinition:
         self.annotations :str|None = None       # Not in current use
 
 
-        self._parse(reactants=reactants, products=products, autoregister_species=autoregister_species)
-
-        # if self._detect_elementary_reaction(reaction_model):
-        #    reaction_model = "mass action"
+        self.stoichiometry = self._parse(reactants=reactants, products=products,
+                                         autoregister_species=autoregister_species)
 
         # Process the given thermodynamic data
         self.thermodynamics = ReactionThermodynamics(delta_H=delta_H, delta_S=delta_S, delta_G=delta_G,
                                                      K_eq=K_eq, temp=temp)
 
 
-        #self.reaction_type = self._determine_reaction_type()
-        #print(f"detected reaction type `{self.reaction_type}`")
-
         self.reaction_category = self._determine_reaction_category()
         #print(f"detected reaction category `{self.reaction_category}`")
 
         self.analytic_solution_family = self._determine_analytic_solution_family()
 
-        if reaction_model is not None:
+        if self.reaction_model is None:
+            # Provide a plausible default when the stoichiometry is consistent with typical elementary reactions,
+            # and at least of of the 'kF' and 'kR' values are listed as kinetic parameters
+            if self.stoichiometry.is_elementary_like():
+                if ("kF" in self.source_kinetic_parameters) or ("kR" in self.source_kinetic_parameters):
+                    self.reaction_model = "mass action"
+
+        if self.reaction_model is not None:
             self._build_model()
 
 
 
-    def _parse(self, reactants :list, products :list, autoregister_species :bool):
+    def _parse(self, reactants :list, products :list, autoregister_species :bool) -> Stoichiometry:
         """
         Parse the reactants and products,
         and set the object variable self.stoichiometry accordingly.
-        Possibly modify self.species_registry as needed
 
         :param reactants:               A list of pairs (stoichiometry, species id)
         :param products:                A list of pairs (stoichiometry, species id)
         :param auto_register_species:   [OPTIONAL] If True, any species id encountered in the reaction parsing
                                             will automatically get added to the species_registry object, if not already present;
                                             if False, an Exception is raised if encountering un-registered species
-        :return:                        None
+        :return:                        A "Stoichiometry" object
         """
         # Parse the reactants and products into a "Stoichiometry" object
         stoich_obj = Stoichiometry.from_reactants_products(reactants=reactants, products=products)
@@ -868,7 +869,7 @@ class ReactionDefinition:
                     raise Exception(f'ReactionDefinition instantiation: No species with id "{species_id}" exists in the given species registry.  '
                                     f'to automatically add new species to the registy, use the argument:  autoregister_species=True')
 
-        self.stoichiometry = stoich_obj
+        return stoich_obj
 
 
 
@@ -896,33 +897,6 @@ class ReactionDefinition:
 
         self.sim_reactions = sr_tuple
         #print("self.sim_reactions: ", self.sim_reactions)
-
-
-
-    def _detect_elementary_reaction_NOT_IN_USE(self, kinetics_type) -> bool:
-        """
-        TODO: maybe turn into a generator for default model type
-        :return:
-        """
-        if kinetics_type is not None:
-            if kinetics_type != "mass action":
-                return False
-
-        r, p, c = self.stoichiometry.reaction_pattern()     # number of reactants, products, catalysts
-
-        if c > 0:      # If enzymes were involved
-            return False
-
-        if r == 1 and p == 1:
-            return True
-
-        if r == 1 and p == 2:
-            return True
-
-        if r == 2 and p == 1:
-            return True
-
-        return False
 
 
 
@@ -963,76 +937,6 @@ class ReactionDefinition:
             return "Bimolecular synthesis"
 
         return "General one-step"
-
-
-
-    def _determine_reaction_type(self):
-        """
-        OBSOLETE
-
-        :return:
-        """
-        #TODO: no longer in use.  Maybe recycle for detection of likely elementary reaction
-        reactant_list = self.stoichiometry.get_reactant_list()
-        product_list = self.stoichiometry.get_product_list()
-
-        single_reactant = None
-        if len(reactant_list) == 1 and reactant_list[0][0] == 1:    # A single reactant, with stoichiometry 1
-            single_reactant = reactant_list[0][1]
-
-        single_product = None
-        if len(product_list) == 1 and product_list[0][0] == 1:      # A single product, with stoichiometry 1
-            single_product = product_list[0][1]
-
-        reaction_type = "ReactionGeneric"       # Default value, possibly changed below
-
-        if single_reactant:    # A single reactant, with stoichiometry 1
-            if single_product:      # A single product, with stoichiometry 1
-                reaction_type = "ReactionUnimolecular"
-                return reaction_type
-            elif len(product_list) == 2 and product_list[0][0] == 1 and product_list[1][0] == 1:      # Two products, both with stoichiometry 1
-                reaction_type = "ReactionDecomposition"
-                return reaction_type
-            elif len(product_list) == 1 and product_list[0][0] == 2:      # A product with stoichiometry 2  (EXAMPLE : A <-> 2 B)
-                reaction_type = "ReactionDecomposition"
-                return reaction_type
-        elif single_product:
-            if len(reactant_list) == 2 and reactant_list[0][0] == 1 and reactant_list[1][0] == 1:      # Two reactants, both with stoichiometry 1
-                reaction_type = "ReactionSynthesis"
-                return reaction_type
-            elif len(reactant_list) == 1 and reactant_list[0][0] == 2:  # A reactant with stoichiometry 2  (EXAMPLE : 2A <-> P)
-                reaction_type = "ReactionSynthesis"
-                return reaction_type
-
-        if reaction_type == "ReactionGeneric":
-             return reaction_type
-
-
-
-    def get_signed_stoichiometric_coefficients(self, reactants :list[tuple], products :list[tuple]) -> dict:
-        """
-        Return the sums of all the stoichiometric coefficients for each species in this reaction.
-        The reactants get negative values, and the products positive ones
-
-        EXAMPLE: for reaction  A + E -> 2P + Q + E
-        it would return {"A": -1, "P": 2, "Q": 1, "E": 0}
-
-        Those signed coefficients ν_i, given a set of species X_i,
-        allow the reaction to be expressed as : ∑i ν_i X_i = 0
-
-        :return:    A dictionary mapping the id's of the species in this reaction
-                        to their SIGNED stoichiometric coefficients in this reaction
-        """
-        # TODO: maybe move to class Stoichiometry
-        coeffs = {}
-
-        for c, species in reactants:        # Example: (2, "A")
-            coeffs[species] = coeffs.get(species, 0) - c    # Accumulate the sum of the stoichiometric coefficients for this species
-
-        for c, species in products:         # Example: (1, "P")
-            coeffs[species] = coeffs.get(species, 0) + c    # Accumulate the sum of the stoichiometric coefficients for this species
-
-        return coeffs
 
 
 

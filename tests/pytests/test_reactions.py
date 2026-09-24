@@ -50,31 +50,6 @@ def test_to_dict_ReactionThermodynamics():
 
 
 
-def test_get_signed_stoichiometric_coefficients():
-    sr = SpeciesRegistry(["A", "B"])
-    rxn = ReactionDefinition(reactants="A", products="B", species_registry=sr)
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "R")], products=[(1, "P")])
-    assert result == {"R": -1, "P": 1}
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "R"), (1, "S")], products=[(1, "P")])
-    assert result == {"R": -1, "S": -1, "P": 1}
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "R"), (1, "R")], products=[(1, "P")])
-    assert result == {"R": -2, "P": 1}
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "R")], products=[(1, "P"), (1, "Q")])
-    assert result == {"R": -1, "P": 1, "Q": 1}
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "E"), (1, "S")], products=[(1, "E"), (1, "P")])
-    assert result == {"S": -1, "P": 1, "E": 0}
-
-    result = rxn.get_signed_stoichiometric_coefficients(reactants=[(1, "A"), (2, "B"), (1, "E"), (1, "A")],
-                                                        products=[(3, "P"), (1, "Q"), (1, "E")])
-    assert result == {"A": -2, "B":- 2, "P": 3, "Q": 1, "E": 0}
-
-
-
 
 
 ############################  class SimulationReaction  ############################
