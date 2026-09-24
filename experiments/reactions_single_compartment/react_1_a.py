@@ -22,8 +22,8 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "July 13, 2026"
-LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
+LAST_REVISED = "Sep. 23, 2026"
+LIFE123_VERSION = "1.0.0rc9"     # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -50,7 +50,7 @@ life123.check_version(LIFE123_VERSION)    # To check compatibility
 uc = life123.UniformCompartment()  
 
 # Elementary Reaction A <-> B
-uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
+uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR": 2.})
 
 uc.describe_reactions()
 

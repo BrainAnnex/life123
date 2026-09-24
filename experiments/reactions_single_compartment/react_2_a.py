@@ -21,15 +21,15 @@
 #
 # (See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version)  
 #
-# #### This experiment gets repeated in _"react_2_b"_ , with a more sophisticated approach, 
+# #### This experiment will get repeated in _"react_2_b"_ , with a more sophisticated approach, 
 # #### involving adaptive variable time steps
 
 # %% [markdown]
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 17, 2026"
-LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
+LAST_REVISED = "Sep. 23, 2026"
+LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -41,8 +41,9 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 
 import numpy as np
 import ipynbname
+from IPython.display import IFrame
 
-from life123 import check_version, UniformCompartment, ThermoDynamics, PlotlyHelper
+from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -51,6 +52,7 @@ check_version(LIFE123_VERSION)
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
 
 # %%
 
@@ -64,7 +66,7 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 uc = UniformCompartment()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
+uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR": 2.})
 
 print("Number of reactions: ", uc.number_of_reactions())
 
@@ -75,6 +77,9 @@ uc.describe_reactions()
 # Send a plot of the network of reactions to the HTML log file
 uc.plot_reaction_network(log_file=log_file)
 
+
+# %%
+IFrame(log_file, width=800, height=600)         # You may also open the above log file in a browser
 
 # %%
 
@@ -90,7 +95,7 @@ uc.get_history()
 
 # %% [markdown]
 # ### Test your intuition: 
-# #### given that this reaction operates mostly in the forward direction (kF = 3 , kR = 2 , K = 1.5), 
+# #### given that this reaction operates mostly in the forward direction (kF = 3 , kR = 2 , K_eq = 1.5), 
 # #### do you think that A will be consumed and B will be produced??
 # We can take a sneak preview at the final equilibrium concentrations without actually running the simulation:
 
@@ -103,11 +108,11 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 
 # %% [markdown]
 # #### Considering that our initial state is {"A": 10., "B": 50.}, the reaction will actually proceed IN REVERSE (decreasing product), because of the large initial concentration of `B`, relative to the small initial concentration of `A`
-# More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K**, which is 1.5 :
+# More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K_eq**, which is 1.5 :
 
 # %%
 ReactionKinetics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
-                                         conc={"A": 10., "B": 50.})
+                                           conc={"A": 10., "B": 50.})
 
 # %% [markdown]
 # Now, let's see the reaction in action!

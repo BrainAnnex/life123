@@ -340,7 +340,7 @@ class ReactionRegistry:
 
 
     def add_reaction(self, reactants :str|list, products :str|list,
-                     reaction_model :str,
+                     reaction_model=None,
                      autoregister_species=True,
                      thermodynamic_parameters=None,
                      kinetic_parameters=None,
@@ -354,13 +354,11 @@ class ReactionRegistry:
               they're assumed to be 1.
 
               The full structure of each term in the list of reactants and of products
-              is the pair:  (stoichiometry coefficient, chemical label)
+              is the pair:  (stoichiometry coefficient, species id)
 
               EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
                 "F"         is taken to mean (1, "F") - default stoichiometry
                 (2, "F")    is taken to mean (2, "F") - stoichiometry coefficient specified
-
-              It's equally acceptable to use LISTS in lieu of tuples for the pairs
 
         :param reactants:       A string or list of pairs (stoichiometry, species name),
                                     or simplified terms in various formats; for details, see above
@@ -370,7 +368,9 @@ class ReactionRegistry:
         :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
                                 Allowed values are "mass action", "michaelis menten",
                                 "single substrate mechanism", "custom" - as detailed
-                                in class ReactionModelRegistry
+                                in class ReactionModelRegistry.
+                                If not provided, it default to "mass action" if the reaction
+                                seems to be elementary from its stoichiometry and kinetic_parameters.
 
         :param temp:            [OPTIONAL] Temperature in Kelvins
 

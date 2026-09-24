@@ -23,8 +23,8 @@
 # ### TAGS :   "quick-start", "basic"
 
 # %%
-LAST_REVISED = "July 13, 2026"
-LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
+LAST_REVISED = "Sep. 23, 2026"
+LIFE123_VERSION = "1.0.0rc9"     # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -147,30 +147,31 @@ sr_2.add_species("Y", annotation="need to re-test")
 
 # %%
 # A SpeciesRegistry can also be started with lists/tuples of data
-rome_cocktail = SpeciesRegistry(ids=["S", "P", "Q", "R"], molecular_weight=[1200, 600, 2900, 1500], annotation=["Senatus", "Populusque", None, "Romanus"])
-rome_cocktail.as_dataframe()
+# ("Rome" is a joke about the initials "SPQR": "Senatus Populusque Romanus")
+rome_group = SpeciesRegistry(ids=["S", "P", "Q", "R"], molecular_weight=[1200, 600, 2900, 1500], annotation=["Senatus", "Populusque", None, "Romanus"])
+rome_group.as_dataframe()
 
 # %%
 # Several functions help deal with setting and reading values
-rome_cocktail.update(species_id="Q", diffusion_rate=5, plot_color="red")
+rome_group.update(species_id="Q", diffusion_rate=5, plot_color="red")
 
-rome_cocktail.set_value(species_id="R", field="diffusion_rate", value=8)   # Alternate way to set a single value
+rome_group.set_value(species_id="R", field="diffusion_rate", value=8)   # Alternate way to set a single value
 
-rome_cocktail.as_dataframe()
-
-# %%
-rome_cocktail.get_value(species_id="Q", field="molecular_weight")
+rome_group.as_dataframe()
 
 # %%
-rome_cocktail.get_all_values(field="molecular_weight")
+rome_group.get_value(species_id="Q", field="molecular_weight")
+
+# %%
+rome_group.get_all_values(field="molecular_weight")
 
 # %%
 
 # %%
 # Some search/aggregation functions
-rome_cocktail.max_value(field="molecular_weight")
+rome_group.max_value(field="molecular_weight")
 
 # %%
-rome_cocktail.has_missing_values(field="diffusion_rate")   # Some of the diffusion rates are indeed missing
+rome_group.has_missing_values(field="diffusion_rate")   # Some of the diffusion rates are indeed missing
 
 # %%

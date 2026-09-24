@@ -274,7 +274,7 @@ class Stoichiometry:
         # If we get thus far, we have at most 3 terms in the overall reaction - and no catalysts
 
         coeffs = sorted(self.vector.values())
-        print(coeffs)
+
         patterns = [
                         [-1, 1],        # unimolecular rearrangement/isomerization
                         [-1, 1, 1],     # decomposition

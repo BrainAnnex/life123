@@ -118,6 +118,6 @@ uc = UniformCompartment(reactions=rxns)
 uc.plot_reaction_network(log_file=log_file)
 
 # %%
-IFrame(log_file, width=1200, height=700)         # You may also open the log file in a browser
+IFrame(log_file, width=1200, height=700)         # You may also open the above log file in a browser
 
 # %%
