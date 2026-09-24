@@ -762,29 +762,43 @@ class ReactionDefinition:
         """
 
         :param reactants:   A list/tuple of terms that are either species id's (with implied stoichiometry 1),
-                                or pairs (stoichiometry coefficient , species id).
+                                or pairs (stoichiometry coefficient, species id).
                                 If not a list, it will first get turned into one
         :param products:    A list/tuple of terms that are either chemicals labels (with implied stoichiometry 1),
-                                or pairs (stoichiometry coefficient , chemical label).
+                                or pairs (stoichiometry coefficient, species id).
                                 If not a list, it will first get turned into one
-        :param species_registry:
+        :param species_registry:        Object of type "SpeciesRegistry", meant as the container
+                                            for this reaction
         :param auto_register_species:   [OPTIONAL] If True, any species id encountered in the reaction parsing
                                             will automatically get added to the species_registry object, if not already present;
                                             if False, an Exception is raised if encountering un-registered species
         :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
                                 Allowed values are "mass action", "michaelis menten",
                                 "single substrate mechanism", "custom" - as detailed
-                                in class ReactionModelRegistry
+                                in class ReactionModelRegistry.
+                                If not provided, it default to "mass action" if the reaction
+                                seems to be elementary from its stoichiometry and kinetic_parameters.
 
-        :param name:        [OPTIONAL]
-        :param id:
+        :param name:        [OPTIONAL] An arbitrary string to attach to this reaction
+        :param id:          [OPTIONAL] An ID value for this reaction.
+                                Typically, an autoincrement managed by the "SpeciesRegistry" object
 
-        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
-        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
-        :param temp:        [OPTIONAL]
+        :param thermodynamic_parameters: [OPTIONAL] A dictionary to contain some of:
+                            delta_H: Change in Enthalpy (from reactants to products), in kJ/mol
+                            delta_S: Change in Entropy (from reactants to products), in Joules/(mol·K)
+                            delta_G:
+                            K_eq:
+                            temp:    In degrees K
 
+        :param kinetic_parameters: [OPTIONAL] A dictionary with entries based on `reaction_model`
 
         """
+        self.name = name    # An arbitrary string attached to this reaction
+                            #       (for example, a name or annotations)
+        self.id = id        # Typically, an autoincrement managed by the "SpeciesRegistry" object
+                            #       containing this reaction
+
+
         if thermodynamic_parameters is None:
             thermodynamic_parameters = {"delta_H": None, "delta_S": None, "delta_G": None, "K_eq": None, "temp": None}
 
@@ -794,31 +808,24 @@ class ReactionDefinition:
         K_eq=thermodynamic_parameters.get("K_eq")
         temp=thermodynamic_parameters.get("temp")
 
-
-        self.name = name
-        self.id = id
-
         self.thermodynamics: ReactionThermodynamics | None = None
 
         self.source_kinetic_parameters : dict|None = kinetic_parameters if kinetic_parameters is not None else {}
         self.source_thermodynamic_parameters = thermodynamic_parameters
-        #self.kinetics: Kinetics | None = None
 
         self.stoichiometry = None   # A "Stoichiometry" object
                                     #   managing all the stoichiometric coefficients
                                     #   (incl. for catalysts, if applicable)
                                     #   for all species in the reaction
 
+        self.species_registry = species_registry    # Object of type "SpeciesRegistry",
+                                                    # meant as the container for this reaction
+
         self.analytic_solution_family = None    # Available values: "ONE_TO_ONE", "ONE_TO_TWO", "TWO_TO_ONE"
         self.reaction_category = None
 
-        self.species_registry = species_registry
-
         self.reaction_model = reaction_model
         self.sim_reactions :tuple|None = ()     # Tuple of "ReactionSimulation" objects
-
-        self.annotations :str|None = None       # Not in current use
-
 
         self.stoichiometry = self._parse(reactants=reactants, products=products,
                                          autoregister_species=autoregister_species)
