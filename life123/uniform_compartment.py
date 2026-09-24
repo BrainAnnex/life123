@@ -9,7 +9,7 @@ from life123.species_registry import SpeciesRegistry, MacroMolecules
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
-from life123.reaction_kinetics import VariableTimeSteps
+from life123.reaction_simulator import VariableTimeSteps
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper

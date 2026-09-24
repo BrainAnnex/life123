@@ -44,7 +44,8 @@ from life123.reaction_registry import ReactionRegistry
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
-from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
+from life123.reaction_kinetics import ReactionKinetics
+from life123.reaction_simulator import ReactionSimulator, VariableTimeSteps
 from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.py_graph_visual import PyGraphVisual
@@ -78,6 +79,7 @@ __all__ = [
     'ReactionDefinition',
     'ReactionKinetics',
     'ReactionRegistry',
+    'ReactionSimulator',
     'ReactionThermodynamics',
     'SimulationReaction',
     'Species',
