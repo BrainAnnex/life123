@@ -12,9 +12,7 @@ from typing import Tuple
 
 class ReactionSimulator:
     """
-    Static methods about reactions kinetics
 
-    For background, see https://life123.science/reactions
     """
 
     @staticmethod
@@ -456,9 +454,9 @@ class ReactionSimulator:
 
     #####################################################################################################
 
-    '''                                       ~   OTHER   ~                                           '''
+    '''                                      ~   RATES   ~                                            '''
 
-    def ________OTHER________(DIVIDER):
+    def ________RATES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -467,6 +465,7 @@ class ReactionSimulator:
                                        A_conc :np.ndarray, B_conc :np.ndarray,
                                        reactant_name="Reactant", product_name="Product"):
         """
+        TODO: CURRENTLY UNUSED DUPLICATE FROM reaction_kinetics.py
         Estimate the rate constants for a 1-st order reaction of the type A <-> B,
         given time evolution of [A] and [B] on a grid of time points (the points don't need to be equally spaced),
         and create a plot to show the fit
@@ -694,28 +693,6 @@ class ReactionSimulator:
         return forward_rate - reverse_rate
 
 
-    @staticmethod
-    def compute_rate_first_order(reactant_terms :[(int, str)], product_terms :[(int, str)],
-                                       kF :float, kR :float,
-                                       conc_dict :dict) -> float:
-        """
-        If the reactions isn't elementary, this is a HYPOTHETICAL scenario (mostly for testing and analysis)
-        where the reaction is first order in all reactants and products
-
-        :param reactant_terms:
-        :param product_terms:
-        :param kF:
-        :param kR:
-        :param conc_dict:
-        :return:
-        """
-        # TODO: ditch, in favor of kinetic_rate_first_order()
-        # Pretend that the reaction is an elementary one
-        reactants = [t[1] for t in reactant_terms]
-        products  = [t[1] for t in product_terms]
-        return ReactionSimulator.compute_rate_elementary(reactants=reactants, products=products, kF=kF, kR=kR, reversible=True, conc_dict=conc_dict)
-
-
 
     @staticmethod
     def kinetic_rate_first_order(stoichiometry,
@@ -739,6 +716,15 @@ class ReactionSimulator:
 
 
 
+    #####################################################################################################
+
+    '''                           ~   EQUILIBRIUM CONCENTRATIONS   ~                                  '''
+
+    def ________EQUILIBRIUM_CONCENTRATIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
     @staticmethod
     def compute_equilibrium_conc_elementary_decomposition(kF, kR, A0, P0) -> dict:
         """
@@ -755,6 +741,7 @@ class ReactionSimulator:
         :return:    A dictionary with two keys, `A` and `P`, containing their equilibrium concentrations.
                         EXAMPLE:    {'A': 24.0, 'P': 1.8}
         """
+        #TODO: CURRENTLY UNUSED DUPLICATE FROM reaction_kinetics.py
         # Reverse kF and kR, to obtain the reversed reaction 2 P <-> A
         result = ReactionSimulator.compute_equilibrium_conc_elementary_synthesis(kF=kR, kR=kF, A0=P0, P0=A0)
 

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, asdict
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
+from life123.reaction_simulator import ReactionSimulator
 from life123.species_registry import SpeciesRegistry
 from life123.kinetics import MassAction_Model, MichaelisMenten_Model, Custom_Model
 from life123.units import show_standard_units, convert, K, C
@@ -312,10 +313,10 @@ class SimulationReaction:
                 P0 = conc_dict[p]
                 # Compute the respective increments of R0 and P0
                 if self.model.reversible:
-                    delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.model.kF, kR=self.model.kR,
+                    delta_p = ReactionSimulator.exact_advance_unimolecular_reversible(kF=self.model.kF, kR=self.model.kR,
                                                                                      A0=R0, P0=P0, t=delta_time, incremental=True)
                 else:
-                    delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.model.kF,
+                    delta_p = ReactionSimulator.exact_advance_unimolecular_irreversible(kF=self.model.kF,
                                                                                        A0=R0, P0=P0, t=delta_time, incremental=True)
 
                 # Work out the stoichiometry for all the species
