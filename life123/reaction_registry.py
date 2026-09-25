@@ -421,21 +421,19 @@ class ReactionRegistry:
 
         #print(f"add_reaction(): detected reaction type `{reaction_type}`")
 
-        return self.register_reaction(rxn_defn=rxn)      # , temp=temp
+        return self.register_reaction(rxn_defn=rxn)
 
 
 
-    def register_reaction(self, rxn_defn :ReactionDefinition, temp=None) -> int:
+    def register_reaction(self, rxn_defn :ReactionDefinition) -> int:
         """
-        Register a SINGLE chemical reaction from its reaction-specific object,
+        Register a SINGLE chemical reaction from its "ReactionDefinition" object,
         and set all its kinetic and/or thermodynamic data from the available information,
         including the value of the temperature (stored in object variable.)
 
-        All the involved chemicals can be either previously registered, or not;
-        if not, they will get automatically registered.
+        Update the object variable `self.active_chemicals`
 
         :param rxn_defn:    Object of type "ReactionDefinition"
-        :param temp:        TODO: OBSOLETE.  NO LONGER IN USE.  Temperature in degree Kelvin
 
         :return:            Integer index of the newly-added reaction
                                 (in the list self.reaction_list, stored as object variable)
@@ -453,48 +451,6 @@ class ReactionRegistry:
             # Update the set of "active chemicals"
             self.active_chemicals |= involved_chemicals     # Union of sets
 
-        """
-        # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn_defn.extract_reactant_ids()
-        for label in rxn_reactants:
-            self.species_data.add_species(id=label, skip_duplicates=True)
-
-        # Register any newly-encountered reaction product not already registered
-        rxn_products = rxn_defn.extract_product_ids()
-        for label in rxn_products:
-            self.species_data.add_species(id=label, skip_duplicates=True)
-
-        # Register any newly-encountered reaction intermediates not already registered
-        rxn_intermediate = rxn_defn.extract_intermediate()
-        if rxn_intermediate:
-            new_index = self.species_data.add_species(id=rxn_intermediate, skip_duplicates=True)
-            if new_index is not None:
-                print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
-
-            if self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate") is None:
-                # Attempt to estimate the diffusion rate constant of the reaction intermediate
-                D_enzyme = self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate")
-                D_substrate = self.species_data.get_value(species_id=rxn_defn.substrate, field="diffusion_rate")
-                # TODO: this might best belong elsewhere; also, review its validity
-                if (D_enzyme is not None) and (D_substrate is not None):
-                    D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
-                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
-                    self.species_data.set_value(species_id=rxn_intermediate, field="diffusion_rate", value=D_ES_rough_estimate)
-        """
-
-        """
-        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
-        if  rxn_intermediate:
-             involved_chemicals = involved_chemicals | {rxn_intermediate}     # Union of sets
-    
-        # Update the set of "active chemicals"
-        self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
-        """
-
-        #if temp is not None:
-        #    rxn_defn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
-
-        #return len(self.reaction_list) - 1
         return reaction_id
 
 
@@ -752,13 +708,14 @@ class ReactionRegistry:
 
             # Process all the PRODUCTS of this reaction
             products = rxn.stoichiometry.get_product_list()
-            for stoich, species_name in products:
-                #species_name = rxn.extract_species(term)
-                chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
+            for stoich, species_id in products:
+                #chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
+                # Use the species' "sort_order" attribute as a short unique ID
+                chemical_id = f"C-{self.species_data.get_species(species_id).sort_order}"      # Example: "C-12"
 
                 # Add each product to the graph as a node (if not already present)
-                properties={'name': species_name}
-                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
+                properties={'name': species_id}
+                if diff := self.species_data.get_value(species_id=species_id, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node( node_id=chemical_id, labels="Chemical",
                                 properties=properties)
@@ -770,13 +727,14 @@ class ReactionRegistry:
 
             # Process all the REACTANTS of this reaction
             reactants = rxn.stoichiometry.get_reactant_list()
-            for stoich, species_name in reactants:
-                #species_name = rxn.extract_species(term)
-                chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-34"
+            for stoich, species_id in reactants:
+                #chemical_id = f"C-{self.species_data.get_species_index(species_id)}"      # Example: "C-34"
+                # Use the species' "sort_order" attribute as a short unique ID
+                chemical_id = f"C-{self.species_data.get_species(species_id).sort_order}"   # Example: "C-34"
 
                 # Add each reactant to the graph as a node (if not already present)
-                properties={'name': species_name}
-                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
+                properties={'name': species_id}
+                if diff := self.species_data.get_value(species_id=species_id, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node(node_id=chemical_id, labels="Chemical",
                                properties=properties)

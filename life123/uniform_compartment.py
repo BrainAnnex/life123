@@ -122,7 +122,7 @@ class UniformCompartment:
         self.previous_system = None # Concentration data of all the species at the previous simulation step
 
 
-        # Pair of indexes to reconcile the species id's to their position in the system state array
+        # Pair of indexes to reconcile the species id's to their index position in the system state array
         self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
         self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
 
@@ -180,7 +180,8 @@ class UniformCompartment:
 
 
         # Build the pair of indexes `index_to_species` and `species_to_index`
-        # TODO: very wasteful to index all species; we should do just the ones that we have reactions for!
+        # TODO: very wasteful to index all species;
+        #  we should do just the ones that we have reactions for - as the reactions get added!
         for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
             self.index_to_species.append(sp_id)
             self.species_to_index[sp_id] = i
@@ -494,7 +495,8 @@ class UniformCompartment:
 
     def add_species_TODO(self) -> None:
         """
-
+        TODO: maybe not needed -> species needed by new reactions will get processed as those new reactions
+              get added...
         :return:
         """
         # Will need to update all the indexes
@@ -539,8 +541,13 @@ class UniformCompartment:
                  the reactions are simulated
         """
         set_active_species = self.get_reactions().active_chemicals
-        index_list = list(map(self.species_data.get_species_index, set_active_species))
+        #index_list = list(map(self.species_data.get_species_index, set_active_species))
+        index_list = list(
+                            map(lambda species_id: self.species_to_index[species_id], set_active_species)
+                         )
         return sorted(index_list)
+
+
 
 
 
@@ -1702,7 +1709,7 @@ class UniformCompartment:
 
         CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
                  You might consider using the argument  enable_diagnostics=True
-                 when first instantiating UniformCompartment(
+                 when first instantiating UniformCompartment.
 
         :return: None
         """
@@ -1712,7 +1719,7 @@ class UniformCompartment:
 
         self.diagnostics_enabled = True
         if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reaction_data)
+            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_to_index)
 
 
     def pause_diagnostics(self):

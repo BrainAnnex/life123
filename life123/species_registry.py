@@ -402,7 +402,7 @@ class SpeciesRegistry:
 
     def get_species(self, id :str) -> Species:
         """
-        Retrieve, and return, the species with the given id
+        Retrieve, and return, the "Species" object with the given id
 
         :param id:  String with a unique value to identify a species
         :return:    An object of type "Species", if found;
@@ -421,7 +421,6 @@ class SpeciesRegistry:
 
 
 
-
     def get_all_species_ids(self) -> list[str]:
         """
         Return a list with the id's of all the species,
@@ -431,29 +430,6 @@ class SpeciesRegistry:
                         in their registered index order
         """
         return list(self.by_id)     # The dictionary keys as a list
-
-
-
-    def get_species_index(self, id :str) -> int:
-        """
-        TODO: DITCH
-        Return the index of the species with the given id.
-        Indexes are the integers assigned, in autoincrement order,
-        at the time each species is first registered.
-        If not found, an Exception is raised
-
-        :param id:  String with a unique value to identify a species
-        :return:    The integer index of the species with the given id
-                        (the order in which it was added to the registry)
-        """
-        # TODO: DITCH.   Replacement for the old get_index()
-        # TODO: consider maintaining a lookup - or better yet doing without this feature!
-        index = next((i for i, k in enumerate(self.by_id) if k == id), None)
-
-        assert index is not None, \
-            f"get_species_index(): No species with id `{id}` was found"
-
-        return index
 
 
 

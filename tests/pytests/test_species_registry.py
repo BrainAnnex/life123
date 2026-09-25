@@ -400,24 +400,6 @@ def test_get_all_species_ids():
 
 
 
-def test_get_species_index():
-    sr = SpeciesRegistry()
-
-    with pytest.raises(Exception):
-        sr.get_species_index("A")   # Doesn't exist
-
-    sr.add_species(id="A")
-    assert sr.get_species_index("A") == 0
-
-    with pytest.raises(Exception):
-        sr.get_species_index("B")   # Doesn't exist
-
-    sr.add_species(id="B")
-    assert sr.get_species_index("B") == 1
-    assert sr.get_species_index("A") == 0
-
-
-
 def test_get_value():
     sr = SpeciesRegistry()
 

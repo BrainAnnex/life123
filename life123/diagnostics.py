@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from typing import Union
 from life123.collections import CollectionTabular
+from life123.reaction_registry import ReactionRegistry
 
 
 
@@ -10,19 +10,21 @@ class Diagnostics:
     For the management of reaction diagnostic data
     """
 
-    def __init__(self, reactions):
+    def __init__(self, reactions :ReactionRegistry, species_to_index=None):
         """
         
-        :param reactions:   Object of type "ReactionRegistry"
+        :param reactions:       Object of type "ReactionRegistry"
+        :parm species_to_index: [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
         """
 
         assert reactions is not None, \
             "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`"
 
-        self.reactions = reactions                  # Object of type "ReactionRegistry"
+        self.reactions = reactions                          # Object of type "ReactionRegistry"
 
-        self.species_data = reactions.get_species_data()  # Object of type "SpeciesRegistry"
+        self.species_data = reactions.get_species_data()    # Object of type "SpeciesRegistry"
 
+        self.species_to_index = species_to_index            # EXAMPLE: {"Species A": 0, "Species X": 1}
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
         self.diagnostic_conc_data = CollectionTabular(parameter_name="TIME")
@@ -162,7 +164,7 @@ class Diagnostics:
 
 
 
-    def get_rxn_rates(self, rxn_index :int) -> Union[pd.DataFrame, None]:
+    def get_rxn_rates(self, rxn_index :int) -> pd.DataFrame|None:
         """
         Return a Pandas dataframe with 2 columns: "START_TIME" and "rate",
         with the rates of the specified reaction at those times.
@@ -188,7 +190,7 @@ class Diagnostics:
 
 
     def get_rxn_data(self, rxn_index :int, head=None, tail=None,
-                     t=None, print_reaction=True) -> Union[pd.DataFrame, None]:
+                     t=None, print_reaction=True) -> pd.DataFrame|None:
         """
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
         from the time that the diagnostics were enabled by instantiating this class.
@@ -289,7 +291,7 @@ class Diagnostics:
     #####  3. diagnostic_decisions_data  #####
 
     def save_diagnostic_decisions_data(self, system_time, data :dict,
-                                       delta_conc_arr :Union[np.ndarray, None], caption="") -> None:
+                                       delta_conc_arr :np.ndarray|None, caption="") -> None:
         """
         Used to save the diagnostic concentration data during the run, indexed by the given System Time.
         Note: if an interval run is aborted, by convention an entry is STILL created here
@@ -534,7 +536,7 @@ class Diagnostics:
 
 
 
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, silent: bool) -> Union[int, float]:
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, silent: bool) -> int|float:
         """
         Using the provided data, about a group of same-size steps, create and print a description of it for the user
 
@@ -568,7 +570,8 @@ class Diagnostics:
 
         :param rxn_index:       The integer index (0-based) to identify the reaction of interest
         :param conc_arr_before: Numpy array with the concentrations of ALL the species (whether involved
-                                    in the reaction or not), in their index order, BEFORE the reaction step
+                                    in the reaction or not), in their index order in a system state variable,
+                                    BEFORE the reaction step
         :param conc_arr_after:  Same as above, but after the reaction
                                 TODO: maybe also accept a Panda's dataframe row
 
@@ -610,7 +613,7 @@ class Diagnostics:
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the species (whether involved
-                                in the reaction or not), in their index order,
+                                in the reaction or not), in their index order in a system state variable,
                                 as a result of JUST the reaction of interest
         :return:            True if the change in reactant/product concentrations is consistent with the
                                 reaction's stoichiometry, or False otherwise.
@@ -618,38 +621,41 @@ class Diagnostics:
                                       (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
                                       check because of that)
         """
-        #print("delta_arr: ", delta_arr)
+        assert self.species_to_index is not None, \
+            "_stoichiometry_checker_from_deltas(): it appears that when the Diagnostics class was instantiated, " \
+            "the argument `species_to_index` was not included correctly. \n" \
+            "As a result, there's no way to identify " \
+            "which concentration is the system-state array correspond to the species in the reactions."
 
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
-        rxn = self.reactions.get_reaction(rxn_index)    # Object of type "SimulationReaction"
+        #rxn = self.reactions.get_reaction(rxn_index)    # Object of type "SimulationReaction"
         reactants = self.reactions.get_reactants(rxn_index)
         products = self.reactions.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_stoichiometry, baseline_species_name = reactants[0]
-        baseline_species_index = self.species_data.get_species_index(baseline_species_name)
+        #baseline_species_index = self.species_data.get_species_index(baseline_species_name)
+        baseline_species_index = self.species_to_index.get(baseline_species_name)
         baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
         #print("\nbaseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                stoichiometry, species_name = term
-                #species_name = rxn.extract_species(term)
-                species_index = self.species_data.get_species_index(species_name)
-                #stoichiometry = rxn.extract_stoichiometry(term)
+                stoichiometry, species_id = term
+                #species_index = self.species_data.get_species_index(species_id)
+                species_index = self.species_to_index.get(species_id)
                 ratio =  (delta_arr[species_index]) / stoichiometry
                 #print(f"ratio for `{species_name}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            stoichiometry, species_name = term
-            #species_name = rxn.extract_species(term)
-            species_index = self.species_data.get_species_index(species_name)
-            #stoichiometry = rxn.extract_stoichiometry(term)
+            stoichiometry, species_id = term
+            #species_index = self.species_data.get_species_index(species_id)
+            species_index = self.species_to_index.get(species_id)
             ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{species_name}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
