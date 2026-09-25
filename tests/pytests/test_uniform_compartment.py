@@ -8,12 +8,12 @@ from life123.species_registry import MacroMolecules
 
 def test_constructor():
     names = ["A", "B", "C"]
-    chem_data = SpeciesRegistry(ids=names)
+    species_registry = SpeciesRegistry(ids=names)
 
     with pytest.raises(Exception):
-        UniformCompartment(species_data=chem_data, names=names)
+        UniformCompartment(species_data=species_registry, names=names)
 
-    rxns = ReactionRegistry(species_data=chem_data)
+    rxns = ReactionRegistry(species_data=species_registry)
 
     with pytest.raises(Exception):
         UniformCompartment(reactions=rxns, names=names)
@@ -25,22 +25,30 @@ def test_constructor():
 
     uc = UniformCompartment(reactions=rxns)
     assert uc.reaction_data == rxns
-    assert uc.species_data == chem_data
+    assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
+    assert uc.index_to_species == ['A', 'B', 'C']
+    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
-    uc = UniformCompartment(species_data=chem_data)
-    assert uc.species_data == chem_data
+    uc = UniformCompartment(species_data=species_registry)
+    assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
+    assert uc.index_to_species == ['A', 'B', 'C']
+    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
     uc = UniformCompartment(names=names)
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
+    assert uc.index_to_species == ['A', 'B', 'C']
+    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
-    uc = UniformCompartment(reactions=rxns, species_data=chem_data)
+    uc = UniformCompartment(reactions=rxns, species_data=species_registry)
     assert uc.reaction_data == rxns
-    assert uc.species_data == chem_data
+    assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
+    assert uc.index_to_species == ['A', 'B', 'C']
+    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
 
 

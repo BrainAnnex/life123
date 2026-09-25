@@ -1,4 +1,4 @@
-# Classes ReactionSimulator and VariableTimeSteps:
+# Classes ReactionSimulator, AnalyticalReactionSolver, and VariableTimeSteps:
 
 import math
 import cmath
@@ -16,7 +16,7 @@ class ReactionSimulator:
 
 
 
- 
+
 
 ####################################################################################################
 

@@ -229,9 +229,15 @@ class Species:
 
 class SpeciesRegistry:
     """
-    Management of all the existing species.
+    Repository and management of all the species of interest.
 
     It acts as a namespace for the Species id's, and enforces their uniqueness within the collection.
+
+    An object of this class is meant as a general reference (a "mini database") about all the species of interest -
+    and may be used and re-used by various simulation modules.
+
+    There is no particular order in the species; simulation modules are responsible for mapping species id's to
+    their system variables
     """
 
     def __init__(self, ids=None, species=None, n_species=None,
@@ -260,7 +266,7 @@ class SpeciesRegistry:
         """
         self.count = 0                          # Species registration index
 
-        self.by_id: dict[str, Species] = {}     # Species classes indexed by `id`.  dict[str, Species]
+        self.by_id: dict[str, Species] = {}     # "Species" objects indexed by their `id` values
         # EXAMPLE:
         """
         {
@@ -272,11 +278,6 @@ class SpeciesRegistry:
                             )
         }
         """
-
-        # TODO: maybe the 2 indexes below really belong to the simulator
-        #self.id_to_index: dict[str, int] = {}       # EXAMPLE: {"Species A": 0, "Species B": 1}
-        #self.index_to_species: list[Species] = []   # EXAMPLE: ["Species A", "Species B"]
-
 
         # Determine which arguments, if any, aren't None
         passed_arg_values = [arg
@@ -429,6 +430,7 @@ class SpeciesRegistry:
         :return:                The id of the chemical species with the given index;
                                     if missing, an Exception is raised
         """
+        # TODO: ditch!  This is now the responsibility of UniformCompartment
         # TODO: this will become replacement for the old get_label()
         # TODO: it'd be better if the calling module kept a lookup table instead :  index -> species_id
 

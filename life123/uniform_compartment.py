@@ -4,8 +4,7 @@ import pandas as pd
 import time
 import plotly.express as px
 import plotly.graph_objects as pgo
-from typing import Union
-from life123.species_registry import SpeciesRegistry, MacroMolecules
+from life123.species_registry import Species, SpeciesRegistry
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
@@ -51,8 +50,8 @@ class UniformCompartment:
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
         :param species_data:[OPTIONAL 2] Object of type "SpeciesRegistry" (with data about the species).
-                                If passed, cannot pass either of the args `reactions` (an object that contains `chem_data`) nor `names`
-                                (names are contained in the `chem_data` object)
+                                If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
+                                nor `names` (names are contained in the `species_data` object)
 
         :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species;
                                 providing a list can be used to make the species appear in a particular desired order.
@@ -75,7 +74,7 @@ class UniformCompartment:
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
         """
 
-        self.species_data = None       # Object of type "SpeciesRegistry" (with data about all the species)
+        self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
 
         self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
 
@@ -92,8 +91,8 @@ class UniformCompartment:
                 "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
         if reactions is not None:
-            #assert chem_data is None, \
-                #"UniformCompartment instantiation: Cannot pass both `chem_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
+            #assert species_data is None, \
+                #"UniformCompartment instantiation: Cannot pass both `species_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
             self.species_data = reactions.get_species_data()
@@ -111,7 +110,7 @@ class UniformCompartment:
 
         self.system_time = 0.       # Global time of the system, from initialization on
 
-        # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the chemicals
+        # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the species
         #       actually involved in this dynamic simulation
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
@@ -120,7 +119,12 @@ class UniformCompartment:
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
-        self.previous_system = None # Concentration data of all the chemicals at the previous simulation step
+        self.previous_system = None # Concentration data of all the species at the previous simulation step
+
+
+        # Pair of indexes to reconcile the species id's to their position in the system state array
+        self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
+        self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
 
 
         self.macromolecules = macromolecules    # Object of type "MacroMolecules"
@@ -180,6 +184,11 @@ class UniformCompartment:
             self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
 
 
+        # Build the pair of indexes `index_to_species` and `species_to_index`
+        for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
+            self.index_to_species.append(sp_id)
+            self.species_to_index[sp_id] = i
+
 
 
 
@@ -211,7 +220,7 @@ class UniformCompartment:
                             (1) a list or tuple of concentration values for ALL the registered chemicals,
                                 in their index order
                             OR
-                            (2) a dict indexed by the chemical labels, for some or all of the chemicals
+                            (2) a dict indexed by the species id, for some or all of the species of interest.
                                 Anything not specified will be set to zero.
                                 EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
@@ -270,7 +279,8 @@ class UniformCompartment:
             f"UniformCompartment.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
-            species_index = self.species_data.get_species_index(species_name)
+            species_index = self.locate_species_index(species_name)
+
         elif species_index is not None:
             self.species_data.assert_valid_species_index(species_index)
         else:
@@ -286,7 +296,7 @@ class UniformCompartment:
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            self.capture_conc_snapshot(caption=f"Set concentration of `{self.species_data.get_species_id(species_index)}`")
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.locate_species_id(species_index)}`")
 
 
 
@@ -305,21 +315,36 @@ class UniformCompartment:
 
     def get_chem_conc(self, label :str) -> float:
         """
-        Return the current system concentration of the given chemical, specified by its label.
-        If no chemical by that name exists, an Exception is raised
+        Return the current system concentration of the given specified, specified by its id.
+        If no species by that name exists, an Exception is raised
 
         :param label:   The label of a chemical species
         :return:        The current system concentration of the above chemical
         """
-        species_index = self.species_data.get_species_index(label)
+        species_index = self.locate_species_index(label)
         return self.system[species_index]
+
+
+
+    def locate_species_index(self, species_id :str) -> int:
+        #species_index = self.species_data.get_species_index(species_id)
+        species_index = self.species_to_index.get(species_id)
+
+        assert species_index is not None, \
+            f'UniformCompartment.locate_species_index(): no information available for species with id "{species_index}"'
+
+        return species_index
+
+    def locate_species_id(self, species_index :int) -> str:
+        #return self.species_data.get_species_id(species_index)
+        return self.index_to_species[species_index]
 
 
 
     def get_conc_dict(self, chem_labels=None, system_data=None) -> dict:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
-        as a dictionary indexed by the chemicals' labels
+        as a dictionary indexed by the species id
 
         :param chem_labels: [OPTIONAL] List or tuple of the labels of the chemical species;
                                 by default, return all
@@ -341,7 +366,7 @@ class UniformCompartment:
             if system_data is None:
                 return {}
             else:
-                return {self.species_data.get_species_id(index): system_data[index]
+                return {self.locate_species_id(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(chem_labels) == list or type(chem_labels) == tuple, \
@@ -350,7 +375,7 @@ class UniformCompartment:
 
             conc_dict = {}
             for name in chem_labels:
-                species_index = self.species_data.get_species_index(name)
+                species_index = self.locate_species_index(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -1212,7 +1237,7 @@ class UniformCompartment:
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
-            chem_name = self.species_data.get_species_id(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            chem_name = self.locate_species_id(int(first_neg_index))  # The int() is to convert the NumPy integer type
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the chemicals (for instance `{chem_name}`, of index {first_neg_index}), from the combined reactions."
@@ -1285,7 +1310,7 @@ class UniformCompartment:
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-                chem_index = self.species_data.get_species_index(chem_label)
+                chem_index = self.locate_species_index(chem_label)
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # for any of the proposed concentration changes for this reaction.
                 # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1327,7 +1352,7 @@ class UniformCompartment:
 
         conc_dict = {}
         for label in chem_labels:
-            chem_index = self.species_data.get_species_index(label)    # The integer index this chemical
+            chem_index = self.locate_species_index(label)    # The integer index this chemical
             conc_dict[label] = conc_array[chem_index]
 
         return conc_dict
@@ -1376,7 +1401,7 @@ class UniformCompartment:
             # Unpack data from the reactant r
             stoichiometry, species_name = r
 
-            species_index = self.species_data.get_species_index(species_name)
+            species_index = self.locate_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if r is an enzyme for this reaction
@@ -1391,7 +1416,7 @@ class UniformCompartment:
             # Unpack data from the product p
             stoichiometry, species_name = p
 
-            species_index = self.species_data.get_species_index(species_name)
+            species_index = self.locate_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if p is an enzyme for this reaction
@@ -1441,7 +1466,7 @@ class UniformCompartment:
         """
         if (baseline_conc + delta_conc) < 0:
             # If the requested concentration change would lead to a negative concentration
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.species_data.get_species_id(species_index)}` "
+            #print(f"\n*** CAUTION: negative concentration in chemical `{self.locate_species_id(species_index)}` "
             #      f"in step starting at t={self.system_time:.5g})"
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
@@ -1451,15 +1476,15 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.species_data.get_species_id(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.locate_species_id(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.species_data.get_species_id(species_index)}`")
+                                               caption=f"aborted: neg. conc. in `{self.locate_species_id(species_index)}`")
 
-            chem_name = self.species_data.get_species_id(species_index)
+            chem_name = self.locate_species_id(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
                                     f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
@@ -2443,7 +2468,7 @@ class UniformCompartment:
 
 
 
-    def reach_threshold(self, chem :str, threshold) -> Union[float, None]:
+    def reach_threshold(self, chem :str, threshold) -> float|None:
         """
 
         :param chem:        The name of the chemical of interest
