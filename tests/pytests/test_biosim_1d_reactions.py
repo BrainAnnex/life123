@@ -2,8 +2,9 @@
 # for general tests of 1D system, see "test_biosim_1d.py"
 
 import numpy as np
-from life123 import SpeciesRegistry, ReactionKinetics
+from life123 import SpeciesRegistry
 from life123 import BioSim1D
+from life123.kinetics import Custom_Model
 
 
 
@@ -97,7 +98,7 @@ def test_react_1():
     # Reaction A <-> 3B , hypothetically with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=["A"], products=[(3,"B")],
                                reaction_model="custom",
-                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
@@ -119,7 +120,7 @@ def test_react_2():
     # Reaction 2A <-> 3B , hypothetically with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
                                reaction_model="custom",
-                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
 
     bio.set_uniform_concentration(chem_index=0, conc=10.)
@@ -172,7 +173,7 @@ def test_react_4():
     # Reaction A <-> 2C + D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                                reaction_model="custom",
-                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
 
     bio.set_all_uniform_concentrations( [4., 7., 2.] )
@@ -197,7 +198,7 @@ def test_react_5():
     # Reaction 2A + 5B <-> 4C + 3D , hypothetically with 1st-order kinetics for each species
     bio.reactions.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                                reaction_model="custom",
-                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                               kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     assert bio.reactions.number_of_reactions() == 1
 
     bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )

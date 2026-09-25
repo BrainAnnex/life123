@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, ReactionKinetics, ReactionDefinition
+from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, ReactionDefinition
+from life123.kinetics import Custom_Model
 from life123.species_registry import MacroMolecules
 
 
@@ -308,7 +309,7 @@ def test__reaction_elemental_step_1():
     # Based on experiment "1D/reactions/reaction2"
     uc.add_reaction(reactants="A", products=[(3,"B")],
                     reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [5. , -15.])
@@ -320,7 +321,7 @@ def test__reaction_elemental_step_1():
     # Based on experiment "1D/reactions/reaction3"
     uc.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
                     reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [10., -15.])
@@ -366,7 +367,7 @@ def test__reaction_elemental_step_3():
     # Based on experiment "1D/reactions/reaction5"
     uc.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                     reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.05)
     assert np.allclose(result, [0.4 , -0.8 , -0.4])
@@ -384,7 +385,7 @@ def test__reaction_elemental_step_4():
     # Based on experiment "1D/reactions/reaction6"
     uc.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                     reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
     result = uc._reaction_elemental_step(delta_time=0.001)
     assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
@@ -445,7 +446,7 @@ def test_single_compartment_react_variable_steps_1():
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
     r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=chem_data,
                            reaction_model="custom",
-                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     rxns.register_reaction(r)
 
     uc = UniformCompartment(species_data=chem_data, preset=None, reactions=rxns)
@@ -490,7 +491,7 @@ def test_single_compartment_correct_neg_conc():
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
     r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=chem_data,
                            reaction_model="custom",
-                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
     rxns.register_reaction(r)
 
     uc = UniformCompartment(species_data=chem_data, reactions=rxns)

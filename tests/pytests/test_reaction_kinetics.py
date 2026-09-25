@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import math
 from life123.reaction_kinetics import ReactionKinetics
-from life123.reaction_simulator import ReactionSimulator
+from life123.reaction_simulator import ReactionSimulator, AnalyticalReactionSolver
 from life123.reactions import Stoichiometry
 
 
@@ -14,7 +14,7 @@ def test_half_time_unimolecular_irreversible():
     half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
     assert np.allclose(half_time, math.log(2) / kF)
 
-    p_halftime = ReactionSimulator.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
+    p_halftime = AnalyticalReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
     a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
     assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
 
@@ -28,7 +28,7 @@ def test_half_time_relaxation_unimolecular_reversible():
     assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
 
     # Simulate the reaction to t = half_time_relaxation
-    p_halftime = ReactionSimulator.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
+    p_halftime = AnalyticalReactionSolver.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
     a_halftime = 80 - (p_halftime - 10)      # From the stoichiometry
 
     # Determine the equilibrium concentrations (the other reference point for the halfway drop)
@@ -55,7 +55,7 @@ def test_half_time_to_equilibrium_synthesis():
     #equil_concs = ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=0, a=1, A0=15., b=1, B0=5, p=1, P0=0)
     #print(equil_concs)
 
-    P_t = ReactionSimulator.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
+    P_t = AnalyticalReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
     assert np.allclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
                                     # when all the limiting reagent (B) has been consumed
 
@@ -63,7 +63,7 @@ def test_half_time_to_equilibrium_synthesis():
     half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=20, B0=20)
     print(half_time_relaxation)
     assert np.allclose(half_time_relaxation, 0.00625)
-    P_t = ReactionSimulator.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
+    P_t = AnalyticalReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
     print(P_t)
     assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
                                     # when the reagents have been consumed
@@ -76,103 +76,6 @@ def test_estimate_rate_constants_simple():
 
 def test_estimate_rate_constants_synthesis():
     pass    # TODO
-
-
-
-def test_kinetic_rate_first_order():
-
-    # Reaction A <-> B
-    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": 1}),
-                                                       kinetic_parameters={"kF": 20., "kR": 2},
-                                                       conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
-
-    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": 1}),
-                                                       kinetic_parameters={"kF": 20.},
-                                                       conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5)             # 100.0
-
-
-    # Reaction A + B <-> C + D , with 1st-order kinetics for each species
-    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
-                                                       kinetic_parameters={"kF": 10},
-                                                       conc_dict={"A": 2, "B": 4, "C": 0, "D": 3})
-    assert np.allclose(result, 80)      #  10. * 2 * 4   (no reverse reaction)
-
-    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
-                                                       kinetic_parameters={"kF": 5., "kR": 2},
-                                                       conc_dict={"A": 3.5, "B": 9., "C": 11., "D": 7.})
-    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
-
-    result = ReactionKinetics.kinetic_rate_first_order(stoichiometry=Stoichiometry({"A": -1, "B": -1, "C": 1, "D": 1}),
-                                                       kinetic_parameters={"kF": 5, "kR": 2},
-                                                       conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
-    assert np.allclose(result,  -10.)   # 5. * 5 * 8 - 2. * 15 * 7
-
-
-
-def test_compute_rate_elementary():
-    # All reactions below are elementary reactions
-    # that have 1st-order kinetics with respect to all the involved chemicals
-
-    # Reaction A <-> B
-    result = ReactionKinetics.compute_rate_elementary(reactants=["A"], products=["B"],
-                                                      kF=20., kR=2., reversible=True,
-                                                      conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
-
-    result = ReactionKinetics.compute_rate_elementary(reactants=["A"], products=["B"],
-                                                      kF=20., kR=2., reversible=False,
-                                                      conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5)             # 100.0
-
-
-    # Reaction A + B <-> C + D , with 1st-order kinetics for each species
-    result = ReactionKinetics.compute_rate_elementary(reactants=["A", "B"], products=["C", "D"],
-                                                      kF=5., kR=2., reversible=True,
-                                                      conc_dict={"A": 3.5, "B": 9., "C": 11., "D": 7.})
-    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
-
-    result = ReactionKinetics.compute_rate_elementary(reactants=["A", "B"], products=["C", "D"],
-                                                      kF=5., kR=2., reversible=True,
-                                                      conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
-    assert np.allclose(result,  -10.)
-
-
-
-
-def test_compute_rate_mass_action_kinetics():
-
-    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
-    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
-                                                    kF=5., kR=2.,
-                                                    conc_dict={"A": 4.5, "B": 6.})
-    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)      # 89.25
-
-    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
-                                                    kF=5., kR=0,
-                                                    conc_dict={"A": 4.5, "B": 6.})
-    assert np.allclose(result, 5. * 4.5 **2)                # 101.25   (irreversible reaction)
-
-
-    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
-                                                    kF=3., kR=2.,
-                                                    conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 59.)
-
-
-    # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
-    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(1, "B")], product_terms=[(2, "C")],
-                                                kF=4., kR=2.,
-                                                conc_dict={"B": 5., "C": 4})
-    assert np.allclose(result, 4. * 5. - 2. * 4. **2)       # -12.0
-
-
-    # Reaction A + B <-> C + D , with 1st-order kinetics for each species
-    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(1, "A"), (1, "B")], product_terms=[(1, "C"), (1, "D")],
-                                            kF=5., kR=2.,
-                                            conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
-    assert np.allclose(result,  -10.)
 
 
 

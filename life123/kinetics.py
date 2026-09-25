@@ -15,6 +15,11 @@ class PingPongBiBi_Model:
 ################################################################################
 
 class MassAction_Model:
+    """
+    Warning: generally speaking, this is NOT a valid kinetic modeling
+             for any reaction that isn't elementary
+    """
+
     name = "mass action"
     supports_equilibrium_constant = True
 
@@ -46,8 +51,15 @@ class MassAction_Model:
 
 
 
-    def overwrite_parameters(self, parameters :dict) -> None:
-        pass    # TODO
+    def overwrite_parameters(self, parameters :dict, derived_pars=None) -> None:
+        # TODO: test
+        self.kF  = None
+        self.kR = None
+        self.K = None
+        self.reversible = False
+        self.derived_pars = set()
+
+        self.set_parameters(parameters, derived_pars=derived_pars)
 
 
 
@@ -212,22 +224,47 @@ class MassAction_Model:
 
     def rate(self, conc_dict :dict) -> float:
         """
-        For the specified reaction and its species concentrations,
+        For this reaction and the species concentrations,
         determine the instantaneous reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the current system state.
 
+        For the "mass action" model, the reaction's kinetics
+        follow the familiar "Rate Laws",
+        with the order of the reaction with respect to its reactant and products
+        equals their respective stoichiometric coefficients.
+
+        For example, if the reaction is aA + bB <-> pP + qQ,
+        then this function returns:  kF [P]^p [Q]^q - kR [A]^a [B]^b
+
         :param conc_dict:
         :return:
         """
-        reactants = self.stoichiometry.get_reactant_list()
-        products  = self.stoichiometry.get_product_list()
+        reactant_terms = self.stoichiometry.get_reactant_list()
+        product_terms  = self.stoichiometry.get_product_list()
 
         kR = 0 if self.kR is None else self.kR
 
-        return ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=reactants, product_terms=products,
-                                                                  kF=self.kF, kR=kR,
-                                                                  conc_dict=conc_dict)
+        forward_rate = self.kF        # The initial multiplicative factor
+        for order, reactant_id in reactant_terms:     # The stoichiometry coeff. of each reactant is taken to be its reaction order
+            conc = conc_dict.get(reactant_id)
+            assert conc is not None, \
+                f"MassAction_Model.rate(): missing concentration value for reactant species`{reactant_id}`"
+            forward_rate *= conc ** order       # Raise to power
+
+        if kR == 0:
+            return forward_rate                 # If there's no reverse reaction (i.e., if reaction is irreversible)
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for order, product_id in product_terms:      # The stoichiometry coeff. of each product is taken to be its reaction order
+            conc = conc_dict.get(product_id)
+            assert conc is not None, \
+                f"MassAction_Model.rate(): missing concentration value for product species `{product_id}`"
+            reverse_rate *= conc ** order       # Raise to power
+
+        return forward_rate - reverse_rate
+
+
 
 
 
@@ -745,3 +782,40 @@ class Custom_Model:
         return function_to_call(stoichiometry = self.stoichiometry,
                                 kinetic_parameters = {"kF": self.kF, "kR": self.kR},
                                 conc_dict = conc_dict)             # Carry out the invocation of the custom function call
+
+
+
+    @staticmethod
+    def kinetic_rate_first_order(stoichiometry,
+                                 kinetic_parameters :dict,
+                                 conc_dict :dict) -> float:
+        """
+        Meant as a sample function for the `rate_function` parameter of the "Custom_Model" reaction model.
+
+        If the reactions isn't elementary, this is a HYPOTHETICAL scenario (mostly for testing and analysis)
+        where the reaction is first order in EACH of the reactants and EACH of products - REGARDLESS
+        of their stoichiometric coefficients
+        """
+        kF = kinetic_parameters.get("kF")
+        kR = kinetic_parameters.get("kR")
+        reversible = True if kR else False
+
+        reactants = stoichiometry.get_reactant_ids()
+        products  = stoichiometry.get_product_ids()
+
+        forward_rate = kF        # The initial multiplicative factor
+        for r in reactants:
+            # Process all the reactants; the reaction order is always taken to be 1
+            conc = conc_dict[r]
+            forward_rate *= conc
+
+        if not reversible:
+            return forward_rate
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for p in products:
+            # Process all the reaction products; the reaction order is always taken to be 1
+            conc = conc_dict[p]
+            reverse_rate *= conc
+
+        return forward_rate - reverse_rate

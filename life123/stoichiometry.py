@@ -44,6 +44,11 @@ class Stoichiometry:
             assert coeff != 0, f"Stoichiometry instantiation: coefficients cannot be zero (species \"{sp}\") - " \
             f"if you want to specify an enzyme/catalyst, pass it as a list to the argument `catalysts`"
 
+        if self.get_reactant_list() == []:
+            print("WARNING: no reactants are present in this stoichiometry")
+        if self.get_product_list() == []:
+            print("WARNING: no products are present in this stoichiometry")
+
 
 
     def to_dict(self) -> dict:
@@ -95,14 +100,15 @@ class Stoichiometry:
 
 
 
-    def get_reactant_list(self) -> list:
+    def get_reactant_list(self) -> list[tuple]:
         """
         Return all reactants as a list of pairs
         of the form (stoichiometry coefficient, species id).
         Catalysts, if any, are also included.
         ~~~
-        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
-                 would return to [(2, "A"), (2, "B"), (1, "E")]
+        EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
+                 and self.catalysts is ["E"]
+                 then return [(2, "A"), (2, "B"), (1, "E")]
         :return:
         """
         # TODO: consider returning a set instead of a list
@@ -126,20 +132,29 @@ class Stoichiometry:
         return s
 
 
-    def get_product_list(self) -> list:
+    def get_product_list(self) -> list[tuple]:
         """
         Return all products as a list of pairs
         of the form (stoichiometry coefficient, species id).
         Catalysts, if any, are also included.
         ~~~
-        EXAMPLE: {"A": -2, "B":- 2, "P": 3, "E": 0}
-                 would return to [(3, "P"), (1, "E")]
+        EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
+                 and self.catalysts is ["E"]
+                 then return [(3, "P"), (1, "E")]
         :return:
         """
         # TODO: consider returning a set instead of a list
         return [   (v, k) for k,v in self.vector.items() if v > 0] \
                 + [(1, c) for c in self.catalysts]
 
+
+    def get_products_as_dict(self) -> dict:
+        # TODO: test
+        d = {v : k for k,v in self.vector.items() if v > 0}
+        for cat in self.catalysts:
+            d[cat] = 1
+
+        return d
 
 
     def get_product_ids(self, exclude_catalysts=False) -> Set[str]:

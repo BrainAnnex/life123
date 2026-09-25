@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from life123.species_registry import SpeciesRegistry
-from life123.reaction_kinetics import ReactionKinetics
+from life123.kinetics import Custom_Model
 from life123.reactions import Stoichiometry, ReactionThermodynamics, \
 ReactionDefinition, SimulationReaction, MassAction_Model, MichaelisMenten_Model
 from tests.utilities.comparisons import *
@@ -148,7 +148,7 @@ def test_determine_reaction_rate_2_a():
     sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                                   reaction_model="custom",
-                                  kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
      #print(rxn_defn.describe(concise=False))
 
     sim_rxn = rxn_defn.sim_reactions[0]
@@ -187,7 +187,7 @@ def test_determine_reaction_rate_2_b():
     sr = SpeciesRegistry(ids=["A", "B"])
     rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
                                   reaction_model="custom",
-                                  kinetic_parameters={"kF": 20, "kR": 2, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  kinetic_parameters={"kF": 20, "kR": 2, "rate_function": Custom_Model.kinetic_rate_first_order})
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
@@ -217,7 +217,8 @@ def test_determine_reaction_rate_2_b():
     # Reaction 5A <-> 2B , with custom reaction model (hypothetically with 1st-order kinetics with respect to each species)
     rxn_defn = ReactionDefinition(reactants=[(5, "A")], products=[(2, "B")], species_registry=sr,
                                   reaction_model="custom",
-                                  kinetic_parameters={"kF": 20, "kR": 2, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  kinetic_parameters={"kF": 20, "kR": 2,
+                                                      "rate_function": Custom_Model.kinetic_rate_first_order})
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
@@ -229,7 +230,7 @@ def test_determine_reaction_rate_2_b():
     # Reaction 2B <-> 3C , with custom reaction model (hypothetically with 1st-order kinetics with respect to each species)
     rxn_defn = ReactionDefinition(reactants=[(2, "B")], products=[(3, "C")], species_registry=sr, autoregister_species=True,
                                   reaction_model="custom",
-                                  kinetic_parameters={"kF": 10, "kR": 25, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  kinetic_parameters={"kF": 10, "kR": 25, "rate_function": Custom_Model.kinetic_rate_first_order})
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
@@ -243,7 +244,7 @@ def test_determine_reaction_rate_2_b():
                                   products=[(4, "C") , (3, "D")],
                                   species_registry=sr, autoregister_species=True,
                                   reaction_model="custom",
-                                  kinetic_parameters={"kF": 5, "kR": 2, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                                  kinetic_parameters={"kF": 5, "kR": 2, "rate_function": Custom_Model.kinetic_rate_first_order})
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
@@ -432,7 +433,7 @@ def test_step_simulation_3():
     sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                              reaction_model="custom",
-                             kinetic_parameters={"kF": 10, "rate_function": ReactionKinetics.kinetic_rate_first_order})
+                             kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
     #print(rxn_defn.describe(concise=False))
 
     sim_rxn = rxn_defn.sim_reactions[0]
