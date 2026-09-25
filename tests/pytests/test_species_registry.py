@@ -387,24 +387,6 @@ def test_get_species():
 
 
 
-def test_get_species_id():
-    sr = SpeciesRegistry()
-
-    with pytest.raises(Exception):
-        sr.get_species_id(0)
-
-    sr.add_species(id="A")
-    assert sr.get_species_id(0) == "A"
-
-    with pytest.raises(Exception):
-        sr.get_species_id(1)        # Doesn't exist
-
-    sr.add_species(id="B")
-    assert sr.get_species_id(1) == "B"  # Now it exists
-    assert sr.get_species_id(0) == "A"
-
-
-
 def test_get_all_species_ids():
     sr = SpeciesRegistry()
 

@@ -876,7 +876,7 @@ class ReactionDefinition:
                     self.species_registry.add_species(id=species_id)
                 else:
                     raise Exception(f'ReactionDefinition instantiation: No species with id "{species_id}" exists in the given species registry.  '
-                                    f'to automatically add new species to the registy, use the argument:  autoregister_species=True')
+                                    f'To automatically add new species to the registy, use the argument:  autoregister_species=True')
 
         return stoich_obj
 

@@ -216,7 +216,7 @@ baseline_conc
 # %%
 # Computes some measures of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.indexes_of_active_chemicals())
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is just about right, and the simulations should STAY on that course : that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -257,7 +257,7 @@ baseline_conc
 # %%
 # Computes a measure of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.indexes_of_active_chemicals())
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is on the "LOW" side, and the simulations should increase it by a factor 1.2 : again, that's based on the shown computed norms (indicating the extent of the change taking place.)  

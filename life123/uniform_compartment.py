@@ -53,8 +53,8 @@ class UniformCompartment:
                                 If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
                                 nor `names` (names are contained in the `species_data` object)
 
-        :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species;
-                                providing a list can be used to make the species appear in a particular desired order.
+        :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species.
+                                (note: providing a list allows one to make the species appear in a particular desired order.)
                                 If passed, cannot pass either of the args `reactions` nor `species_data` (both those object contain the chemical names)
 
 
@@ -115,7 +115,7 @@ class UniformCompartment:
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
                             # the array size is the total number of chemical species.
-                            # Each entry is the concentration of the species with that index (in the "SpeciesRegistry" object)
+                            # Each entry is the concentration of a species whose id is indexed with self.index_to_species
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
@@ -156,11 +156,6 @@ class UniformCompartment:
                                                                     # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
 
-        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
-        self.adaptive_steps = VariableTimeSteps()
-
-        if preset:
-            self.adaptive_steps.use_adaptive_preset(preset)
 
 
         # The following 3 diagnostic values get reset at every run
@@ -185,9 +180,18 @@ class UniformCompartment:
 
 
         # Build the pair of indexes `index_to_species` and `species_to_index`
+        # TODO: very wasteful to index all species; we should do just the ones that we have reactions for!
         for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
             self.index_to_species.append(sp_id)
             self.species_to_index[sp_id] = i
+
+
+        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
+        self.adaptive_steps = VariableTimeSteps(uc=self)
+
+        if preset:
+            self.adaptive_steps.use_adaptive_preset(preset)
+
 
 
 
@@ -482,10 +486,19 @@ class UniformCompartment:
         """
         if self.temp:
             # If a temperature is set for the uniform compartment, pass it to the reaction
-            return self.reaction_data.add_reaction(temp=self.temp, **kwargs)
+            return self.reaction_data.add_reaction(autoregister_species=False, temp=self.temp, **kwargs)
         else:
-            return self.reaction_data.add_reaction(**kwargs)
+            return self.reaction_data.add_reaction(autoregister_species=False, **kwargs)
 
+
+
+    def add_species_TODO(self) -> None:
+        """
+
+        :return:
+        """
+        # Will need to update all the indexes
+        pass
 
 
     def describe_reactions(self, **kwargs) -> None:
@@ -510,6 +523,24 @@ class UniformCompartment:
         return self.reaction_data.number_of_reactions()
 
 
+
+    def indexes_of_active_chemicals(self) -> list[int]:
+        """
+        Return the ordered list (numerically SORTED) of the INDEX numbers of all the chemicals
+        involved in ANY of the registered reactions,
+        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+        participate in
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here.)
+
+        EXAMPLE: [2, 7, 8]  if only those 3 chemicals (with indexes of, respectively, 2, 7 and 8)
+                            are actively involved in ANY of the registered reactions
+
+        CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
+                 the reactions are simulated
+        """
+        set_active_species = self.get_reactions().active_chemicals
+        index_list = list(map(self.species_data.get_species_index, set_active_species))
+        return sorted(index_list)
 
 
 
@@ -1116,7 +1147,7 @@ class UniformCompartment:
 
         if variable_steps:
             decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.species_data.number_of_species(),
-                                                                indexes_of_active_chemicals= self.reaction_data.indexes_of_active_chemicals(),
+                                                                indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
             action = decision_data['action']
@@ -1137,7 +1168,7 @@ class UniformCompartment:
 
                 if len(self.reaction_data.active_chemicals) < self.species_data.number_of_species():
                     print(f"    Restricting adaptive time step analysis to {len(self.reaction_data.active_chemicals)} "
-                    f"chemicals only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.reaction_data.indexes_of_active_chemicals()}")
+                    f"species only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")

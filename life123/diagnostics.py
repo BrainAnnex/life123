@@ -83,16 +83,18 @@ class Diagnostics:
         self.reactions.assert_valid_rxn_index(rxn_index)
 
         # Sorted list of the indexes of all the chemicals participating in this reaction
-        indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)   # TODO: get the chem labels instead?
-
+        # Note: self.reactions is an object of type "ReactionRegistry"
+        #indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)
+        set_of_species = self.reactions.get_species_in_reaction(rxn_index)
+        sorted_species_ids = sorted(list(set_of_species))
 
         # Validate increment_dict_single_rxn
         if increment_dict_single_rxn is not None:     # If the values are available (not the case in aborts)
             assert type(increment_dict_single_rxn) == dict, \
                 "save_diagnostic_rxn_data(): the argument `increment_dict_single_rxn` must be of type dict"
 
-            assert len(increment_dict_single_rxn) == len(indexes), \
-                f"save_rxn_data(): the size of the argument `increment_dict_single_rxn` should be {len(indexes)}"
+            assert len(increment_dict_single_rxn) == len(sorted_species_ids), \
+                f"save_rxn_data(): the size of the argument `increment_dict_single_rxn` should be {len(sorted_species_ids)}"
 
             # TODO: also validate that the keys in increment_dict_single_rxn match the labels of the chemicals in this rxn
             
@@ -105,12 +107,13 @@ class Diagnostics:
         data_snapshot = {"time_step": time_step, "aborted": aborted}      # Dict being prepared to add a new row to a Pandas dataframe
 
         if increment_dict_single_rxn is None:     # If the values aren't available (as is the case in aborts)
-            for index in indexes:       # For all the chemicals participating in this reaction
-                data_snapshot["Delta " + self.species_data.get_species_id(index)] = np.nan
+            for species_id in sorted_species_ids:       # For all the species participating in this reaction
+                #data_snapshot["Delta " + self.species_data.get_species_id(index)] = np.nan
+                data_snapshot["Delta " + species_id] = np.nan
         else:
-            for index in indexes:       # For all the chemicals participating in this reaction
-                chem_label = self.species_data.get_species_id(index)
-                data_snapshot["Delta " + chem_label] = increment_dict_single_rxn[chem_label]
+            for species_id in sorted_species_ids:       # For all the species participating in this reaction
+                #chem_label = self.species_data.get_species_id(index)
+                data_snapshot["Delta " + species_id] = increment_dict_single_rxn[species_id]
 
         if rate is not None:
             if type(rate) == tuple:

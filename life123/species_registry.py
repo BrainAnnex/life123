@@ -421,33 +421,6 @@ class SpeciesRegistry:
 
 
 
-    def get_species_id(self, species_index :int) -> str:
-        """
-        Return the id of the species with the given registration index.
-
-        :param species_index:   An integer (starting with zero) corresponding to the
-                                    original order with which the species were first registered
-        :return:                The id of the chemical species with the given index;
-                                    if missing, an Exception is raised
-        """
-        # TODO: ditch!  This is now the responsibility of UniformCompartment
-        # TODO: this will become replacement for the old get_label()
-        # TODO: it'd be better if the calling module kept a lookup table instead :  index -> species_id
-
-        if len(self.by_id) == 0:
-            raise Exception("get_species_id(): no lookup is possible, because there are no species currently registered")
-
-        assert type(species_index) == int, \
-            f"get_species_id(): argument `species_index` must be an integer; it was of type {type(species_index)}"
-
-        assert (species_index >= 0) and (species_index < len(self.by_id)), \
-            f"get_species_id(): argument `species_index` must be between 0 and {len(self.by_id) - 1} (inclusive).  " \
-            f"The value passed was {species_index}"
-
-        # Extract the species_index-th key efficiently
-        return next(islice(iter(self.by_id), species_index, species_index + 1))
-
-
 
     def get_all_species_ids(self) -> list[str]:
         """
@@ -463,6 +436,7 @@ class SpeciesRegistry:
 
     def get_species_index(self, id :str) -> int:
         """
+        TODO: DITCH
         Return the index of the species with the given id.
         Indexes are the integers assigned, in autoincrement order,
         at the time each species is first registered.
@@ -472,7 +446,7 @@ class SpeciesRegistry:
         :return:    The integer index of the species with the given id
                         (the order in which it was added to the registry)
         """
-        # TODO: replacement for the old get_index()
+        # TODO: DITCH.   Replacement for the old get_index()
         # TODO: consider maintaining a lookup - or better yet doing without this feature!
         index = next((i for i, k in enumerate(self.by_id) if k == id), None)
 

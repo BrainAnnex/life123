@@ -52,6 +52,12 @@ class BioSim2D:
                                 #              of the xy grid layout.  Visualization methods will need to make the transformation!
                                 #              See: https://github.com/BrainAnnex/life123/discussions/75
 
+
+        # Pair of indexes to reconcile the species id's to their position in the system state array
+        self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
+        self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
+
+
         # The following buffers are of size (n_species x n_bins_x x n_bins_y)
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step
         self.delta_reactions = None  # Buffer for the concentration changes from reactions step
@@ -125,6 +131,13 @@ class BioSim2D:
         self.system_time = 0             # "Start the clock"
 
 
+        # Build the pair of indexes `index_to_species` and `species_to_index`
+        for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
+            self.index_to_species.append(sp_id)
+            self.species_to_index[sp_id] = i
+
+
+
 
 
     #####################################################################################################
@@ -174,6 +187,23 @@ class BioSim2D:
 
 
 
+    def locate_species_index(self, species_id :str) -> int:
+        #TODO: share with UniformCompartment
+        #species_index = self.species_data.get_species_index(species_id)
+        species_index = self.species_to_index.get(species_id)
+
+        assert species_index is not None, \
+            f'UniformCompartment.locate_species_index(): no information available for species with id "{species_index}"'
+
+        return species_index
+
+    def locate_species_id(self, species_index :int) -> str:
+        #TODO: share with UniformCompartment
+        #return self.species_data.get_species_id(species_index)
+        return self.index_to_species[species_index]
+
+
+
     def system_snapshot_arr_xy(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
         Return a snapshot of all the concentrations of the given chemical species,
@@ -191,7 +221,7 @@ class BioSim2D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_xy(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.species_data.get_species_index(chem_label)
+            chem_index = self.locate_species_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -239,7 +269,7 @@ class BioSim2D:
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_label is not None:
-            species_index = self.species_data.get_species_index(species_label)
+            species_index = self.locate_species_index(species_label)
 
         self.species_data.assert_valid_species_index(species_index)
 
@@ -263,7 +293,7 @@ class BioSim2D:
 
         print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
         for species_index in range(self.n_species):
-            chem_name = self.species_data.get_species_id(species_index)
+            chem_name = self.locate_species_id(species_index)
             if chem_name is None:
                 print(f"Species {species_index}:")      # Use the index, if the name isn't available
             else:
@@ -288,7 +318,7 @@ class BioSim2D:
                                     the size of the array is (n_bins_y x n_bins_x)
         """
         if species_name is not None:
-            species_index = self.species_data.get_species_index(species_name)
+            species_index = self.locate_species_index(species_name)
         else:
             self.species_data.assert_valid_species_index(species_index)
 
@@ -421,7 +451,7 @@ class BioSim2D:
         assert conc >= 0., \
             f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
 
-        species_index = self.species_data.get_species_index(chem_label)
+        species_index = self.locate_species_index(chem_label)
         self.system[species_index, bin_x, bin_y] = conc
 
 
@@ -493,7 +523,7 @@ class BioSim2D:
         """
         if species_name is not None:
             # If the chemical is being identified by name, look up its index
-            species_index = self.species_data.get_species_index(species_name)
+            species_index = self.locate_species_index(species_name)
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
@@ -742,7 +772,7 @@ class BioSim2D:
         if self.n_bins_x and self.n_bins_y == 1:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
-        species_id = self.species_data.get_species_id(species_index)
+        species_id = self.locate_species_id(species_index)
         diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
@@ -1109,7 +1139,7 @@ class BioSim2D:
 
         if title is None:
             if self.species_data.number_of_species() == 1:
-                chem_label = f"chemical `{self.species_data.get_species_id(0)}`"    # The label of the only chemical in the system
+                chem_label = f"chemical `{self.locate_species_id(0)}`"    # The label of the only chemical in the system
             else:
                 chem_label = "all chemicals"
 

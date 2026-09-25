@@ -52,11 +52,22 @@ class ReactionRegistry:
         self.reaction_list = []         # List of "SimulationReaction" objects
 
 
-        self.active_chemicals = set()   # Set of the labels of the chemicals - not counting pure catalysts - involved
+        self.active_chemicals = set()   # Set of the id's of species - not counting pure catalysts - involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
 
+
+
+
+
+    #####################################################################################################
+
+    '''                                          ~   TO VIEW  ~                                       '''
+
+    def ________VIEW________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def number_of_reactions(self, include_inactive=False) -> int:
@@ -217,37 +228,16 @@ class ReactionRegistry:
 
 
 
-    def get_chemicals_in_reaction(self, rxn_index :int) -> {int}:
+    def get_species_in_reaction(self, rxn_index :int) -> set[str]:
         """
-        Return a SET of indices (being a set, they're NOT in any particular order)
-        of all the chemicals participating in the i-th reaction
+        Return the SET of the id's
+        of all the species participating in the reaction with the specified index
 
         :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
-        :return:            A SET of indices of the chemicals involved in the above reaction
+        :return:            A SET of indices of the id's of the species involved in the above reaction
                                 Note: being a set, it's NOT in any particular order
         """
-        #rxn = self.get_reaction(rxn_index)
-        rxn_defn = self.reaction_defn_list[rxn_index]
-
-        name_set = rxn_defn.extract_species_in_reaction()
-
-        index_set = {self.species_data.get_species_index(name) for name in name_set}
-
-        return index_set
-
-
-    def get_chemicals_indexes_in_reaction(self, rxn_index :int) -> [int]:
-        """
-        Return a sorted list of the indexes
-        of all the chemicals participating in the i-th reaction
-
-        :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
-        :return:            A sorted list of indices of the chemicals involved in the above reaction
-        """
-        index_set = self.get_chemicals_in_reaction(rxn_index)
-        index_list = list(index_set)
-
-        return sorted(index_list)
+        return self.get_reaction(rxn_index).stoichiometry.get_all_species_ids()
 
 
 
@@ -274,6 +264,40 @@ class ReactionRegistry:
 
 
         return rxns_found_in
+
+
+
+    def number_of_active_chemicals(self) -> int:
+        """
+        Return the number of all the chemicals
+        involved in ANY of the registered reactions,
+        but NOT counting chemicals that always appear
+        in a catalytic role in all the reactions they participate in
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+        """
+        return len(self.active_chemicals)
+
+
+
+    def labels_of_active_chemicals(self, sort=False) -> list[str]:
+        """
+        Return a list of the id's of all the species
+        involved in ANY of the registered reactions,
+        but NOT counting species that always appear
+        in a catalytic role in all the reactions they participate in
+        (if a species participates in a non-catalytic role in ANY reaction, it'll appear here)
+
+        The list is not in any particular order, unless sort is True.
+
+        :param sort:    If True, the list is sorted
+        :return:        A list of species id's
+        """
+        if not sort:
+            return list(self.active_chemicals)
+
+        return sorted(self.active_chemicals)
+        #return sorted(self.active_chemicals, key=self.species_data.get_species_index)
+
 
 
 
@@ -592,7 +616,7 @@ class ReactionRegistry:
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
-        chem_labels = self.labels_of_active_chemicals(sort_by_index=True)   # Set of chem labels, sorted by chemical index
+        chem_labels = self.labels_of_active_chemicals(sort=True)   # Set of chem labels, sorted by species id
 
         # If plot colors were registered, show them alongside the chem labels
         chem_labels_with_colors = []
@@ -658,57 +682,6 @@ class ReactionRegistry:
 
         return rxn_defn.describe(concise)    # Invoke the individual "ReactionDefinition" object
 
-
-
-    def labels_of_active_chemicals(self, sort_by_index=False) -> [str]:
-        """
-        Return a list of the labels of all the chemicals
-        involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear
-        in a catalytic role in all the reactions they participate in
-        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
-
-        The list is not in any particular order, unless sort_by_index is True
-
-        :param sort_by_index:   If True, the list is sorted by the index (order of registration)
-                                    of the chemicals in it
-        :return:                A set of chemical labels
-        """
-        if not sort_by_index:
-            return list(self.active_chemicals)
-
-        return sorted(self.active_chemicals, key=self.species_data.get_species_index)
-
-
-
-    def number_of_active_chemicals(self) -> int:
-        """
-        Return the number of all the chemicals
-        involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear
-        in a catalytic role in all the reactions they participate in
-        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
-        """
-        return len(self.active_chemicals)
-
-
-
-    def indexes_of_active_chemicals(self) -> [int]:
-        """
-        Return the ordered list (numerically sorted) of the INDEX numbers of all the chemicals
-        involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
-        participate in
-        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here.)
-
-        EXAMPLE: [2, 7, 8]  if only those 3 chemicals (with indexes of, respectively, 2, 7 and 8)
-                            are actively involved in ANY of the registered reactions
-
-        CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
-                 the reactions are simulated
-        """
-        index_list = list(map(self.species_data.get_species_index, self.active_chemicals))
-        return sorted(index_list)
 
 
 

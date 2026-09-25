@@ -30,6 +30,8 @@ def test_constructor():
     assert bio.n_bins_y == 5
     assert bio.n_species == 1
     assert bio.species_data == chem_data
+    assert bio.index_to_species == ['A']
+    assert bio.species_to_index == {'A': 0}
     expected = np.zeros((1, 3, 5), dtype=float)
     assert np.allclose(bio.system, expected)
 
@@ -42,6 +44,8 @@ def test_constructor():
     assert bio.n_bins_y == 5
     assert bio.n_species == 4
     assert bio.species_data == chem_data
+    assert bio.index_to_species == ['A', 'B', 'C', 'D']
+    assert bio.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     expected = np.zeros((4, 3, 5), dtype=float)
     assert np.allclose(bio.system, expected)
     assert type(bio.reactions) == ReactionRegistry
@@ -61,6 +65,8 @@ def test_constructor():
     assert bio.n_bins_x == 4
     assert bio.n_bins_y == 2
     assert bio.n_species == 3
+    assert bio.index_to_species == ['A', 'B', 'C']
+    assert bio.species_to_index == {'A': 0, 'B': 1, 'C': 2}
     expected = np.zeros((3, 4, 2), dtype=float)
     assert np.allclose(bio.system, expected)
     assert type(bio.reactions) == ReactionRegistry

@@ -110,29 +110,81 @@ def test_get_chem_conc():
 
 def test_get_conc_dict():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
-    rxn = UniformCompartment(species_data=chem_data)
-    rxn.set_conc(conc=(100, 200, 300, 400))
+    uc = UniformCompartment(species_data=chem_data)
+    uc.set_conc(conc=(100, 200, 300, 400))
 
-    result = rxn.get_conc_dict()
+    result = uc.get_conc_dict()
     assert result == {"A": 100, "B": 200, "C": 300, "D": 400}
 
-    result = rxn.get_conc_dict(chem_labels=["D", "A"])
+    result = uc.get_conc_dict(chem_labels=["D", "A"])
     assert result == {"A": 100, "D": 400}
 
-    result = rxn.get_conc_dict(chem_labels=("C",))      # Tuple with 1 element
+    result = uc.get_conc_dict(chem_labels=("C",))      # Tuple with 1 element
     assert result == {"C": 300}
 
     with pytest.raises(Exception):
-        rxn.get_conc_dict(chem_labels="C")                      # Wrong data type
+        uc.get_conc_dict(chem_labels="C")                      # Wrong data type
 
     with pytest.raises(Exception):
-        rxn.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
+        uc.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
 
-    result = rxn.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
+    result = uc.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
     assert result == {"A": 1, "B": 2, "C": 3, "D": 4}
 
-    result = rxn.get_conc_dict(chem_labels=["B"], system_data=np.array([1, 2, 3, 4]))
+    result = uc.get_conc_dict(chem_labels=["B"], system_data=np.array([1, 2, 3, 4]))
     assert result == {"B": 2}
+
+
+
+def test_indexes_of_active_chemicals():
+    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A', 'Z'])
+    uc = UniformCompartment(species_data=species_registry)
+
+    assert uc.indexes_of_active_chemicals() == []                 # No reactions yet
+
+    assert uc.index_to_species == ['Y', 'X', 'C', 'B', 'A', 'Z']                    # This order is NOT guaranteed(?)
+    assert uc.species_to_index == {'Y': 0, 'X': 1, 'C': 2, 'B': 3, 'A': 4, 'Z': 5}  # This order is NOT guaranteed(?)
+
+    uc.add_reaction(reactants="A", products="B", reaction_model="mass action")
+    assert uc.indexes_of_active_chemicals() == [3, 4]               # ["A", "B"]
+
+    uc.add_reaction(reactants=["B", "X"], products=["C", "X"], reaction_model="mass action")
+    assert uc.indexes_of_active_chemicals() == [1, 2, 3, 4]          # ["X", "A", "B", "C"]
+
+    uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
+    assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4]      # ["Y", "X", "A", "B", "C"]
+
+    uc.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"], reaction_model="mass action")
+    assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4, 5]   # All
+
+
+
+def test_locate_species_index():
+    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A'])
+    uc = UniformCompartment(species_data=species_registry)
+
+    assert uc.index_to_species == ['Y', 'X', 'C', 'B', 'A']                 # This order is NOT guaranteed(?)
+    assert uc.species_to_index == {'Y': 0, 'X': 1, 'C': 2, 'B': 3, 'A': 4}  # This order is NOT guaranteed(?)
+
+    assert uc.locate_species_index('Y') == 0
+    assert uc.locate_species_index('X') == 1
+    assert uc.locate_species_index('C') == 2
+    assert uc.locate_species_index('B') == 3
+    assert uc.locate_species_index('A') == 4
+
+
+def test_locate_species_id():
+    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A'])
+    uc = UniformCompartment(species_data=species_registry)
+
+    assert uc.index_to_species == ['Y', 'X', 'C', 'B', 'A']                 # This order is NOT guaranteed(?)
+    assert uc.species_to_index == {'Y': 0, 'X': 1, 'C': 2, 'B': 3, 'A': 4}  # This order is NOT guaranteed(?)
+
+    assert uc.locate_species_id(0) == 'Y'
+    assert uc.locate_species_id(1) == 'X'
+    assert uc.locate_species_id(2) == 'C'
+    assert uc.locate_species_id(3) == 'B'
+    assert uc.locate_species_id(4) == 'A'
 
 
 
