@@ -4,7 +4,7 @@ import pandas as pd
 import time
 import plotly.express as px
 import plotly.graph_objects as pgo
-from life123.species_registry import Species, SpeciesRegistry
+from life123.species_registry import SpeciesRegistry
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
@@ -107,6 +107,8 @@ class UniformCompartment:
 
             self.reaction_data = ReactionRegistry(species_data=self.species_data)
 
+        self._reaction_registry_version = self.reaction_data.version    # Used for "lazy synchronization",
+                                                                        # i.e. to check for changes externally made to the registry
 
         self.system_time = 0.       # Global time of the system, from initialization on
 
@@ -157,11 +159,9 @@ class UniformCompartment:
 
 
 
-
         # The following 3 diagnostic values get reset at every run
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
-
 
 
         # ***  FOR DIAGNOSTICS  ***
@@ -180,11 +180,24 @@ class UniformCompartment:
 
 
         # Build the pair of indexes `index_to_species` and `species_to_index`
-        # TODO: very wasteful to index all species;
-        #  we should do just the ones that we have reactions for - as the reactions get added!
+        """
         for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
             self.index_to_species.append(sp_id)
             self.species_to_index[sp_id] = i
+        """
+
+        self._synchronize_species()
+        """
+        for rxn in self.reaction_data.get_all_reactions():
+            # rxn is a "SimulationReaction" object
+            assert type(rxn) is SimulationReaction
+            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
+            self._add_species_set(species_id_set)
+        """
+        if self.macromolecules:
+            ligands = self.macromolecules.get_ligands()     # Set of species id's
+            self._add_species_set(ligands)
+
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
@@ -216,6 +229,29 @@ class UniformCompartment:
         return self.species_data
 
 
+    def _add_species_set(self, species_id_set :set[str]) -> None:
+        """
+
+        :param species_id_set:  Set of ID's of species participating in a reaction being added
+        :return:
+        """
+        # TODO: return the number of newly-added species (for testing convenience)
+        species_id_list = sorted(list(species_id_set))              # The sorting is just for UX reasons
+        for i, sp_id in enumerate(species_id_list):
+            if self.species_to_index.get(sp_id) is not None:
+                continue        # Already indexed this species
+
+            new_index = len(self.index_to_species)
+            self.index_to_species.append(sp_id)
+            self.species_to_index[sp_id] = new_index
+
+            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
+            if self.system is None:
+                self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
+            else:
+                self.system = np.pad(self.system, (0, 1))
+
+
 
     def set_conc(self, conc :list|tuple|dict, snapshot=True) -> None:
         """
@@ -239,14 +275,15 @@ class UniformCompartment:
         # TODO: also allow a Numpy array; make sure to do a copy() to it!
 
         if type(conc) == list or type(conc) == tuple:
-            assert len(conc) == self.species_data.number_of_species(), \
-                f"UniformCompartment.set_conc(): when a list or tuple is passed as the argument 'conc', " \
-                f"its size must match the number of declared chemicals ({self.species_data.number_of_species()})"
+            assert len(conc) == self.number_of_system_species(), \
+                f"UniformCompartment.set_conc(): when a list or tuple is passed as the argument `conc`, " \
+                f"its size must match the number of currently-registered species ({self.number_of_system_species()})"
 
             assert min(conc) >= 0, \
                 f"UniformCompartment.set_conc(): values meant to be chemical concentrations cannot be negative " \
                 f"(such as the passed value {min(conc)})"
 
+            # This sets (or resets) the entire system state
             self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
 
         elif type(conc) == dict:
@@ -261,6 +298,33 @@ class UniformCompartment:
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
                                                        caption="Set concentration")
+
+
+
+    def _synchronize_species(self) -> None:
+        """
+        Register (start managing) all the species that participate in any of the reactions
+        in the reaction registry
+
+        :return:
+        """
+        for rxn in self.reaction_data.get_all_reactions():
+            # rxn is a "SimulationReaction" object
+            assert type(rxn) is SimulationReaction
+            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
+            self._add_species_set(species_id_set)
+
+
+    def _ensure_synchronized_with_reaction_registry(self) -> None:
+        """
+        For lazy synchronization with external mutation in the reaction registry
+
+        :return:
+        """
+        if self._reaction_registry_version != self.reaction_data.version:
+            #print("************OUT OF SYNCH DETECTED!")
+            self._synchronize_species()
+            self._reaction_registry_version = self.reaction_data.version
 
 
 
@@ -281,9 +345,10 @@ class UniformCompartment:
         """
         # Validate the arguments
         assert conc >= 0, \
-            f"UniformCompartment.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
+            f"UniformCompartment.set_single_conc(): species concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
+            self._ensure_synchronized_with_reaction_registry()
             species_index = self.locate_species_index(species_name)
 
         elif species_index is not None:
@@ -294,9 +359,9 @@ class UniformCompartment:
 
 
         if self.system is None:
-            self.system = np.zeros(self.species_data.number_of_species(), dtype='d')      # float64      TODO: allow users to specify the type
+            # Initialize the system state with all zero, if previously unset
+            self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
 
-        # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc
 
         if snapshot:
@@ -318,9 +383,9 @@ class UniformCompartment:
 
 
 
-    def get_chem_conc(self, label :str) -> float:
+    def get_species_conc(self, label :str) -> float:
         """
-        Return the current system concentration of the given specified, specified by its id.
+        Return the current system concentration of the given species, specified by its id.
         If no species by that name exists, an Exception is raised
 
         :param label:   The label of a chemical species
@@ -333,20 +398,29 @@ class UniformCompartment:
 
     def locate_species_index(self, species_id :str) -> int:
         #species_index = self.species_data.get_species_index(species_id)
-        species_index = self.species_to_index.get(species_id)
+        species_index = self.species_to_index.get(species_id, None)
 
         assert species_index is not None, \
-            f'UniformCompartment.locate_species_index(): no information available for species with id "{species_index}"'
+            f'UniformCompartment.locate_species_index(): no species with id "{species_id}" is currently registered ' \
+            f'in the system-state array. \nDid you add reaction including it?'
 
         return species_index
 
+
     def locate_species_id(self, species_index :int) -> str:
         #return self.species_data.get_species_id(species_index)
-        return self.index_to_species[species_index]
+        try:
+            species_id = self.index_to_species[species_index]
+        except IndexError:
+            raise Exception(f"locate_species_id(): there is no species linked "
+                            f"to index value {species_index} in the system-state array.  \n"
+                            f"Maybe you didn't add all the reactions?")
+
+        return species_id
 
 
 
-    def get_conc_dict(self, chem_labels=None, system_data=None) -> dict:
+    def get_conc_dict(self, chem_labels=None, system_data=None) -> dict|None:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
         as a dictionary indexed by the species id
@@ -357,14 +431,16 @@ class UniformCompartment:
                                 index of the chemical species; by default, use the SYSTEM DATA
 
         :return:            A dictionary, indexed by the chemical labels, of the concentration values;
+                                or None if no data available
                                 EXAMPLE: {"A": 1.2, "D": 4.67}
         """
+        # TODO: probably change the None returns to empty dict's
         if system_data is None:
             system_data = self.system
         else:
-            assert system_data.size == self.species_data.number_of_species(), \
+            assert system_data.size == self.number_of_system_species(), \
                 f"UniformCompartment.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
-                f"as the declared number of chemicals ({self.species_data.number_of_species()})"
+                f"as the declared number of chemicals ({self.number_of_system_species()})"
 
 
         if chem_labels is None:
@@ -464,7 +540,7 @@ class UniformCompartment:
     def clear_reactions(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals)
+        to the same data object about the species)
 
         :return:    None
         """
@@ -472,6 +548,8 @@ class UniformCompartment:
         # TODO: provide support for "inactivating" reactions
 
         self.reaction_data.clear_reactions_data()
+        self.index_to_species = []
+        self.species_to_index = {}
 
 
 
@@ -487,9 +565,32 @@ class UniformCompartment:
         """
         if self.temp:
             # If a temperature is set for the uniform compartment, pass it to the reaction
-            return self.reaction_data.add_reaction(autoregister_species=False, temp=self.temp, **kwargs)
+            rxn_index = self.reaction_data.add_reaction(autoregister_species=True, temp=self.temp, **kwargs)
         else:
-            return self.reaction_data.add_reaction(autoregister_species=False, **kwargs)
+            rxn_index = self.reaction_data.add_reaction(autoregister_species=True, **kwargs)
+
+        species_id_set =  self.reaction_data.get_species_in_reaction(rxn_index)
+        self._add_species_set(species_id_set)
+        """
+        species_id_list = sorted(list(species_id_set))              # The sorting is just for UX reasons
+        for i, sp_id in enumerate(species_id_list):
+            if self.species_to_index.get(sp_id) is not None:
+                continue        # Already indexed this species
+
+            self.index_to_species.append(sp_id)
+            self.species_to_index[sp_id] = len(self.index_to_species) - 1   # i
+        """
+
+        return rxn_index
+
+
+
+    def number_of_system_species(self) -> int:
+        """
+        Number of species being simulated (and kept in the system state)
+        :return:
+        """
+        return len(self.index_to_species)
 
 
 
@@ -773,11 +874,11 @@ class UniformCompartment:
                     (termination_keyword, termination_parameter) = stop
                     if termination_keyword == "conc_below":
                         chem_name, conc_threshold = termination_parameter
-                        if self.get_chem_conc(chem_name) < conc_threshold:
+                        if self.get_species_conc(chem_name) < conc_threshold:
                             break   # The concentration of the specified chemical has dropped the requested threshold
                     elif termination_keyword == "conc_above":
                         chem_name, conc_threshold = termination_parameter
-                        if self.get_chem_conc(chem_name) > conc_threshold:
+                        if self.get_species_conc(chem_name) > conc_threshold:
                             break   # The concentration of the specified chemical has risen above the requested threshold
 
                 if (not variable_steps) and (step_count == n_steps)\
@@ -1153,7 +1254,7 @@ class UniformCompartment:
                                                 # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.species_data.number_of_species(),
+            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.number_of_system_species(),
                                                                 indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
@@ -1173,7 +1274,7 @@ class UniformCompartment:
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
 
-                if len(self.reaction_data.active_chemicals) < self.species_data.number_of_species():
+                if len(self.reaction_data.active_chemicals) < self.number_of_system_species():
                     print(f"    Restricting adaptive time step analysis to {len(self.reaction_data.active_chemicals)} "
                     f"species only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
 
@@ -1319,7 +1420,7 @@ class UniformCompartment:
         """
 
         # The increment vector is cumulative for ALL the requested reactions.  Initialize it to all zeros
-        increment_vector = np.zeros(self.species_data.number_of_species(), dtype=float)       # One element per chemical species
+        increment_vector = np.zeros(self.number_of_system_species(), dtype=float)       # One element per chemical species
 
         # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
         # the keys are the reaction indexes
@@ -1641,7 +1742,7 @@ class UniformCompartment:
             d = self.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
             for (site_number, ligand) in d.items():
                 aff_data = self.macromolecules.get_binding_site_affinity(mm, site_number)
-                conc = self.get_chem_conc(ligand)
+                conc = self.get_species_conc(ligand)
                 fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
 
                 self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
@@ -1766,7 +1867,7 @@ class UniformCompartment:
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
-        n_species = self.species_data.number_of_species()
+        n_species = self.number_of_system_species()
         print(f"{n_species} species:")
 
         # Show a line of line of data for each species in turn
@@ -2322,7 +2423,8 @@ class UniformCompartment:
         :param conc:        Dict with the concentrations of the species involved in the reaction(s).
                             The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
-                            If None, then use the current System concentrations instead
+                            If None, then use the current System concentrations instead; if that's not set,
+                                raise an Exception
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
                                 to establish satisfactory match with expected values
         :param explain:     If True, print out details about the analysis,
@@ -2341,6 +2443,8 @@ class UniformCompartment:
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
                                         # EXAMPLE: {'A': 23.9, 'B': 36.1}
+            assert conc,  "is_in_equilibrium(): no concentration values provided, " \
+                          "nor available as system concentration data"
 
         failures_dict = {False: []}     # 1-element dict whose value is
                                         # a list of reactions that fail to meet the criterion for equilibrium

@@ -433,31 +433,6 @@ def test_labels_of_active_chemicals():
 
 
 
-def test__parse_reaction_term():
-    rxn = ReactionRegistry(species_data=SpeciesRegistry())     # Won't actually use the reactants/products
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
-
-    assert rxn._parse_reaction_term("F") == (1, "F")
-
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (2, 5) )   # The last item in the pair is not a string
-
-    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")    # order defaults to stoichiometry
-    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (2, 5) )   # The mid-item in the triplet is not a string
-
-    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")
-    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (3, "F", 2, 123) )     # Extra element in tuple
-
-
 
 
 

@@ -1009,6 +1009,41 @@ class MacroMolecules():
         binding_data[site_number] = ChemicalAffinity(chemical=ligand, Kd=Kd)
 
 
+
+    def get_ligands(self) -> set[str]:
+        """
+        Return a set of all ligands
+
+        #       self.binding_sites = {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
+        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3),
+        #               3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+        #        }
+        :return:
+        """
+        ligands = set()
+
+        mappings = list(self.binding_sites.values())
+        # EXAMPLE of mappings:
+        # [
+        #   {   1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)
+        #   },
+        #   {   1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3),
+        #       3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)
+        #   }
+        # ]
+        for m in mappings:
+            # m is a dict.  EXAMPLE:  { 1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1) }
+            affinities_list = list(m.values())  # EXAMPLE:  [ ChemicalAffinity("A", 2.4), ChemicalAffinity("C", 5.1) ]
+            #print(affinities_list)
+            ligands |= { affinity.chemical for affinity in affinities_list}   # Set union
+            for affinity in affinities_list:
+                species = affinity.chemical
+                #print(species)
+
+        return ligands
+
+
+
     def reset_macromolecule(self, macromolecule :str) -> None:
         """
         Erase all data for the specified macromolecule

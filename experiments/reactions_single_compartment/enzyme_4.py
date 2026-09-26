@@ -131,7 +131,7 @@ uc.curve_intersect("S", "P", t_start=0, t_end=1.0)
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %%
@@ -207,7 +207,7 @@ uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in
 # Interestingly, most of the inital [E] of 0.2 is now, at equilibrium, stored as [ES]=0.119; the energy of the "activation barrier" from E + S to ES might be unrealistically low (2000 Joules).  Zooming in on the very earl part of the plot:
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %%
@@ -267,7 +267,7 @@ uc.plot_history(species=['E', 'ES'], show_intervals=True,
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -333,7 +333,7 @@ uc.plot_history(species=['E', 'ES'], show_intervals=True,
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -402,7 +402,7 @@ uc.plot_history(species=['E', 'ES'], show_intervals=True,
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -470,7 +470,7 @@ uc.plot_history(species=['E', 'ES'], show_intervals=True,
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -538,7 +538,7 @@ uc.plot_history(species=['E', 'ES'], show_intervals=True,
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -597,7 +597,7 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.005)
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]
@@ -656,7 +656,7 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.005)
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = uc.get_chem_conc("P")
+P_equil = uc.get_species_conc("P")
 P_equil
 
 # %% [markdown]

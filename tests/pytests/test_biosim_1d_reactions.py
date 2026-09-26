@@ -28,7 +28,7 @@ def test_reaction_step_1():
     bio.set_uniform_concentration(chem_index=1, conc=50.)
 
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
+    # Reaction A <-> B , with mass-action kinetics
     bio.reactions.add_reaction(reactants=["A"], products=["B"], 
                                reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 

@@ -148,11 +148,11 @@ dynamics.is_in_equilibrium()
 # ### Let's look at the final concentrations of `A` and `C` (i.e., the reactant and product of the composite reaction)
 
 # %%
-A_final = dynamics.get_chem_conc("A")
+A_final = dynamics.get_species_conc("A")
 A_final
 
 # %%
-C_final = dynamics.get_chem_conc("C")
+C_final = dynamics.get_species_conc("C")
 C_final
 
 # %% [markdown]

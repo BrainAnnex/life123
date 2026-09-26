@@ -243,9 +243,10 @@ class MassAction_Model:
         reactant_terms = self.stoichiometry.get_reactant_list()
         product_terms  = self.stoichiometry.get_product_list()
 
+        kF = 0 if self.kF is None else self.kF
         kR = 0 if self.kR is None else self.kR
 
-        forward_rate = self.kF        # The initial multiplicative factor
+        forward_rate = kF        # The initial multiplicative factor
         for order, reactant_id in reactant_terms:     # The stoichiometry coeff. of each reactant is taken to be its reaction order
             conc = conc_dict.get(reactant_id)
             assert conc is not None, \

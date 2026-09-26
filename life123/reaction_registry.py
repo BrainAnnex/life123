@@ -42,6 +42,11 @@ class ReactionRegistry:
         #assert chem_data is not None, \
             #"ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
 
+        self.version = 0        # A mutation counter used for "lazy synchronization" with higher-level modules using this class.
+                                #   Whenever this registry is modified (for example, by adding a reaction),
+                                #   its `version` number gets increased;
+                                #   clients can inspect changes when they need to interact with this registry
+
         if species_data is None:
             self.species_data = SpeciesRegistry()
         else:
@@ -52,7 +57,7 @@ class ReactionRegistry:
         self.reaction_list = []         # List of "SimulationReaction" objects
 
 
-        self.active_chemicals = set()   # Set of the id's of species - not counting pure catalysts - involved
+        self.active_chemicals = set()   # Set of the id's of species - NOT counting pure catalysts - involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
@@ -70,12 +75,11 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def number_of_reactions(self, include_inactive=False) -> int:
+    def number_of_reactions(self) -> int:
         """
         Return the number of registered chemical reactions
         (the number of DERIVED "SimulationReaction" objects)
 
-        :param include_inactive:    [NO LONGER IN USE] If True, disabled reactions are also included
         :return:                    The number of registered chemical reactions
         """
         return len(self.reaction_list)
@@ -212,6 +216,7 @@ class ReactionRegistry:
         :param i:   The integer index (0-based) to identify the reaction of interest
         :return:    The value of the forward rate constant for the above reaction
         """
+        # TODO: OBSOLETE
         rxn = self.get_reaction(i)
         return rxn.extract_forward_rate_constant()
 
@@ -223,6 +228,7 @@ class ReactionRegistry:
         :param i:   The integer index (0-based) to identify the reaction of interest
         :return:    The value of the reverse (back) rate constant for the above reaction
         """
+        # TODO: OBSOLETE
         rxn = self.get_reaction(i)
         return rxn.extract_reverse_rate_constant()
 
@@ -451,6 +457,8 @@ class ReactionRegistry:
             # Update the set of "active chemicals"
             self.active_chemicals |= involved_chemicals     # Union of sets
 
+        self.version += 1       # Update the "mutation counter" of this ReactionRegistry object
+
         return reaction_id
 
 
@@ -458,86 +466,15 @@ class ReactionRegistry:
     def clear_reactions_data(self) -> None:
         """
         Get rid of all the reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals and their properties)
+        to the same data object about the species and their properties)
 
         :return:    None
         """
         self.reaction_list = []
         self.reaction_defn_list = []
         self.active_chemicals = set()
+        self.version += 1       # Update the "mutation counter" of this ReactionRegistry object
 
-
-
-    def _parse_reaction_term(self, term :str|tuple|list, name="term") -> (int, str):
-        """
-        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
-
-        NOTE: if the stoichiometry coefficient isn't specified, it defaults to 1
-
-        In the passed tuples or lists:
-            - required 1st entry is the stoichiometry
-            - required 2nd entry is the chemical name
-
-        If just a string is being passed, it is taken to be the chemical name,
-        with stoichiometry coefficient of 1
-
-        EXAMPLES:
-            "F"          gets turned into:  (1, "F")   - defaults used for stoichiometry
-            (2, "F")                        (2, "F")
-            It's equally acceptable to use LISTS in lieu of tuples
-
-        :param term:    A string (a chemical name)
-                            OR  a pair (stoichiometry coeff, name)
-        :param name:    An optional nickname, handy to refer to this term in error messages if needed
-                            (for example, "reactant" or "product")
-        :return:        A standardized pair of the form (stoichiometry, species_label),
-                            where stoichiometry is an integer, while species_label is a string
-        """
-        if type(term) == str:
-            return  (1, term)    # Accept simply the chemical name as a shortcut,
-                                    # for when the stoichiometry coefficient and reaction order are both 1
-
-        if type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
-                            f"or a pair (stoichiometry coeff, name). "
-                            f"Instead, it is `{term}` (of type {type(term)})")
-
-        # If we get thus far, term is either a tuple or a list
-        assert len(term) == 2,  \
-            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2. " \
-            f"Instead, it is {len(term)}"
-
-        stoichiometry = term[0]
-        assert type(stoichiometry) == int, \
-            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
-
-        chem_label = term[1]
-        assert type(chem_label) == str, \
-                            f"_parse_reaction_term(): The chemical name must be a string. " \
-                            f"Instead, it is `{chem_label}` (of type {type(chem_label)})"
-
-
-        return (stoichiometry, chem_label)
-
-
-
-    def _standardize_reaction_side(self, terms :str|list, arg_name :str):
-        """
-
-        :param terms:
-        :param arg_name:
-        :return:
-        """
-        assert terms is not None, \
-            f"standardize_reaction_side(): the argument `{arg_name}` is a required one; it can't be None"
-
-        if type(terms) == str:
-            terms = [terms]
-        else:
-            assert type(terms) == list, \
-                f"standardize_reaction_side(): the argument `{arg_name}` must be a string or a list; the passed value was {type(terms)}"
-
-        return [self._parse_reaction_term(r, "reactant") for r in terms]   # A list of pairs
 
 
 
