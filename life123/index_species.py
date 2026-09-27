@@ -21,53 +21,59 @@ class IndexSpecies:
     def number_of_system_species(self) -> int:
         """
         Number of species being simulated (and kept in the system state)
+
         :return:
         """
         return len(self.index_to_species)
 
 
 
-    def locate_species_index(self, species_id :str) -> int:
+    def index_of(self, species_id :str) -> int:
         """
+        Locate and return the array index (meant for system-state arrays)
+        associated to the given species ID.
 
-        :param species_id:
+        :param species_id:  A species ID
         :return:
         """
         species_index = self.species_to_index.get(species_id, None)
 
         assert species_index is not None, \
-            f'UniformCompartment.locate_species_index(): no species with id "{species_id}" is currently registered ' \
-            f'in the system-state array. \nDid you add reaction including it?'
+            f'IndexSpecies.index_of(): no species with id "{species_id}" is currently registered ' \
+            f'in the system-state array. \nDid you include it?'
 
         return species_index
 
 
-    def locate_species_id(self, species_index :int) -> str:
+    def species_at(self, species_index :int) -> str:
         """
+        Locate and return the species ID associated to the given index
+        (typically, index used for storage in system-state arrays)
 
         :param species_index:
-        :return:
+        :return:                A species ID
         """
         try:
             species_id = self.index_to_species[species_index]
         except IndexError:
-            raise Exception(f"locate_species_id(): there is no species linked "
+            raise IndexError(f"IndexSpecies.species_at(): there is no species linked "
                             f"to index value {species_index} in the system-state array.  \n"
-                            f"Maybe you didn't add all the reactions?")
+                            f"Did you add all the species?")
 
         return species_id
 
 
 
-    def add_species(self, species_id_set : set[str] | list[str]) -> int:
+    def add_species(self, species_ids : set[str] | list[str] | tuple[str, ...]) -> int:
         """
-        Specify a set to species id's to add to the index management
+        Specify that the given group of species id's should be included in the index management
+        Note: the calling module will typically need to expand the system state array accordingly
 
-        :param species_id_set:  Set of ID's of species whose indexing needs to be managed;
-                                    no action taken for any species that is already managed
-        :return:                The number of newly-managed species
+        :param species_ids: Set, list or tuple of the ID's of species whose indexing needs to be managed;
+                                no harm in also including species that are already managed (they will be ignored)
+        :return:            The number of newly-managed species
         """
-        species_id_list = sorted(list(species_id_set))      # The sorting is just for UX reasons
+        species_id_list = sorted(list(species_ids))      # The sorting is just for UX reasons
 
         number_added = 0
         for i, sp_id in enumerate(species_id_list):
@@ -79,14 +85,6 @@ class IndexSpecies:
             self.species_to_index[sp_id] = new_index
 
             number_added += 1
-
-            """
-            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
-            if self.system is None:
-                self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
-            else:
-                self.system = np.pad(self.system, (0, 1))
-            """
 
         return number_added
 

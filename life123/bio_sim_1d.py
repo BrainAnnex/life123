@@ -535,7 +535,7 @@ class System1D:
         :return:            None
         """
         if chem_label is not None:
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -596,7 +596,7 @@ class System1D:
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         if chem_label is not None:
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -618,7 +618,7 @@ class System1D:
         """
         if chem_label is not None:
             # If the chemical is being identified by name, look up its index
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         elif chem_index is None:
             raise Exception("System1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
@@ -660,7 +660,7 @@ class System1D:
             "inject_conc_to_bin(): at least one of the args `chem_label` or `chem_index` must be provided"
         if chem_label is not None:
             assert chem_index is None, "inject_conc_to_bin(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         else:
             assert chem_index is not None, "inject_conc_to_bin(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -695,7 +695,7 @@ class System1D:
         assert self.n_bins > 1, \
                     f"System1D.inject_gradient(): minimum system size must be 2 bins"
 
-        species_index = self.index_species.locate_species_index(chem_label)
+        species_index = self.index_species.index_of(chem_label)
 
         # Create an array of equally-spaced values from conc_left to conc_right
         # Size of array is same as the number of bins in the system
@@ -727,7 +727,7 @@ class System1D:
                                     otherwise, an Exception will be raised
         :return:                None
         """
-        species_index = self.index_species.locate_species_index(chem_label)
+        species_index = self.index_species.index_of(chem_label)
 
         period = self.n_bins / number_cycles
         #print("period: ", period)
@@ -800,7 +800,7 @@ class System1D:
             assert amplitude >= 0, \
                 f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
-        species_index = self.index_species.locate_species_index(chem_label)
+        species_index = self.index_species.index_of(chem_label)
 
         # Create an array of equally-spaced values from 0. to 1.
         # Size of array is same as the number of bins in the system
@@ -867,7 +867,7 @@ class System1D:
         #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr()
 
         if chem_label is not None:
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -898,7 +898,7 @@ class System1D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -941,7 +941,7 @@ class System1D:
         :return:            A concentration value at the indicated bin, for the requested species
         """
         if chem_label is not None:
-            chem_index = self.index_species.locate_species_index(chem_label)
+            chem_index = self.index_species.index_of(chem_label)
 
         self.species_data.assert_valid_species_index(chem_index)
 
@@ -962,7 +962,7 @@ class System1D:
 
         d = {}
         for species_index in range(self.n_species):
-            name = self.index_species.locate_species_id(species_index)
+            name = self.index_species.species_at(species_index)
             conc = self.bin_concentration(bin_address, species_index)
             d[name] = conc
 
@@ -1413,7 +1413,7 @@ class System1D:
 
         if title is None:
             if self.species_data.number_of_species() == 1:
-                chem_title = f"chemical `{self.index_species.locate_species_id(0)}`"    # The label of the only chemical in the system
+                chem_title = f"chemical `{self.index_species.species_at(0)}`"    # The label of the only chemical in the system
             else:
                 chem_title = "all chemicals"
 
@@ -1808,9 +1808,9 @@ class BioSim1D(System1D):
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-            species_id = self.index_species.locate_species_id(chem_index)
+            species_id = self.index_species.species_at(chem_index)
             diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of this chemical
-            chem_label = self.index_species.locate_species_id(chem_index)
+            chem_label = self.index_species.species_at(chem_index)
             permeability = self.membranes_obj.permeability.get(chem_label)
             # TODO: maybe skip any species that have exactly zero as diffusion/permeability (species that
             #       in a simplified model we don't want to bother with)

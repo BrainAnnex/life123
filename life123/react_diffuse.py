@@ -40,8 +40,8 @@ class ReactDiffuse:
 
         match type:
             case "uniform":
-                self.module = UniformCompartment()
-                self.module.index_species = self.index_species   # Over-write
+                self.module = UniformCompartment(index_species=self.index_species)
+
 
             case "1d":
                 assert n_bins is not None, "Must pass a value for argument `n_bins`"
@@ -53,4 +53,3 @@ class ReactDiffuse:
                     self.index_species.add_species(all_registry_species)
 
                 self.module = BioSim1D(n_bins=n_bins, species_data=species_registry, index_species=self.index_species)
-                #self.module.index_species = self.index_species

@@ -54,7 +54,7 @@ class UniformCompartment:
     """
 
     def __init__(self, reactions=None, species_data=None, names=None,
-                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None):
+                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None, index_species=None):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
@@ -85,6 +85,7 @@ class UniformCompartment:
                                         if False (default), no action taken
         :param temp:            [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
+        :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
 
         self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
@@ -137,9 +138,6 @@ class UniformCompartment:
         self.previous_system = None # Concentration data of all the species at the previous simulation step
 
 
-        # Indexes to reconcile the species id's to their index position in the system state array
-        self.index_species = IndexSpecies()
-
 
         self.macromolecules = macromolecules    # Object of type "MacroMolecules"
 
@@ -170,6 +168,23 @@ class UniformCompartment:
                                                                     # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
 
+        self.index_species = None   # Indexes to reconcile the species id's to their index position in the system state array
+
+        if index_species is not None:
+            # Index was passed by the calling module (which will be initiating it)
+            self.index_species = index_species
+        else:
+             # We'll proceed independently, as a top-level module
+            self.index_species = IndexSpecies()
+
+            # Build the needed indexes, based on the reactions, and on macromolecules
+            self._synchronize_species()
+
+            if self.macromolecules:
+                ligands = self.macromolecules.get_ligands()     # Set of species id's
+                self._add_species_set(ligands)
+
+
 
         # The following 3 diagnostic values get reset at every run
         self.number_neg_concs = 0
@@ -191,13 +206,6 @@ class UniformCompartment:
             self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
 
 
-        # Build the needed indexes
-        self._synchronize_species()
-
-        if self.macromolecules:
-            ligands = self.macromolecules.get_ligands()     # Set of species id's
-            self._add_species_set(ligands)
-
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps(uc=self)
@@ -205,6 +213,23 @@ class UniformCompartment:
         if preset:
             self.adaptive_steps.use_adaptive_preset(preset)
 
+
+
+    def _add_species_set(self, species_id_set :set[str]) -> None:
+        """
+
+        :param species_id_set:  Set of ID's of species participating in a reaction being added
+        :return:                None
+        """
+        number_added = self.index_species.add_species(species_id_set)
+        #print("number_added: ", number_added)
+
+        if number_added > 0:
+            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
+            if self.system is None:
+                self.system = np.zeros(number_added, dtype='d') # float64      TODO: allow users to specify the type
+            else:
+                self.system = np.pad(self.system, (0, number_added))
 
 
 
@@ -226,24 +251,6 @@ class UniformCompartment:
         :return:    Object of type "SpeciesRegistry"
         """
         return self.species_data
-
-
-    def _add_species_set(self, species_id_set :set[str]) -> None:
-        """
-
-        :param species_id_set:  Set of ID's of species participating in a reaction being added
-        :return:                None
-        """
-        number_added = self.index_species.add_species(species_id_set)
-        #print("number_added: ", number_added)
-
-        if number_added > 0:
-            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
-            if self.system is None:
-                self.system = np.zeros(number_added, dtype='d')
-                #self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
-            else:
-                self.system = np.pad(self.system, (0, number_added))
 
 
 
@@ -391,13 +398,13 @@ class UniformCompartment:
 
     def locate_species_index(self, species_id :str) -> int:
         # TODO: zap
-        return self.index_species.locate_species_index(species_id)
+        return self.index_species.index_of(species_id)
 
 
 
     def locate_species_id(self, species_index :int) -> str:
         # TODO: zap
-        return self.index_species.locate_species_id(species_index)
+        return self.index_species.species_at(species_index)
 
 
 
@@ -615,7 +622,7 @@ class UniformCompartment:
         set_active_species = self.get_reactions().active_chemicals
 
         index_list = list(
-                            map(lambda species_id: self.index_species.locate_species_index(species_id), set_active_species)
+                            map(lambda species_id: self.index_species.index_of(species_id), set_active_species)
                          )
         return sorted(index_list)
 
