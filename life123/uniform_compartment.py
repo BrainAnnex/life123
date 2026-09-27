@@ -349,7 +349,7 @@ class UniformCompartment:
 
         if species_name is not None:
             self._ensure_synchronized_with_reaction_registry()
-            species_index = self.locate_species_index(species_name)
+            species_index = self.index_species.index_of(species_name)
 
         elif species_index is not None:
             self.species_data.assert_valid_species_index(species_index)
@@ -366,7 +366,7 @@ class UniformCompartment:
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            self.capture_conc_snapshot(caption=f"Set concentration of `{self.locate_species_id(species_index)}`")
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.index_species.species_at(species_index)}`")
 
 
 
@@ -391,20 +391,8 @@ class UniformCompartment:
         :param label:   The label of a chemical species
         :return:        The current system concentration of the above chemical
         """
-        species_index = self.locate_species_index(label)
+        species_index = self.index_species.index_of(label)
         return self.system[species_index]
-
-
-
-    def locate_species_index(self, species_id :str) -> int:
-        # TODO: zap
-        return self.index_species.index_of(species_id)
-
-
-
-    def locate_species_id(self, species_index :int) -> str:
-        # TODO: zap
-        return self.index_species.species_at(species_index)
 
 
 
@@ -435,7 +423,7 @@ class UniformCompartment:
             if system_data is None:
                 return {}
             else:
-                return {self.locate_species_id(index): system_data[index]
+                return {self.index_species.species_at(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(chem_labels) == list or type(chem_labels) == tuple, \
@@ -444,7 +432,7 @@ class UniformCompartment:
 
             conc_dict = {}
             for name in chem_labels:
-                species_index = self.locate_species_index(name)
+                species_index = self.index_species.index_of(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -1354,7 +1342,7 @@ class UniformCompartment:
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
-            chem_name = self.locate_species_id(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            chem_name = self.index_species.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the chemicals (for instance `{chem_name}`, of index {first_neg_index}), from the combined reactions."
@@ -1427,7 +1415,7 @@ class UniformCompartment:
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-                chem_index = self.locate_species_index(chem_label)
+                chem_index = self.index_species.index_of(chem_label)
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # for any of the proposed concentration changes for this reaction.
                 # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1469,7 +1457,7 @@ class UniformCompartment:
 
         conc_dict = {}
         for label in chem_labels:
-            chem_index = self.locate_species_index(label)    # The integer index this chemical
+            chem_index = self.index_species.index_of(label)    # The integer index this chemical
             conc_dict[label] = conc_array[chem_index]
 
         return conc_dict
@@ -1518,7 +1506,7 @@ class UniformCompartment:
             # Unpack data from the reactant r
             stoichiometry, species_name = r
 
-            species_index = self.locate_species_index(species_name)
+            species_index = self.index_species.index_of(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if r is an enzyme for this reaction
@@ -1533,7 +1521,7 @@ class UniformCompartment:
             # Unpack data from the product p
             stoichiometry, species_name = p
 
-            species_index = self.locate_species_index(species_name)
+            species_index = self.index_species.index_of(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if p is an enzyme for this reaction
@@ -1583,7 +1571,7 @@ class UniformCompartment:
         """
         if (baseline_conc + delta_conc) < 0:
             # If the requested concentration change would lead to a negative concentration
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.locate_species_id(species_index)}` "
+            #print(f"\n*** CAUTION: negative concentration in chemical `{self.index_species.species_at(species_index)}` "
             #      f"in step starting at t={self.system_time:.5g})"
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
@@ -1593,15 +1581,15 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.locate_species_id(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.index_species.species_at(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.locate_species_id(species_index)}`")
+                                               caption=f"aborted: neg. conc. in `{self.index_species.species_at(species_index)}`")
 
-            chem_name = self.locate_species_id(species_index)
+            chem_name = self.index_species.species_at(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
                                     f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "

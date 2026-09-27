@@ -192,7 +192,7 @@ def test_indexes_of_active_chemicals():
 
 
 
-def test_locate_species_index():
+def test_add_reaction():
     species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A'])
     uc = UniformCompartment(species_data=species_registry)
 
@@ -202,34 +202,25 @@ def test_locate_species_index():
     assert uc.index_species.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
     assert uc.index_species.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
 
-    assert uc.locate_species_index('X') == 0
-    assert uc.locate_species_index('Y') == 1
-    assert uc.locate_species_index('A') == 2
-    assert uc.locate_species_index('B') == 3
-    assert uc.locate_species_index('C') == 4
+    assert uc.index_species.index_of('X') == 0
+    assert uc.index_species.index_of('Y') == 1
+    assert uc.index_species.index_of('A') == 2
+    assert uc.index_species.index_of('B') == 3
+    assert uc.index_species.index_of('C') == 4
 
     with pytest.raises(Exception):
-        uc.locate_species_index('UNKNOWN')
+        uc.index_species.index_of('UNKNOWN')
 
 
-def test_locate_species_id():
-    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A'])
-    uc = UniformCompartment(species_data=species_registry)
-
-    uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
-    uc.add_reaction(reactants="C", products=["B", "A"], reaction_model="mass action")
-
-    assert uc.index_species.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.index_species.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
-
-    assert uc.locate_species_id(0) == 'X'
-    assert uc.locate_species_id(1) == 'Y'
-    assert uc.locate_species_id(2) == 'A'
-    assert uc.locate_species_id(3) == 'B'
-    assert uc.locate_species_id(4) == 'C'
+    assert uc.index_species.species_at(0) == 'X'
+    assert uc.index_species.species_at(1) == 'Y'
+    assert uc.index_species.species_at(2) == 'A'
+    assert uc.index_species.species_at(3) == 'B'
+    assert uc.index_species.species_at(4) == 'C'
 
     with pytest.raises(Exception):
-        uc.locate_species_id(5)
+        uc.index_species.locate_species_id(5)
+
 
 
 
