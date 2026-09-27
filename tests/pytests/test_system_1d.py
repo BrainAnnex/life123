@@ -29,8 +29,8 @@ def test_constructor():
     assert bio.n_bins == 5
     assert bio.n_species == 1
     assert bio.species_data == chem_data
-    assert bio.index_to_species == ['A']
-    assert bio.species_to_index == {'A': 0}
+    assert bio.index_species.index_to_species == ['A']
+    assert bio.index_species.species_to_index == {'A': 0}
     assert bio.global_Dx == 1
     assert np.allclose(bio.system_time, 0)
     expected = np.zeros((1, 5), dtype=float)
@@ -43,8 +43,8 @@ def test_constructor():
     assert bio.n_bins == 15
     assert bio.n_species == 3
     assert bio.species_data == chem_data
-    assert bio.index_to_species == ['A', 'B', 'C']
-    assert bio.species_to_index == {'A': 0, 'B': 1, 'C': 2}
+    assert bio.index_species.index_to_species == ['A', 'B', 'C']
+    assert bio.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.system, expected)
 

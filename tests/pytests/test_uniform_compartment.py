@@ -28,28 +28,28 @@ def test_constructor():
     assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.index_to_species == []
-    assert uc.species_to_index == {}
+    assert uc.index_species.index_to_species == []
+    assert uc.index_species.species_to_index == {}
 
     uc = UniformCompartment(species_data=species_registry)
     assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.index_to_species == []
-    assert uc.species_to_index == {}
+    assert uc.index_species.index_to_species == []
+    assert uc.index_species.species_to_index == {}
 
     uc = UniformCompartment(names=names)
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.index_to_species == []
-    assert uc.species_to_index == {}
+    assert uc.index_species.index_to_species == []
+    assert uc.index_species.species_to_index == {}
 
     uc = UniformCompartment(reactions=rxns, species_data=species_registry)
     assert uc.reaction_data == rxns
     assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
-    assert uc.index_to_species == []
-    assert uc.species_to_index == {}
+    assert uc.index_species.index_to_species == []
+    assert uc.index_species.species_to_index == {}
 
 
     rxns.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")
@@ -59,8 +59,8 @@ def test_constructor():
     assert uc.species_data == species_registry
     assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 1
-    assert uc.index_to_species == ['A', 'B', 'C']
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
 
 
@@ -74,8 +74,8 @@ def test_set_conc():
 
     uc.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")
     assert uc.reaction_data.number_of_reactions() == 1
-    assert uc.index_to_species == ['A', 'B', 'C']
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(uc.system, [0, 0, 0])
 
     with pytest.raises(Exception):
@@ -136,8 +136,8 @@ def test_get_conc_dict():
     uc = UniformCompartment(species_data=chem_data)
     uc.add_reaction(reactants=["A"], products=["B"], reaction_model="mass action")
     uc.add_reaction(reactants=["C"], products=["D"], reaction_model="mass action")
-    assert uc.index_to_species == ['A', 'B', 'C', 'D']
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C', 'D']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
 
     uc.set_conc(conc=(100, 200, 300, 400))
 
@@ -171,23 +171,23 @@ def test_indexes_of_active_chemicals():
     assert uc.indexes_of_active_chemicals() == []                 # No reactions yet
 
     uc.add_reaction(reactants="A", products="B", reaction_model="mass action")
-    assert uc.index_to_species == ['A', 'B']
-    assert uc.species_to_index == {'A': 0, 'B': 1}
+    assert uc.index_species.index_to_species == ['A', 'B']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1}
     assert uc.indexes_of_active_chemicals() == [0, 1]
 
     uc.add_reaction(reactants=["B", "X"], products=["C", "X"], reaction_model="mass action")
-    assert uc.index_to_species == ['A', 'B', 'C', 'X']              # Notice the newly-added names got sorted alphabetically
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C', 'X']              # Notice the newly-added names got sorted alphabetically
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3}
     assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3]
 
     uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
-    assert uc.index_to_species == ['A', 'B', 'C', 'X', 'Y']
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C', 'X', 'Y']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4}
     assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4]
 
     uc.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"], reaction_model="mass action")
-    assert uc.index_to_species == ['A', 'B', 'C', 'X', 'Y', 'Z']
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4, 'Z': 5}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C', 'X', 'Y', 'Z']
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4, 'Z': 5}
     assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4, 5]   # All
 
 
@@ -199,8 +199,8 @@ def test_locate_species_index():
     uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
     uc.add_reaction(reactants="C", products=["B", "A"], reaction_model="mass action")
 
-    assert uc.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
+    assert uc.index_species.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
+    assert uc.index_species.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
 
     assert uc.locate_species_index('X') == 0
     assert uc.locate_species_index('Y') == 1
@@ -219,8 +219,8 @@ def test_locate_species_id():
     uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
     uc.add_reaction(reactants="C", products=["B", "A"], reaction_model="mass action")
 
-    assert uc.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
+    assert uc.index_species.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
+    assert uc.index_species.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
 
     assert uc.locate_species_id(0) == 'X'
     assert uc.locate_species_id(1) == 'Y'
@@ -271,7 +271,7 @@ def test_single_compartment_react():
 
     # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow
     # HYPOTHETICALLY treated as a mass-action reaction
-    index = rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
+    rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
                       reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
 
 
@@ -381,8 +381,8 @@ def test_reaction_step_common_fixed_step_2():
     uc.add_reaction(reactants=["A" , "B"], products="C",
                     reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
 
-    assert uc.index_to_species == ['A', 'B', 'X', 'Y', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'X': 2, 'Y': 3, 'C': 4}
+    assert uc.index_species.index_to_species == ['A', 'B', 'X', 'Y', 'C']                     # Notice the reaction-wise sorting
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'X': 2, 'Y': 3, 'C': 4}
 
     uc.set_conc(conc=[10, 50, 0, 0, 20], snapshot=False)
 
@@ -468,8 +468,8 @@ def test__reaction_elemental_step_2():
 
     uc.set_conc(conc={"C": 20.})
     assert np.allclose(uc.get_system_conc() , [10., 50., 20.])
-    assert uc.index_to_species == ['A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_to_index == {'A': 0, 'B': 1, 'C': 2}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C']                     # Notice the reaction-wise sorting
+    assert uc.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
 
     result = uc._reaction_elemental_step(delta_time=0.002)
     assert np.allclose(result, [-4.92, -4.92, 4.92])
@@ -621,8 +621,8 @@ def test_single_compartment_correct_neg_conc():
                     reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
     
     uc.set_conc(conc={"U": 50., "X": 100., "S": 0.})
-    assert uc.index_to_species == ['S', 'U', 'X']
-    assert uc.species_to_index == {'S': 0, 'U': 1, 'X': 2}
+    assert uc.index_species.index_to_species == ['S', 'U', 'X']
+    assert uc.index_species.species_to_index == {'S': 0, 'U': 1, 'X': 2}
 
     uc.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
@@ -955,8 +955,8 @@ def test_update_occupancy():
 
     uc = UniformCompartment(species_data=sr, macromolecules=mm_data)
     # Verify that the ligands got added to the system state
-    assert uc.index_to_species == ['A', 'B', 'C']
-    assert uc.species_to_index == {"A": 0, "B": 1, "C": 2}
+    assert uc.index_species.index_to_species == ['A', 'B', 'C']
+    assert uc.index_species.species_to_index == {"A": 0, "B": 1, "C": 2}
 
     uc.set_macromolecules()
     assert uc.macro_system == {"M1": 1, "M2": 1}

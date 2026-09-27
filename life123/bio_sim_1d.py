@@ -6,6 +6,7 @@ from scipy.stats import norm
 from typing import Union, List
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
+from life123.index_species import IndexSpecies
 from life123.history import HistoryBinConcentration
 import plotly.express as px
 import plotly.graph_objects as pgo
@@ -29,7 +30,7 @@ class System1D:
     "system coordinates": real numbers in the interval [0-1]
     """
 
-    def __init__(self, n_bins :int, species_data):
+    def __init__(self, n_bins :int, species_data, index_species=None):
         """
 
         :param n_bins:          The number of compartments (bins) to model our 1D system
@@ -54,9 +55,17 @@ class System1D:
                                     # to compute the state at the next time step
 
 
-        # Pair of indexes to reconcile the species id's to their position in the system state array
-        self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
-        self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
+        # Indexes to reconcile the species id's to their position in the system state array
+        if index_species is not None:
+            # Index was passed by the calling module (which will be initiating it)
+            self.index_species = index_species
+        else:
+            # We'll proceed independently, as a top-level module
+            self.index_species = IndexSpecies()
+            all_registry_species = species_data.get_all_species_ids()
+            assert len(all_registry_species) > 0, \
+                "No species were specified, thru argument `species_data`"
+            self.index_species.add_species(all_registry_species)
 
 
         self.system_time = 0        # Global time of the system, from initialization on
@@ -69,9 +78,10 @@ class System1D:
             # TODO: maybe drop this requirement?  And then set it later on?
 
 
-        self.species_data = species_data      # Object of type "SpeciesRegistry", with info on the individual chemicals
+        self.species_data = species_data      # Object of type "SpeciesRegistry", with info on the individual species
 
-        self.n_species = self.species_data.number_of_species()   # The number of (non-water) chemical species   TODO: phase out?
+        #self.n_species = self.species_data.number_of_species()   # The number of (non-water) chemical species   TODO: turn into a method?
+        self.n_species = self.index_species.number_of_system_species()
 
         assert self.n_species >= 1, \
             "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
@@ -91,12 +101,12 @@ class System1D:
                                                                     # Note: this is the primary way of history-keeping
                                                                     # of concentration values during the simulation
 
+        """
         # Build the pair of indexes `index_to_species` and `species_to_index`
         for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
             self.index_to_species.append(sp_id)
             self.species_to_index[sp_id] = i
-
-
+        """
 
 
 
@@ -525,7 +535,7 @@ class System1D:
         :return:            None
         """
         if chem_label is not None:
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -586,7 +596,7 @@ class System1D:
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         if chem_label is not None:
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -608,7 +618,7 @@ class System1D:
         """
         if chem_label is not None:
             # If the chemical is being identified by name, look up its index
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         elif chem_index is None:
             raise Exception("System1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
@@ -650,7 +660,7 @@ class System1D:
             "inject_conc_to_bin(): at least one of the args `chem_label` or `chem_index` must be provided"
         if chem_label is not None:
             assert chem_index is None, "inject_conc_to_bin(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             assert chem_index is not None, "inject_conc_to_bin(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -685,7 +695,7 @@ class System1D:
         assert self.n_bins > 1, \
                     f"System1D.inject_gradient(): minimum system size must be 2 bins"
 
-        species_index = self.locate_species_index(chem_label)
+        species_index = self.index_species.locate_species_index(chem_label)
 
         # Create an array of equally-spaced values from conc_left to conc_right
         # Size of array is same as the number of bins in the system
@@ -717,7 +727,7 @@ class System1D:
                                     otherwise, an Exception will be raised
         :return:                None
         """
-        species_index = self.locate_species_index(chem_label)
+        species_index = self.index_species.locate_species_index(chem_label)
 
         period = self.n_bins / number_cycles
         #print("period: ", period)
@@ -790,7 +800,7 @@ class System1D:
             assert amplitude >= 0, \
                 f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
-        species_index = self.locate_species_index(chem_label)
+        species_index = self.index_species.locate_species_index(chem_label)
 
         # Create an array of equally-spaced values from 0. to 1.
         # Size of array is same as the number of bins in the system
@@ -857,7 +867,7 @@ class System1D:
         #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr()
 
         if chem_label is not None:
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
@@ -888,7 +898,7 @@ class System1D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -931,7 +941,7 @@ class System1D:
         :return:            A concentration value at the indicated bin, for the requested species
         """
         if chem_label is not None:
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
 
         self.species_data.assert_valid_species_index(chem_index)
 
@@ -952,27 +962,11 @@ class System1D:
 
         d = {}
         for species_index in range(self.n_species):
-            name = self.locate_species_id(species_index)
+            name = self.index_species.locate_species_id(species_index)
             conc = self.bin_concentration(bin_address, species_index)
             d[name] = conc
 
         return d
-
-
-    def locate_species_index(self, species_id :str) -> int:
-        #TODO: share with UniformCompartment
-        #species_index = self.species_data.get_species_index(species_id)
-        species_index = self.species_to_index.get(species_id)
-
-        assert species_index is not None, \
-            f'UniformCompartment.locate_species_index(): no information available for species with id "{species_index}"'
-
-        return species_index
-
-    def locate_species_id(self, species_index :int) -> str:
-        #TODO: share with UniformCompartment
-        #return self.species_data.get_species_id(species_index)
-        return self.index_to_species[species_index]
 
 
 
@@ -1419,7 +1413,7 @@ class System1D:
 
         if title is None:
             if self.species_data.number_of_species() == 1:
-                chem_title = f"chemical `{self.locate_species_id(0)}`"    # The label of the only chemical in the system
+                chem_title = f"chemical `{self.index_species.locate_species_id(0)}`"    # The label of the only chemical in the system
             else:
                 chem_title = "all chemicals"
 
@@ -1466,7 +1460,7 @@ class BioSim1D(System1D):
     with optional membranes
     """
 
-    def __init__(self, n_bins :int, species_data=None, reaction_handler=None, reactions=None):
+    def __init__(self, n_bins :int, species_data=None, reaction_handler=None, reactions=None, index_species=None):
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
@@ -1480,6 +1474,7 @@ class BioSim1D(System1D):
         :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
                                     if not specified, it'll get instantiated here
         :param reactions:       [OPTIONAL] Object of type "Reactions", with data about the reactions and the chemicals
+        :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
         #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
         #       (or passing the names, like with UniformCompartment?)
@@ -1505,7 +1500,7 @@ class BioSim1D(System1D):
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
                                         # TODO: for now just 1 object is instantiated;
-                                        #       in the future, it might be 1 per bin (or bin cluster)
+                                        #       in the future, it might be 1 per bin cluster
 
 
         self.delta_diffusion = None # Buffer for the concentration changes from diffusion step (n_species x n_bins)
@@ -1537,11 +1532,16 @@ class BioSim1D(System1D):
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
+        self.index_species = None   # Indexes to reconcile the species id's to their position in the system state array
 
-        super().__init__(n_bins, species_data=species_data)    # Invoke the constructor of its parent class
+        super().__init__(n_bins, species_data=species_data, index_species=index_species)    # Invoke the constructor of its parent class
 
+
+        self.reaction_dynamics.index_species = self.index_species
 
         self.diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)
+
+
 
 
 
@@ -1808,9 +1808,9 @@ class BioSim1D(System1D):
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-            species_id = self.locate_species_id(chem_index)
+            species_id = self.index_species.locate_species_id(chem_index)
             diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of this chemical
-            chem_label = self.locate_species_id(chem_index)
+            chem_label = self.index_species.locate_species_id(chem_index)
             permeability = self.membranes_obj.permeability.get(chem_label)
             # TODO: maybe skip any species that have exactly zero as diffusion/permeability (species that
             #       in a simplified model we don't want to bother with)

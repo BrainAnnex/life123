@@ -4,6 +4,7 @@ from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
+from life123.index_species import IndexSpecies
 from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.colors import Colors
@@ -18,7 +19,7 @@ class BioSim2D:
     TODO: reorganize by splitting, as done for BioSim1D
     """
 
-    def __init__(self, x_bins :int, y_bins :int, species_data=None, reaction_handler=None):
+    def __init__(self, x_bins :int, y_bins :int, species_data=None, reaction_handler=None, index_species=None):
         """
         :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
@@ -29,6 +30,7 @@ class BioSim2D:
                                     from the "UniformCompartment" class (if passed to the next argument)
         :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
                                     if not specified, it'll get instantiated here
+        :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
         self.debug = False
 
@@ -53,9 +55,7 @@ class BioSim2D:
                                 #              See: https://github.com/BrainAnnex/life123/discussions/75
 
 
-        # Pair of indexes to reconcile the species id's to their position in the system state array
-        self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
-        self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
+        self.index_species = None   # Indexes to reconcile the species id's to their position in the system state array
 
 
         # The following buffers are of size (n_species x n_bins_x x n_bins_y)
@@ -70,7 +70,8 @@ class BioSim2D:
 
         self.system_time = None              # Global time of the system, from initialization on
 
-        self._initialize_system(x_bins=x_bins, y_bins=y_bins, chem_data=species_data, reaction_handler=reaction_handler)
+        self._initialize_system(x_bins=x_bins, y_bins=y_bins, chem_data=species_data,
+                                reaction_handler=reaction_handler, index_species=index_species)
 
         self.conc_history = HistoryBinConcentration(active=False)
 
@@ -83,7 +84,7 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    def _initialize_system(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None) -> None:
+    def _initialize_system(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None, index_species=None) -> None:
         """
         Initialize all concentrations to zero.
 
@@ -91,7 +92,7 @@ class BioSim2D:
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
         :param chem_data:   (OPTIONAL) Object of class "SpeciesRegistry";
                                 if not specified, it will get extracted from the "Reactions" class
-        :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
+        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
                                 if not specified, it'll get instantiated here
 
         :return:            None
@@ -117,10 +118,29 @@ class BioSim2D:
 
         self.reactions = self.reaction_dynamics.get_reactions()     # TODO: Maybe use self.get_reactions()
 
+        self.index_species = None   # Indexes to reconcile the species id's to their position in the system state array
+
         self.n_bins_x = x_bins
         self.n_bins_y = y_bins
 
-        self.n_species = self.species_data.number_of_species()
+
+        # Indexes to reconcile the species id's to their position in the system state array
+        if index_species is not None:
+            # Index was passed by the calling module (which will be initiating it)
+            self.index_species = index_species
+        else:
+            # We'll proceed independently, as a top-level module
+            self.index_species = IndexSpecies()
+            all_registry_species = self.species_data.get_all_species_ids()
+            assert len(all_registry_species) > 0, \
+                "No species were specified, thru argument `species_data`"
+            self.index_species.add_species(all_registry_species)
+
+
+        self.reaction_dynamics.index_species = self.index_species
+
+        #self.n_species = self.species_data.number_of_species()
+        self.n_species = self.index_species.number_of_system_species()
 
         assert self.n_species >= 1, \
             "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
@@ -131,10 +151,6 @@ class BioSim2D:
         self.system_time = 0             # "Start the clock"
 
 
-        # Build the pair of indexes `index_to_species` and `species_to_index`
-        for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
-            self.index_to_species.append(sp_id)
-            self.species_to_index[sp_id] = i
 
 
 
@@ -187,23 +203,6 @@ class BioSim2D:
 
 
 
-    def locate_species_index(self, species_id :str) -> int:
-        #TODO: share with UniformCompartment
-        #species_index = self.species_data.get_species_index(species_id)
-        species_index = self.species_to_index.get(species_id)
-
-        assert species_index is not None, \
-            f'UniformCompartment.locate_species_index(): no information available for species with id "{species_index}"'
-
-        return species_index
-
-    def locate_species_id(self, species_index :int) -> str:
-        #TODO: share with UniformCompartment
-        #return self.species_data.get_species_id(species_index)
-        return self.index_to_species[species_index]
-
-
-
     def system_snapshot_arr_xy(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
         Return a snapshot of all the concentrations of the given chemical species,
@@ -221,7 +220,7 @@ class BioSim2D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_xy(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.locate_species_index(chem_label)
+            chem_index = self.index_species.locate_species_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
@@ -269,7 +268,7 @@ class BioSim2D:
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_label is not None:
-            species_index = self.locate_species_index(species_label)
+            species_index = self.index_species.locate_species_index(species_label)
 
         self.species_data.assert_valid_species_index(species_index)
 
@@ -293,7 +292,7 @@ class BioSim2D:
 
         print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
         for species_index in range(self.n_species):
-            chem_name = self.locate_species_id(species_index)
+            chem_name = self.index_species.locate_species_id(species_index)
             if chem_name is None:
                 print(f"Species {species_index}:")      # Use the index, if the name isn't available
             else:
@@ -318,7 +317,7 @@ class BioSim2D:
                                     the size of the array is (n_bins_y x n_bins_x)
         """
         if species_name is not None:
-            species_index = self.locate_species_index(species_name)
+            species_index = self.index_species.locate_species_index(species_name)
         else:
             self.species_data.assert_valid_species_index(species_index)
 
@@ -451,7 +450,7 @@ class BioSim2D:
         assert conc >= 0., \
             f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
 
-        species_index = self.locate_species_index(chem_label)
+        species_index = self.index_species.locate_species_index(chem_label)
         self.system[species_index, bin_x, bin_y] = conc
 
 
@@ -523,7 +522,7 @@ class BioSim2D:
         """
         if species_name is not None:
             # If the chemical is being identified by name, look up its index
-            species_index = self.locate_species_index(species_name)
+            species_index = self.index_species.locate_species_index(species_name)
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
@@ -772,7 +771,7 @@ class BioSim2D:
         if self.n_bins_x and self.n_bins_y == 1:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
-        species_id = self.locate_species_id(species_index)
+        species_id = self.index_species.locate_species_id(species_index)
         diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
@@ -1139,7 +1138,7 @@ class BioSim2D:
 
         if title is None:
             if self.species_data.number_of_species() == 1:
-                chem_label = f"chemical `{self.locate_species_id(0)}`"    # The label of the only chemical in the system
+                chem_label = f"chemical `{self.index_species.locate_species_id(0)}`"    # The label of the only chemical in the system
             else:
                 chem_label = "all chemicals"
 
@@ -1180,6 +1179,7 @@ class System2D:
         """
         # TODO: NOT YET IN USE
         pass
+
 
 
 ##########################################################################################

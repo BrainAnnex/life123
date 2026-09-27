@@ -16,9 +16,8 @@ from life123 import CollectionArray
 
 def test_diffuse_step_1():
     # Test with just 1 bin
-    chem_data = SpeciesRegistry(ids="A", diffusion_rate=20.)
-    bio = BioSim1D(n_bins=1, species_data=chem_data)
-
+    species_registry = SpeciesRegistry(ids="A", diffusion_rate=20.)
+    bio = BioSim1D(n_bins=1, species_data=species_registry)
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
     #bio.describe_state()    # 1 bins and 1 species:  [[8.]]

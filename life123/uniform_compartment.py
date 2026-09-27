@@ -9,6 +9,7 @@ from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_simulator import VariableTimeSteps
+from life123.index_species import IndexSpecies
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -31,13 +32,25 @@ class ExcessiveTimeStepSoft(Exception):
     """
     pass
 
+
 #############################################################################################
 
 
 class UniformCompartment:
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
-    This might be thought of as a "zero-dimensional system"
+    This might be thought of as a "zero-dimensional system".
+
+    This class is currently covering multiple roles
+    that are expected to get separated in the future:
+
+        1. reaction-system/model holder
+        2. holder of state space
+        3. scratch workspace for one reaction calculation
+        4. time integrator (simulator for the kinetics of the reactions)
+
+    Note that UniformCompartment is treated as a "reaction handler" by spatial modules
+    that offer reaction-diffusion (BioSim1D, BioSim2D, BioSim3D)
     """
 
     def __init__(self, reactions=None, species_data=None, names=None,
@@ -125,8 +138,10 @@ class UniformCompartment:
 
 
         # Pair of indexes to reconcile the species id's to their index position in the system state array
-        self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
-        self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
+        #self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
+        #self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
+
+        self.index_species = IndexSpecies()
 
 
         self.macromolecules = macromolecules    # Object of type "MacroMolecules"
@@ -180,24 +195,11 @@ class UniformCompartment:
 
 
         # Build the pair of indexes `index_to_species` and `species_to_index`
-        """
-        for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
-            self.index_to_species.append(sp_id)
-            self.species_to_index[sp_id] = i
-        """
-
         self._synchronize_species()
-        """
-        for rxn in self.reaction_data.get_all_reactions():
-            # rxn is a "SimulationReaction" object
-            assert type(rxn) is SimulationReaction
-            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
-            self._add_species_set(species_id_set)
-        """
+
         if self.macromolecules:
             ligands = self.macromolecules.get_ligands()     # Set of species id's
             self._add_species_set(ligands)
-
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
@@ -233,8 +235,20 @@ class UniformCompartment:
         """
 
         :param species_id_set:  Set of ID's of species participating in a reaction being added
-        :return:
+        :return:                None
         """
+        number_added = self.index_species.add_species(species_id_set)
+        #print("number_added: ", number_added)
+
+        if number_added > 0:
+            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
+            if self.system is None:
+                self.system = np.zeros(number_added, dtype='d')
+                #self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
+            else:
+                self.system = np.pad(self.system, (0, number_added))
+
+        return
         # TODO: return the number of newly-added species (for testing convenience)
         species_id_list = sorted(list(species_id_set))              # The sorting is just for UX reasons
         for i, sp_id in enumerate(species_id_list):
@@ -303,14 +317,13 @@ class UniformCompartment:
 
     def _synchronize_species(self) -> None:
         """
-        Register (start managing) all the species that participate in any of the reactions
+        Index (start managing) all the species that participate in any of the reactions
         in the reaction registry
 
         :return:
         """
         for rxn in self.reaction_data.get_all_reactions():
             # rxn is a "SimulationReaction" object
-            assert type(rxn) is SimulationReaction
             species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
             self._add_species_set(species_id_set)
 
@@ -397,7 +410,9 @@ class UniformCompartment:
 
 
     def locate_species_index(self, species_id :str) -> int:
+        return self.index_species.locate_species_index(species_id)
         #species_index = self.species_data.get_species_index(species_id)
+
         species_index = self.species_to_index.get(species_id, None)
 
         assert species_index is not None, \
@@ -408,6 +423,7 @@ class UniformCompartment:
 
 
     def locate_species_id(self, species_index :int) -> str:
+        return self.index_species.locate_species_id(species_index)
         #return self.species_data.get_species_id(species_index)
         try:
             species_id = self.index_to_species[species_index]
@@ -548,8 +564,9 @@ class UniformCompartment:
         # TODO: provide support for "inactivating" reactions
 
         self.reaction_data.clear_reactions_data()
-        self.index_to_species = []
-        self.species_to_index = {}
+        self.index_species.clear_index()
+        #self.index_to_species = []
+        #self.species_to_index = {}
 
 
 
@@ -571,15 +588,6 @@ class UniformCompartment:
 
         species_id_set =  self.reaction_data.get_species_in_reaction(rxn_index)
         self._add_species_set(species_id_set)
-        """
-        species_id_list = sorted(list(species_id_set))              # The sorting is just for UX reasons
-        for i, sp_id in enumerate(species_id_list):
-            if self.species_to_index.get(sp_id) is not None:
-                continue        # Already indexed this species
-
-            self.index_to_species.append(sp_id)
-            self.species_to_index[sp_id] = len(self.index_to_species) - 1   # i
-        """
 
         return rxn_index
 
@@ -590,7 +598,8 @@ class UniformCompartment:
         Number of species being simulated (and kept in the system state)
         :return:
         """
-        return len(self.index_to_species)
+        return self.index_species.number_of_system_species()
+        #return len(self.index_to_species)
 
 
 
@@ -644,7 +653,8 @@ class UniformCompartment:
         set_active_species = self.get_reactions().active_chemicals
         #index_list = list(map(self.species_data.get_species_index, set_active_species))
         index_list = list(
-                            map(lambda species_id: self.species_to_index[species_id], set_active_species)
+                            #map(lambda species_id: self.species_to_index[species_id], set_active_species)
+                            map(lambda species_id: self.index_species.locate_species_index(species_id), set_active_species)
                          )
         return sorted(index_list)
 
@@ -1820,7 +1830,8 @@ class UniformCompartment:
 
         self.diagnostics_enabled = True
         if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_to_index)
+            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.index_species.species_to_index)
+            #self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_to_index)
 
 
     def pause_diagnostics(self):
