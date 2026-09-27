@@ -130,17 +130,14 @@ class UniformCompartment:
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
                             # the array size is the total number of chemical species.
-                            # Each entry is the concentration of a species whose id is indexed with self.index_to_species
+                            # Each entry is the concentration of a species whose id is indexed by the IndexSpecies module
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
         self.previous_system = None # Concentration data of all the species at the previous simulation step
 
 
-        # Pair of indexes to reconcile the species id's to their index position in the system state array
-        #self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
-        #self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
-
+        # Indexes to reconcile the species id's to their index position in the system state array
         self.index_species = IndexSpecies()
 
 
@@ -194,7 +191,7 @@ class UniformCompartment:
             self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
 
 
-        # Build the pair of indexes `index_to_species` and `species_to_index`
+        # Build the needed indexes
         self._synchronize_species()
 
         if self.macromolecules:
@@ -247,23 +244,6 @@ class UniformCompartment:
                 #self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
             else:
                 self.system = np.pad(self.system, (0, number_added))
-
-        return
-        # TODO: return the number of newly-added species (for testing convenience)
-        species_id_list = sorted(list(species_id_set))              # The sorting is just for UX reasons
-        for i, sp_id in enumerate(species_id_list):
-            if self.species_to_index.get(sp_id) is not None:
-                continue        # Already indexed this species
-
-            new_index = len(self.index_to_species)
-            self.index_to_species.append(sp_id)
-            self.species_to_index[sp_id] = new_index
-
-            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
-            if self.system is None:
-                self.system = np.array([0], dtype='d')      # float64      TODO: allow users to specify the type
-            else:
-                self.system = np.pad(self.system, (0, 1))
 
 
 
@@ -410,29 +390,14 @@ class UniformCompartment:
 
 
     def locate_species_index(self, species_id :str) -> int:
+        # TODO: zap
         return self.index_species.locate_species_index(species_id)
-        #species_index = self.species_data.get_species_index(species_id)
 
-        species_index = self.species_to_index.get(species_id, None)
-
-        assert species_index is not None, \
-            f'UniformCompartment.locate_species_index(): no species with id "{species_id}" is currently registered ' \
-            f'in the system-state array. \nDid you add reaction including it?'
-
-        return species_index
 
 
     def locate_species_id(self, species_index :int) -> str:
+        # TODO: zap
         return self.index_species.locate_species_id(species_index)
-        #return self.species_data.get_species_id(species_index)
-        try:
-            species_id = self.index_to_species[species_index]
-        except IndexError:
-            raise Exception(f"locate_species_id(): there is no species linked "
-                            f"to index value {species_index} in the system-state array.  \n"
-                            f"Maybe you didn't add all the reactions?")
-
-        return species_id
 
 
 
@@ -565,8 +530,6 @@ class UniformCompartment:
 
         self.reaction_data.clear_reactions_data()
         self.index_species.clear_index()
-        #self.index_to_species = []
-        #self.species_to_index = {}
 
 
 
@@ -599,7 +562,6 @@ class UniformCompartment:
         :return:
         """
         return self.index_species.number_of_system_species()
-        #return len(self.index_to_species)
 
 
 
@@ -651,9 +613,8 @@ class UniformCompartment:
                  the reactions are simulated
         """
         set_active_species = self.get_reactions().active_chemicals
-        #index_list = list(map(self.species_data.get_species_index, set_active_species))
+
         index_list = list(
-                            #map(lambda species_id: self.species_to_index[species_id], set_active_species)
                             map(lambda species_id: self.index_species.locate_species_index(species_id), set_active_species)
                          )
         return sorted(index_list)
