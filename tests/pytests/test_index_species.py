@@ -1,9 +1,9 @@
 import pytest
-from life123.index_species import IndexSpecies
+from life123.index_species import SpeciesIndexMap
 
 
 def test_CONSTRUCTOR():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
 
     assert ind.index_to_species == []
     assert ind.species_to_index == {}
@@ -11,7 +11,7 @@ def test_CONSTRUCTOR():
 
 
 def test_number_of_system_species():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
 
     assert ind.number_of_system_species() == 0
 
@@ -27,7 +27,7 @@ def test_number_of_system_species():
 
 
 def test_index_of():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
 
     with pytest.raises(Exception):
         ind.index_of("A")
@@ -45,7 +45,7 @@ def test_index_of():
 
 
 def test_species_at():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
 
     with pytest.raises(Exception):
         ind.species_at(0)
@@ -63,7 +63,7 @@ def test_species_at():
 
 
 def test_add_species():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
     assert ind.index_to_species == []
     assert ind.species_to_index == {}
 
@@ -82,7 +82,7 @@ def test_add_species():
 
 
 def test_clear_index():
-    ind = IndexSpecies()
+    ind = SpeciesIndexMap()
 
     ind.add_species(["Z", "H"])
     ind.clear_index()

@@ -6,7 +6,7 @@ from scipy.stats import norm
 from typing import Union, List
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
-from life123.index_species import IndexSpecies
+from life123.index_species import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 import plotly.express as px
 import plotly.graph_objects as pgo
@@ -61,7 +61,7 @@ class System1D:
             self.index_species = index_species
         else:
             # We'll proceed independently, as a top-level module
-            self.index_species = IndexSpecies()
+            self.index_species = SpeciesIndexMap()
             all_registry_species = species_data.get_all_species_ids()
             assert len(all_registry_species) > 0, \
                 "No species were specified, thru argument `species_data`"
@@ -101,12 +101,6 @@ class System1D:
                                                                     # Note: this is the primary way of history-keeping
                                                                     # of concentration values during the simulation
 
-        """
-        # Build the pair of indexes `index_to_species` and `species_to_index`
-        for i, sp_id in enumerate(self.species_data.get_all_species_ids()):
-            self.index_to_species.append(sp_id)
-            self.species_to_index[sp_id] = i
-        """
 
 
 

@@ -4,7 +4,7 @@ from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
-from life123.index_species import IndexSpecies
+from life123.index_species import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.colors import Colors
@@ -130,7 +130,7 @@ class BioSim2D:
             self.index_species = index_species
         else:
             # We'll proceed independently, as a top-level module
-            self.index_species = IndexSpecies()
+            self.index_species = SpeciesIndexMap()
             all_registry_species = self.species_data.get_all_species_ids()
             assert len(all_registry_species) > 0, \
                 "No species were specified, thru argument `species_data`"

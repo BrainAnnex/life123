@@ -1,12 +1,12 @@
 
-class IndexSpecies:
+class SpeciesIndexMap:
     """
     Manage Species Index for high-level modules
     that keep a system state that utilizes a subset of the overall species in a registry.
 
     A pair of indexes is used to reconcile the species id's to their index position in the system state array
 
-    ALTERNATE NAME IDEAS:  * SpeciesIndexMap   * SpeciesIndex
+    ALTERNATE NAME IDEAS:  * IndexSpecies   * SpeciesIndex
     """
 
 

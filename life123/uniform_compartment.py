@@ -9,12 +9,11 @@ from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_simulator import VariableTimeSteps
-from life123.index_species import IndexSpecies
+from life123.index_species import SpeciesIndexMap
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
-
 
 
 
@@ -158,7 +157,7 @@ class UniformCompartment:
             self.index_species = index_species
         else:
              # We'll proceed independently, as a top-level module
-            self.index_species = IndexSpecies()
+            self.index_species = SpeciesIndexMap()
 
             # Build the needed indexes, based on the reactions, and on macromolecules
             self._synchronize_species()
@@ -1347,7 +1346,7 @@ class UniformCompartment:
 
         If any concentration goes negative, an Exception is raised.
 
-        Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
+        Return the Numpy increment vector for ALL the species concentrations, in their index order
         (whether involved in these reactions or not)
 
         NOTES:  - the actual System Concentrations

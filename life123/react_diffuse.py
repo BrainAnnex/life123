@@ -1,8 +1,25 @@
-from life123.index_species import IndexSpecies
+import numpy as np
+from life123.index_species import SpeciesIndexMap
 from life123.uniform_compartment import UniformCompartment
 from life123 import BioSim1D, BioSim2D, BioSim3D
 from life123 import SpeciesRegistry
 
+
+class ConcentrationState:
+    """
+    WARNING : this is an experimental class, not yet in active use
+    """
+
+    def __init__(self):
+        self.species_index: SpeciesIndexMap
+
+        self.system: np.ndarray     # For UniformCompartment, the shape is simply (n_species,)
+                                    # For BioSim1D, it is (n_species, n_bins)
+                                    # etc.
+
+
+
+##################################################################################################
 
 class ReactDiffuse:
     """
@@ -33,7 +50,7 @@ class ReactDiffuse:
             self.species_registry = species_registry
 
 
-        self.index_species = IndexSpecies()
+        self.index_species = SpeciesIndexMap()
         if species_ids is not None:
             self.index_species.add_species(species_ids)
 
