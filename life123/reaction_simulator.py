@@ -9,6 +9,24 @@ import numpy as np
 
 
 
+class ExcessiveTimeStepHard(Exception):
+    """
+    Used to raise Exceptions arising from excessively large time steps
+    (that lead to negative concentration values, i.e. "HARD" errors)
+    """
+    pass
+
+class ExcessiveTimeStepSoft(Exception):
+    """
+    Used to raise Exceptions arising from excessively large time steps
+    (that lead to norms regarded as excessive because of user-specified values,
+     or to other signs of overshoots, i.e. "SOFT" errors)
+    """
+    pass
+
+
+
+#############################################################################################
 
 class ReactionSimulator:
     """
@@ -22,10 +40,10 @@ class ReactionSimulator:
 
         :param rxn:         The "SimulationReaction" object for this reaction
         :param conc_init:   Object of type IndexSpecies
-        :param delta_time:
+        :param delta_time:  The duration of the single time step to take
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
         """
-        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        # Compute the reaction rate ("velocity"), at the current system concentrations, for this reaction
         rate_initial = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
 
         delta_rxn = rate_initial * delta_time      # forward reaction - reverse reaction
@@ -46,30 +64,69 @@ class ReactionSimulator:
         delta_conc = {species: (stoich.vector[species] * delta_rxn)
                                     for species in all_species}
 
+        # TODO: maybe raise an "ExcessiveTimeStepSoft" Exception, if any of the delta_conc
+        #       components would make its final concentration negative
+
         return (delta_conc, rate_initial)
 
 
 
 
     @staticmethod
-    def heun(system_info, system_state :np.array, delta_t, rxn_list) :
-        increment_c_vector = 0  # vector
-        for rxn in rxn_list:
-           rxn_species = rxn.all_species_ids()
-           c0 = {}
-           for s in rxn_species:
-               species_index = system_info.get_species_index(s)
-               c0[s] = system_state[species_index]
+    def heun_single_rxn(rxn, conc_init :dict, delta_time :float) -> tuple[dict, float]:
+        """
+        Simulate the given reaction, over the specified single time step,
+        using the "Heun" method (aka "explicit trapezoidal rule")
 
-           rate_initial = rxn.model.rate(conc = c0)    # Rate at start of time step
-           c_star = c0 + rate_initial * delta_t  # Same a c_final for "Forward Euler" method
-           rate_final = rxn.model.rate(conc = c_star)
-           rate_heun = (rate_initial + rate_final) / 2
-           #c_final = c0 + rate_heun * delta_t  # Final concentration by the "Heun" method
-           delta_c = rate_heun * delta_t
+        :param rxn:         The "SimulationReaction" object for this reaction
+        :param conc_init:   Object of type IndexSpecies
+        :param delta_time:  The duration of the single time step to take
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+        """
+        # The first part is just like the forward Euler method: we'll compute the
+        # final concentrations after the given single time step
 
-        increment_c_vector += delta_c   # This needs to be convert to a dict op.   Also, factor in the stoichiometry coeff!
+        # Compute the reaction rate ("velocity"), at the current system concentrations, for this reaction
+        rate_initial = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
 
+        delta_rxn_prelim = rate_initial * delta_time      # forward reaction - reverse reaction (early pass)
+
+        stoich = rxn.stoichiometry
+        all_species = stoich.get_all_species_ids(exclude_catalysts=True)
+
+        final_conc = {species: (stoich.vector[species] * delta_rxn_prelim) + conc_init[species]
+                                    for species in all_species}
+        # So far, same as the "Forward Euler" method
+        print("Euler final_conc: ", final_conc)
+
+        min_conc = min(final_conc.values())
+        if min_conc < 0:
+            raise ExcessiveTimeStepHard(f"heun_single_rxn(): excessive time step ({delta_time}), "
+                                        f"leading to negative concentrations")
+
+        # Now compute the rate at END of time step, UNDER THE ASSUMPTION that the reaction
+        # proceeded as predicted by the "Forward Euler" approximation
+        rate_final = rxn.model.rate(conc_dict = final_conc)
+        print(f"final rate: {rate_final}")
+
+        # We want to intercept scenarios where the reaction rate changes sign,
+        # and the Heun update would reverse the reaction's direction or result in zero changes
+        if (np.sign(rate_final) != np.sign(rate_initial)) \
+            and (np.abs(rate_final) >= np.abs(rate_initial)):
+                raise ExcessiveTimeStepSoft(f"heun_single_rxn(): excessive time step ({delta_time}), "
+                                            f"leading to final rate of {rate_final} which, when averaged with the "
+                                            f"initial rate of {rate_initial} would flip the reaction's direction")
+
+        # Finally, average the two rate, and use the average the advance the reaction
+        rate_heun = (rate_initial + rate_final) / 2
+        print(f"rate_heun: {rate_heun}")
+
+        delta_rxn = rate_heun * delta_time      # forward reaction - reverse reaction (corrected)
+
+        delta_conc = {species: (stoich.vector[species] * delta_rxn)
+                                    for species in all_species}
+
+        return (delta_conc, rate_initial)
     
 
 

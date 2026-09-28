@@ -13,27 +13,10 @@ from life123.index_species import IndexSpecies
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
+from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
 
 
 
-#############################################################################################
-
-class ExcessiveTimeStepHard(Exception):
-    """
-    Used to raise Exceptions arising from excessively large time steps
-    (that lead to negative concentration values, i.e. "HARD" errors)
-    """
-    pass
-
-class ExcessiveTimeStepSoft(Exception):
-    """
-    Used to raise Exceptions arising from excessively large time steps
-    (that lead to norms regarded as excessive because of user-specified values, i.e. "SOFT" errors)
-    """
-    pass
-
-
-#############################################################################################
 
 
 class UniformCompartment:

@@ -5,6 +5,7 @@ from life123.reaction_simulator import ReactionSimulator, AnalyticalReactionSolv
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
 from life123.kinetics import Custom_Model
+from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
 from tests.utilities.comparisons import *
 
 
@@ -37,7 +38,7 @@ def test_forward_euler_single_rxn_1():
     sim_rxn = rxn_defn.sim_reactions[0]
 
     result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.1)
-    assert result[0] == {'A': 7, 'B': -7}
+    assert result[0] == {'A': 7, 'B': -7}       # Reactant [A] is increasing, and product [B] is decreasing
     assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is progressing in the reverse direction
 
     result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.8)
@@ -176,6 +177,86 @@ def test_forward_euler_single_rxn_3():
     assert rate == 50      # 80 - 2. * 5 * 3
     assert incr_dict == {'A': -5, 'B': -5, 'C': 5, 'D': 5}      # 50 * 0.1 = 5
 
+
+
+def test_heun_single_rxn_1():
+    sr = SpeciesRegistry(ids=["A", "B"])
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    assert len(rxn_defn.sim_reactions) == 1
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    """
+    As seen in test_forward_euler_single_rxn_1():
+        Start rate = -70
+        Delta conc = {'A': 7, 'B': -7}
+        So, Euler-based final conc:  {'A': 17, 'B': 43}
+        Then: final rate = 3. * 17. - 2. * 43 = -35
+        and: average rate = (-70 - 35)/2 = -52.5
+    """
+    assert result[0] == {'A': 52.5*0.1, 'B': -52.5*0.1}
+    assert result[1] == -70     # Start Rate
+
+    with pytest.raises(ExcessiveTimeStepHard):      # Excessive time step that would make [B], as computed by forward Euler. negative
+        ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.8)
+
+    with pytest.raises(ExcessiveTimeStepSoft):
+        # Excessive time step (0.7), leading to final rate of 175 which, when averaged with the initial rate of -70 would flip the reaction's direction
+        # Euler final_conc:  {'A': 59, 'B': 1}   [A] = 10 + (-1) * -70 * 0.7   ;  [A] = 50 + 1 * -70 * 0.7
+        # Final rate =  3. * 59 - 2. * 1 = 175
+        ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.7)
+
+    with pytest.raises(ExcessiveTimeStepSoft):
+        # excessive time step (0.4001), leading to final rate of 70.0353 which, when averaged with the initial rate of -70 would flip the reaction's direction
+        ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.4001)
+
+    result = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.39)
+    # Euler final_conc:  {'A': 37.3, 'B': 22.7}   [A] = 10 + (-1) * (-70) * 0.39   ;  [A] = 50 + 1 * -70 * 0.39
+    # Final rate =  3. * 37.3 - 2. * 22.7 = 66.5
+    # Heun's rate = (-70 + 66.5)/2 = -1.75
+    assert result[0] == {'A': 0.6825, 'B': -0.6825}     #  delta [A] = (-1) * (-1.75) * 0.39
+    assert result[1] == -70
+
+    return       # TODO: continue
+    # Reaction : A -> B  (no reverse reaction)
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert result[0] == {'A': -3, 'B': 3}
+    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
+
+    result = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.4)
+    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
+    assert result[1] == 30
+
+
+    # Reaction : A + B <-> C
+    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    C_0 = {"A": 10, "B": 50, "C": 20}
+    delta_time = 0.002
+    delta, rate = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init=C_0, delta_time=delta_time)
+    assert delta == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert rate == 5 * 10 * 50 - 2 * 20        # 2460 , i.e.  kF [A] [B] - kR [C]
+    for k in delta:     # Loop over the keys
+        assert delta[k] == rate * 0.002 * np.sign(sim_rxn.stoichiometry.vector[k])
+
+
+    # Reaction : C <-> A + B
+    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50, "C": 20}, delta_time=0.002)
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == -2460
 
 
 
