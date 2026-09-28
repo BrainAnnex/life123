@@ -274,6 +274,7 @@ def test_determine_reaction_rate_3():
 
 
 def test_step_simulation_1():
+    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
     sr = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction : A <-> B
@@ -361,6 +362,7 @@ def test_step_simulation_1():
 
 
 def test_step_simulation_2():
+    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
 
     # Reaction: # E + S <-> ES* -> E + P, with SingleSubstrateMechanism model
     sr = SpeciesRegistry(ids=["S", "P", "E"])
@@ -428,6 +430,7 @@ def test_step_simulation_2():
 
 
 def test_step_simulation_3():
+    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
 
     # Reaction: # A + B -> C + D , with custom reaction model
     sr = SpeciesRegistry(ids=["A", "B", "C", "D"])

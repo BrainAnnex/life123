@@ -1,4 +1,7 @@
-# Classes ReactionSimulator, AnalyticalReactionSolver, and VariableTimeSteps:
+# Classes:
+#   1) ReactionSimulator
+#   2) AnalyticalReactionSolver
+#   3) VariableTimeSteps:
 
 import math
 import cmath
@@ -11,7 +14,62 @@ class ReactionSimulator:
     """
 
     """
-    pass
+    @staticmethod
+    def forward_euler_single_rxn(rxn, conc_init :dict, delta_time :float) -> tuple[dict, float]:
+        """
+        Simulate the given reaction, over the specified single time step,
+        using the "forward Euler" method
+
+        :param rxn:         The "SimulationReaction" object for this reaction
+        :param conc_init:   Object of type IndexSpecies
+        :param delta_time:
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+        """
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rate_initial = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
+
+        delta_rxn = rate_initial * delta_time      # forward reaction - reverse reaction
+
+        #Note: conc_final = conc_init + v_i * rate_initial * delta_time
+        #      We return conc_final - conc_init , which we call delta_conc
+
+        stoich = rxn.stoichiometry
+        all_species = stoich.get_all_species_ids(exclude_catalysts=True)
+        #print(delta_rxn)
+        #print(rate_initial)
+
+        # Determine the concentration adjustments as a result of this reaction step,
+        #       for this individual reaction being considered
+        # Note: the SIGNED stoichiometry coefficient ensure that,
+        #       if delta_rxn is positive,
+        #       the reactants decrease in concentration, and the products increase
+        delta_conc = {species: (stoich.vector[species] * delta_rxn)
+                                    for species in all_species}
+
+        return (delta_conc, rate_initial)
+
+
+
+
+    @staticmethod
+    def heun(system_info, system_state :np.array, delta_t, rxn_list) :
+        increment_c_vector = 0  # vector
+        for rxn in rxn_list:
+           rxn_species = rxn.all_species_ids()
+           c0 = {}
+           for s in rxn_species:
+               species_index = system_info.get_species_index(s)
+               c0[s] = system_state[species_index]
+
+           rate_initial = rxn.model.rate(conc = c0)    # Rate at start of time step
+           c_star = c0 + rate_initial * delta_t  # Same a c_final for "Forward Euler" method
+           rate_final = rxn.model.rate(conc = c_star)
+           rate_heun = (rate_initial + rate_final) / 2
+           #c_final = c0 + rate_heun * delta_t  # Final concentration by the "Heun" method
+           delta_c = rate_heun * delta_t
+
+        increment_c_vector += delta_c   # This needs to be convert to a dict op.   Also, factor in the stoichiometry coeff!
+
     
 
 

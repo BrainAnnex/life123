@@ -173,16 +173,20 @@ class Stoichiometry:
 
 
 
-    def get_all_species_ids(self) -> Set[str]:
+    def get_all_species_ids(self, exclude_catalysts=False) -> Set[str]:
         """
         Return the SET of the id's of ALL the species appearing in this reaction
 
-        :return:    A SET of the id's of the species involved in this reaction
-                        Note: being a set, it's NOT in any particular order
+        :param exclude_catalysts:
+        :return:                    A SET of the id's of the species involved in this reaction
+                                        Note: being a set, it's NOT in any particular order
         """
-        # Use set construction and set union
-        return    { k for k,_ in self.vector.items() }  \
-                | { c for c in self.catalysts}
+        s = { k for k,_ in self.vector.items() }    #  Set construction
+
+        if not exclude_catalysts:
+            s |= { c for c in self.catalysts}   # Set union
+
+        return s
 
 
 

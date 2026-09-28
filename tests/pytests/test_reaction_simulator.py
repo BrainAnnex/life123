@@ -1,15 +1,188 @@
 import pytest
 import numpy as np
-import math
 from life123.reaction_kinetics import ReactionKinetics
 from life123.reaction_simulator import ReactionSimulator, AnalyticalReactionSolver, VariableTimeSteps
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
+from life123.kinetics import Custom_Model
+from tests.utilities.comparisons import *
+
+
+
+def update_concentrations(conc, delta_conc) -> None:
+    """
+    Update the values of the dict `conc` based on the increments in `delta_conc` for the corresponding keys
+
+    TODO: eventually move to one of the libraries
+
+    :param conc:
+    :param delta_conc:
+    :return:            None
+    """
+    for k in conc:
+        conc[k] += delta_conc.get(k, 0)     # Missing values default to zero
 
 
 
 
 ########    class ReactionSimulator    ###########################################################################
+
+def test_forward_euler_single_rxn_1():
+    sr = SpeciesRegistry(ids=["A", "B"])
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    assert len(rxn_defn.sim_reactions) == 1
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert result[0] == {'A': 7, 'B': -7}
+    assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is progressing in the reverse direction
+
+    result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.8)
+    assert result[0] == {'A': 56, 'B': -56}              # Note: these increments would make [B] negative!
+    assert result[1] == -70
+
+
+    # Reaction : A -> B  (no reverse reaction)
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert result[0] == {'A': -3, 'B': 3}
+    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
+
+    result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.4)
+    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
+    assert result[1] == 30
+
+
+    # Reaction : A + B <-> C
+    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    C_0 = {"A": 10, "B": 50, "C": 20}
+    delta_time = 0.002
+    delta, rate = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init=C_0, delta_time=delta_time)
+    assert delta == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert rate == 5 * 10 * 50 - 2 * 20        # 2460 , i.e.  kF [A] [B] - kR [C]
+    for k in delta:     # Loop over the keys
+        assert delta[k] == rate * 0.002 * np.sign(sim_rxn.stoichiometry.vector[k])
+
+
+    # Reaction : C <-> A + B
+    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    result = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50, "C": 20}, delta_time=0.002)
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == -2460
+
+
+def test_forward_euler_single_rxn_2():
+
+    # Reaction: # E + S <-> ES* -> E + P, with SingleSubstrateMechanism model
+    sr = SpeciesRegistry(ids=["S", "P", "E"])
+    rxn_defn = ReactionDefinition(id=85, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
+                             reaction_model="single substrate mechanism",
+                             kinetic_parameters={"k1_F": 18, "k1_R": 100, "k2_F": 49})
+
+    initial_conc = {"E": 1, "S": 20, "P": 0, "ES*": 0}
+    dt = 0.002
+
+    # Look at each derived reaction individually
+    rxn_sim_tuple = rxn_defn.sim_reactions
+    assert len(rxn_sim_tuple) == 2
+    rxn_sim_1, rxn_sim_2 = rxn_sim_tuple
+
+    incr_dict_1, rate_1 = ReactionSimulator.forward_euler_single_rxn(rxn=rxn_sim_1, conc_init=initial_conc, delta_time=dt)
+    assert rate_1 == 360       # 18 * 1 * 20 - 100 * 0
+    assert incr_dict_1 == {'E': -0.72, 'S': -0.72, 'ES*': 0.72}
+
+
+    incr_dict_2, rate_2 = ReactionSimulator.forward_euler_single_rxn(rxn=rxn_sim_2, conc_init=initial_conc, delta_time=dt)
+    assert rate_2 == 0          # 49 * 0
+    assert incr_dict_2 == {'E': 0, 'ES*': 0, 'P': 0}
+
+
+    # Simulating individually each of the 2 sub-reactions (i.e. manually expanding the original enzymatic reaction) will give the same results
+    upstream_rxn_defn = ReactionDefinition(reactants=["E", "S"], products="ES*", species_registry=sr,
+                             reaction_model="mass action",
+                             kinetic_parameters={"kF": 18, "kR": 100})
+    upstream_rxn_sim = upstream_rxn_defn.sim_reactions[0]
+    assert ReactionSimulator.forward_euler_single_rxn(rxn=upstream_rxn_sim, conc_init=initial_conc, delta_time=dt) \
+                    == ( {'E': -0.72, 'S': -0.72, 'ES*': 0.72} , 360 )
+
+    downstream_rxn_defn = ReactionDefinition(reactants="ES*", products=["E", "P"], species_registry=sr,
+                             reaction_model="mass action",
+                             kinetic_parameters={"kF": 49})
+    downstream_rxn_sim = downstream_rxn_defn.sim_reactions[0]
+    assert ReactionSimulator.forward_euler_single_rxn(rxn=downstream_rxn_sim, conc_init=initial_conc,delta_time=dt) \
+                    == ( {'E': 0, 'ES*': 0, 'P': 0} , 0 )
+
+
+
+    # Manually advance the system state by the previous time step, plus one more
+    conc = initial_conc
+
+    # Update the system concentrations (thus advancing the simulation)
+    update_concentrations(conc, incr_dict_1)
+    update_concentrations(conc, incr_dict_2)
+
+    assert conc == {'E': 0.28, 'S': 19.28, 'P': 0.0, 'ES*': 0.72}
+
+    incr_dict_1, rate_1 = ReactionSimulator.forward_euler_single_rxn(rxn=upstream_rxn_sim, conc_init=conc, delta_time=dt)
+    assert math.isclose(rate_1, 25.1712)    # 18 * 0.28 * 19.28 - 100 * 0.72
+    expected_incr = {'E': -0.0503424, 'S': -0.0503424, 'ES*': 0.0503424}    # Delta_conc = 25.1712 * 0.002 = 0.0503424
+    compare_dicts(incr_dict_1, expected_incr)
+
+    incr_dict_2, rate_2 = ReactionSimulator.forward_euler_single_rxn(rxn=downstream_rxn_sim, conc_init=initial_conc, delta_time=dt)
+    assert math.isclose(rate_2, 35.28)      # 49 * 0.72
+    expected_incr = {'ES*': -0.07056, 'E': 0.07056, 'P': 0.07056}           # Delta_conc = 35.28 * 0.002 = 0.07056
+    compare_dicts(incr_dict_2, expected_incr)
+
+    # Update the system concentrations (thus advancing the simulation)
+    update_concentrations(conc, incr_dict_1)
+    update_concentrations(conc, incr_dict_2)
+
+    expected = {'E': 0.3002176, 'S': 19.2296576, 'P': 0.07056, 'ES*': 0.6997824}
+    compare_dicts(conc, expected)
+
+
+def test_forward_euler_single_rxn_3():
+    # Reaction: # A + B -> C + D , with custom reaction model
+    sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
+    rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
+                             reaction_model="custom",
+                             kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
+    #print(rxn_defn.describe(concise=False))
+
+    sim_rxn = rxn_defn.sim_reactions[0]
+
+    initial_conc = {"A": 2, "B": 4, "C": 5, "D": 3}
+    dt = 0.1
+
+    incr_dict, rate = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init=initial_conc, delta_time=dt)
+    assert rate == 80       #  10. * 2 * 4   (no reverse reaction)
+    assert incr_dict == {'A': -8, 'B': -8, 'C': 8, 'D': 8}      # 80 * 0.1 = 8
+
+    # Make reversible
+    sim_rxn.set_parameters({"kR": 2})
+    incr_dict, rate = ReactionSimulator.forward_euler_single_rxn(rxn=sim_rxn, conc_init=initial_conc, delta_time=dt)
+    assert rate == 50      # 80 - 2. * 5 * 3
+    assert incr_dict == {'A': -5, 'B': -5, 'C': 5, 'D': 5}      # 50 * 0.1 = 5
+
+
+
+
+
+
+
+########    class AnalyticalReactionSolver    ###########################################################################
 
 
 def test_exact_advance_unimolecular_reversible():
