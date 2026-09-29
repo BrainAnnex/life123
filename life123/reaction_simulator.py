@@ -37,16 +37,17 @@ class ReactionSimulator:
 
     """
     
-    def __init__(self, system, species_index_map, reaction_registry, analytical, adaptive_steps,
-        system_rxn_rates, diagnostics, diagnostics_enabled=False):
+    def __init__(self, system, species_index_map, reaction_registry, analytic=False, adaptive_steps=None,
+        system_rxn_rates=None, diagnostics=None, diagnostics_enabled=False):
         self.system :np.ndarray = system
         self.species_index_map :SpeciesIndexMap = species_index_map
-        self.reaction_registry :ReactionRegistry = reaction_registry
-        self.analytical :bool = analytical
+        self.reaction_registry  = reaction_registry
+        self.analytic :bool = analytic
         self.adaptive_steps :VariableTimeSteps = adaptive_steps
         self.system_rxn_rates :dict = system_rxn_rates
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
-        self.diagnostics :Diagnostics = diagnostics
+        self.diagnostics  = diagnostics
+        self.method = "forward_euler"
 
 
 
@@ -103,42 +104,72 @@ class ReactionSimulator:
         #   based on the forward and reverse rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
             rxn = self.reaction_registry.get_reaction(rxn_index)
+            self.single_step_single_rxn(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
+                                        rates_dict=rates_dict, system_time=system_time,
+                                        increment_vector=increment_vector)
 
-            conc_dict = self._fetch_concs_for_rnx(rxn=rxn)
-            # For the species in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-
-            # ********** START OF NEW APPROACH
-            increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
-                                                                      conc_dict=conc_dict, exact=self.analytical)
-            # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
-
-            rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
-
-            for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-                species_index = self.species_index_map.index_of(chem_label)
-                # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-                # for any of the proposed concentration changes for this reaction.
-                # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-                #       Further testing done upstream
-                # TODO: pass the chem_label, rather than chem_index, to validate_increment()
-                self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                        rxn_index=rxn_index, species_index=species_index,
-                                        delta_time=delta_time, system_time=system_time)
-
-                # Accumulate the increment vector from the chemicals in this reaction
-                increment_vector[species_index] += delta_conc  # Accumulate  all the increments from this reaction
-
-
-            if self.diagnostics_enabled:
-                self.diagnostics.save_rxn_data(rxn_index=rxn_index,
-                                               system_time=system_time, time_step=delta_time,
-                                               increment_dict_single_rxn=increment_dict_single_rxn,
-                                               rate=rxn_rate)
-        # END for (over rxn_list)
 
         self.system_rxn_rates = rates_dict
 
         return increment_vector
+
+
+
+    def single_step_single_rxn(self, rxn, rxn_index, delta_time, rates_dict, system_time, increment_vector):
+        """
+
+        :param rxn:
+        :param rxn_index:
+        :param delta_time:
+        :param rates_dict:
+        :param system_time:
+        :param increment_vector:
+        :return:
+        """
+
+        conc_init = self._fetch_concs_for_rnx(rxn=rxn)
+        # For the species in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
+        # ********** START OF NEW APPROACH
+        #increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
+                                                                  #conc_dict=conc_dict, exact=self.analytical)
+
+        if self.analytic and rxn.analytic_solution_family:
+            rxn_rate = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
+            increment_dict_single_rxn = self.analytic_solver_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+            
+        elif self.method == "forward_euler":
+            increment_dict_single_rxn, rxn_rate = ReactionSimulator.forward_euler_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+        elif self.method == "heun":
+            increment_dict_single_rxn, rxn_rate = ReactionSimulator.heun_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+        else:
+            raise Exception(f"single_step_single_rxn(): Unknown reaction-solver method: '{self.method}'")
+
+        # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
+
+
+        rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
+
+        for (chem_label, delta_conc) in increment_dict_single_rxn.items():
+            species_index = self.species_index_map.index_of(chem_label)
+            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
+            # for any of the proposed concentration changes for this reaction.
+            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
+            #       Further testing done upstream
+            # TODO: pass the chem_label, rather than chem_index, to validate_increment()
+            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
+                                    rxn_index=rxn_index, species_index=species_index,
+                                    delta_time=delta_time, system_time=system_time)
+
+            # Accumulate the increment vector from the chemicals in this reaction
+            increment_vector[species_index] += delta_conc  # Accumulate  all the increments from this reaction
+
+
+        if self.diagnostics_enabled:
+            self.diagnostics.save_rxn_data(rxn_index=rxn_index,
+                                           system_time=system_time, time_step=delta_time,
+                                           increment_dict_single_rxn=increment_dict_single_rxn,
+                                           rate=rxn_rate)
 
 
 
@@ -218,7 +249,41 @@ class ReactionSimulator:
         
 
 
-    
+    def analytic_solver_single_rxn(self, rxn, conc_init, delta_time):
+        """
+
+        :param rxn:
+        :param conc_init:
+        :param delta_time:
+        :return:
+        """
+        reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
+        products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
+
+        if rxn.analytic_solution_family == "ONE_TO_ONE":
+            r = reactants[0][1]           # EXAMPLE: "R"
+            p = products[0][1]            # EXAMPLE: "P"
+
+            R0 = conc_init[r]
+            P0 = conc_init[p]
+            # Compute the respective increments of R0 and P0
+            if rxn.model.reversible:
+                delta_p = AnalyticalReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                                         A0=R0, P0=P0, t=delta_time, incremental=True)
+            else:
+                delta_p = AnalyticalReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
+                                                                                           A0=R0, P0=P0, t=delta_time, incremental=True)
+
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+            return increment_dict_single_rxn
+        else:       # TODO: implement "TWO_TO_ONE" and "ONE_TO_TWO"
+            raise Exception(f"analytic_solver_single_rxn(): no exact analytic solution "
+                            f"is currently implemented for reactions of type {rxn.analytic_solution_family}")
+
+
+
+
     @staticmethod
     def forward_euler_single_rxn(rxn, conc_init :dict, delta_time :float) -> tuple[dict, float]:
         """
