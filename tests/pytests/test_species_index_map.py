@@ -1,5 +1,5 @@
 import pytest
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 
 
 def test_CONSTRUCTOR():

@@ -4,7 +4,7 @@ from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.colors import Colors

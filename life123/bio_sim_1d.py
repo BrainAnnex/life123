@@ -6,7 +6,7 @@ from scipy.stats import norm
 from typing import Union, List
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 import plotly.express as px
 import plotly.graph_objects as pgo

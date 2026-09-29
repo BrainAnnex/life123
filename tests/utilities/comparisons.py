@@ -100,8 +100,3 @@ def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
             return  False
 
     return True
-    """
-    return d1.keys() == d2.keys() and all(
-        math.isclose(d1[k], d2[k], **kwargs) for k in d1
-    )
-    """

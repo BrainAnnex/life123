@@ -6,7 +6,7 @@
 import math
 import cmath
 import numpy as np
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 #from life123.reactions import SimulationReaction
 #from life123.reaction_registry import ReactionRegistry
 #from life123.diagnostics import Diagnostics
@@ -37,17 +37,21 @@ class ReactionSimulator:
 
     """
     
-    def __init__(self, system, species_index_map, reaction_registry, analytic=False, adaptive_steps=None,
-        system_rxn_rates=None, diagnostics=None, diagnostics_enabled=False):
+    def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True, adaptive_steps=None,
+                 diagnostics=None, diagnostics_enabled=False, method="forward_euler"):
         self.system :np.ndarray = system
         self.species_index_map :SpeciesIndexMap = species_index_map
         self.reaction_registry  = reaction_registry
-        self.analytic :bool = analytic
+        self.exact :bool = exact
         self.adaptive_steps :VariableTimeSteps = adaptive_steps
-        self.system_rxn_rates :dict = system_rxn_rates
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
-        self.diagnostics  = diagnostics
-        self.method = "forward_euler"
+        self.diagnostics = diagnostics  # Object of class "Diagnostics"
+        self.method :str = method
+
+        self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
+                                        # Note that reactions natively supported that contain multiple elementary reactions (such as
+                                        #       enzymatic reactions) will have tuples of all the individual rates
+                                        # EXAMPLE: {0: 0.42, 1: (4.26, 6.2), 2: -3.7}
 
 
 
@@ -75,7 +79,7 @@ class ReactionSimulator:
         :param rxn_list:    OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
                                 EXAMPLE: [1, 3, 7]
                                 If None, do all the reactions
-        :param system_time: [OPTIONAL] Only used for diagnostics and debugging
+        :param system_time: [OPTIONAL] Global time of the system, from initialization.  Only used for diagnostics and debugging
 
         :return:            The increment vector caused by all the specified reactions
                                 for the concentrations of ALL the chemical species,
@@ -91,7 +95,7 @@ class ReactionSimulator:
 
         # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
         # the keys are the reaction indexes
-        rates_dict = {}      # EXAMPLE: {0: 40., 1: 4.4}
+        self.system_rxn_rates = {}      # Reset, ahead of this round of reactions.  EXAMPLE: {0: 40., 1: 4.4}
 
 
         if rxn_list is None:    # Meaning ALL (active) reactions
@@ -104,64 +108,52 @@ class ReactionSimulator:
         #   based on the forward and reverse rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
             rxn = self.reaction_registry.get_reaction(rxn_index)
-            self.single_step_single_rxn(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
-                                        rates_dict=rates_dict, system_time=system_time,
-                                        increment_vector=increment_vector)
-
-
-        self.system_rxn_rates = rates_dict
+            rxn_rate = self.single_step_single_rxn(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
+                                                   system_time=system_time,
+                                                   increment_vector=increment_vector)
+            self.system_rxn_rates[rxn_index] = rxn_rate       # Save the value
 
         return increment_vector
 
 
 
-    def single_step_single_rxn(self, rxn, rxn_index, delta_time, rates_dict, system_time, increment_vector):
+    def single_step_single_rxn(self, increment_vector, delta_time,
+                                rxn, rxn_index, system_time=0) -> float:
         """
+        Update the Numpy array passed as the argument `increment_vector`.
 
-        :param rxn:
-        :param rxn_index:
-        :param delta_time:
-        :param rates_dict:
-        :param system_time:
-        :param increment_vector:
-        :return:
+        :param increment_vector:Numpy array that gets updated in place
+        :param delta_time:      The duration of the single time step to take
+        :param rxn:             Object of type "SimulationReaction"
+
+        (The remaining arguments are just for diagnostics and error printing
+        :param rxn_index:       The index (0-based) of the above reaction in self.reaction_registry  (ONLY USED for diagnostics and error printing)
+        :param system_time:     Global time of the system, from initialization (ONLY USED for diagnostics and error printing)
+
+        :return:                The initial rate of the reaction
         """
-
         conc_init = self._fetch_concs_for_rnx(rxn=rxn)
         # For the species in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
-        # ********** START OF NEW APPROACH
-        #increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
-                                                                  #conc_dict=conc_dict, exact=self.analytical)
-
-        if self.analytic and rxn.analytic_solution_family:
-            rxn_rate = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
-            increment_dict_single_rxn = self.analytic_solver_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
-            
-        elif self.method == "forward_euler":
-            increment_dict_single_rxn, rxn_rate = ReactionSimulator.forward_euler_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
-        elif self.method == "heun":
-            increment_dict_single_rxn, rxn_rate = ReactionSimulator.heun_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
-        else:
-            raise Exception(f"single_step_single_rxn(): Unknown reaction-solver method: '{self.method}'")
-
+        increment_dict_single_rxn, rxn_rate = self.dispatcher_single_rxn(rxn=rxn, conc_init=conc_init,
+                                                                         delta_time=delta_time)
         # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
 
-        rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
+        #self.system_rxn_rates[rxn_index] = rxn_rate       # Save the value
 
-        for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-            species_index = self.species_index_map.index_of(chem_label)
+
+        for (species_id, delta_conc) in increment_dict_single_rxn.items():
+            species_index = self.species_index_map.index_of(species_id)
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
             # for any of the proposed concentration changes for this reaction.
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
-            # TODO: pass the chem_label, rather than chem_index, to validate_increment()
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index,
-                                    delta_time=delta_time, system_time=system_time)
+            self._validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
+                                     rxn_index=rxn_index, species_id=species_id,
+                                     delta_time=delta_time, system_time=system_time)
 
-            # Accumulate the increment vector from the chemicals in this reaction
+            # Accumulate the increment vector from the species in this reaction
             increment_vector[species_index] += delta_conc  # Accumulate  all the increments from this reaction
 
 
@@ -171,37 +163,37 @@ class ReactionSimulator:
                                            increment_dict_single_rxn=increment_dict_single_rxn,
                                            rate=rxn_rate)
 
+        return rxn_rate
 
 
-    def validate_increment(self, delta_conc :float, baseline_conc :float,
-                           rxn_index :int, species_index: int, delta_time, system_time) -> None:
+
+    def _validate_increment(self, delta_conc :float, baseline_conc :float,
+                            rxn_index :int, species_id: str, delta_time, system_time) -> None:
         """
         Examine the single requested concentration change `delta_conc`
         (typically, as computed by an ODE solver),
         relative to the baseline (pre-reaction) value `baseline_conc`,
-        for the given SINGLE chemical species and SINGLE reaction.
+        for the given SINGLE species and SINGLE reaction.
 
         If the requested concentration change would render the concentration negative,
         save diagnostic data if diagnostics are enabled, and then
-        raise an Exception of custom type "ExcessiveTimeStepHard"
+        raise an Exception of the custom type "ExcessiveTimeStepHard"
 
         :param delta_conc:      The change in concentration that we're considering
-                                    for the specified chemical, in the given reaction
-        :param baseline_conc:   The initial concentration value for that chemical
+                                    for the specified species, in the given reaction
+        :param baseline_conc:   The initial concentration value for that species
 
         [The remaining arguments are ONLY USED for diagnostics and error printing]
-        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
-        :param species_index:   The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
-        :param delta_time:      The time duration of the reaction step (ONLY USED for error printing)
-        :param system_time:     [OPTIONAL] Only used for diagnostics and debugging
+        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for diagnostics and error message)
+        :param species_id:      The id of the species under consideration (ONLY USED for diagnostics and error message)
+        :param delta_time:      The time duration of the reaction step (ONLY USED for diagnostics and error message)
+        :param system_time:     Global time of the system, from initialization (ONLY USED for diagnostics and error message)
 
         :return:                None.  An Exception is raised if a negative new concentration would result
                                     from the requested concentration change
         """
         if (baseline_conc + delta_conc) < 0:
             # If the requested concentration change would lead to a negative concentration
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.species_index_map.species_at(species_index)}` "
-            #      f"in step starting at t={self.system_time:.5g})"
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
@@ -210,19 +202,18 @@ class ReactionSimulator:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.species_index_map.species_at(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {species_id} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.species_index_map.species_at(species_index)}`")
+                                               caption=f"aborted: neg. conc. in `{species_id}`")
 
-            chem_name = self.species_index_map.species_at(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
-                                    f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
+                                    f"would lead to a NEGATIVE concentration of the species `{species_id}` "
                                     f"from the reaction `{self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
-                                    f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
+                                    f"\n      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
 
 
@@ -249,13 +240,50 @@ class ReactionSimulator:
         
 
 
-    def analytic_solver_single_rxn(self, rxn, conc_init, delta_time):
+    def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float):
         """
+        Dispatch to the appropriate ODE solver for this single reaction,
+        based on the object variable self.method
 
-        :param rxn:
+        If the requested method is "analytic", but no analytic solver is available
+        for this reaction type, then fall back to "forward_euler" for this reaction
+
+        :param rxn:         Object of type "SimulationReaction"
         :param conc_init:
-        :param delta_time:
-        :return:
+        :param delta_time:  The duration of the single time step to take
+        :return:            EXAMPLE: (  {"B": -1.3, "F": 2.9, "D": -1.6} ,
+                                        35.
+                                     )
+        """
+        method = self.method
+
+        if method == "analytic" and not rxn.analytic_solution_family:
+            method = "forward_euler"    # Default when no analytic solver is available
+
+        if self.method == "forward_euler":
+            increment_dict_single_rxn, rxn_rate = ReactionSimulator.forward_euler_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+        elif self.method == "heun":
+            increment_dict_single_rxn, rxn_rate = ReactionSimulator.heun_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+        elif method == "analytic":
+            rxn_rate = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
+            increment_dict_single_rxn = ReactionSimulator.analytic_solver_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
+        else:
+            raise Exception(f"single_step_single_rxn(): Unknown reaction-solver method: '{self.method}'")
+
+
+        return (increment_dict_single_rxn, rxn_rate)
+
+
+
+    @staticmethod
+    def analytic_solver_single_rxn(rxn, conc_init, delta_time) -> dict:
+        """
+        Unpack the reaction's parameters, and dispatch to the appropriate analytic solver for its type
+
+        :param rxn:         Object of type "SimulationReaction"
+        :param conc_init:   A dictionary of initial concentrations for all the species involved
+        :param delta_time:  The duration of the single time step to take
+        :return:            A dictionary of concentration increments for all the species involved
         """
         reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
         products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
@@ -291,7 +319,7 @@ class ReactionSimulator:
         using the "forward Euler" method
 
         :param rxn:         The "SimulationReaction" object for this reaction
-        :param conc_init:   Object of type IndexSpecies
+        :param conc_init:   A dictionary of initial concentrations for all the species involved
         :param delta_time:  The duration of the single time step to take
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
         """
@@ -331,7 +359,7 @@ class ReactionSimulator:
         using the "Heun" method (aka "explicit trapezoidal rule")
 
         :param rxn:         The "SimulationReaction" object for this reaction
-        :param conc_init:   Object of type IndexSpecies
+        :param conc_init:   A dictionary of initial concentrations for all the species involved
         :param delta_time:  The duration of the single time step to take
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
         """
@@ -365,7 +393,7 @@ class ReactionSimulator:
         # and the Heun update would reverse the reaction's direction or result in zero changes
         if (np.sign(rate_final) != np.sign(rate_initial)) \
             and (np.abs(rate_final) >= np.abs(rate_initial)):
-                raise ExcessiveTimeStepSoft(f"heun_single_rxn(): excessive time step ({delta_time}), "
+                raise ExcessiveTimeStepHard(f"heun_single_rxn(): excessive time step ({delta_time}), "
                                             f"leading to final rate of {rate_final} which, when averaged with the "
                                             f"initial rate of {rate_initial} would flip the reaction's direction")
 

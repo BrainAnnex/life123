@@ -1,5 +1,5 @@
 import numpy as np
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 from life123.uniform_compartment import UniformCompartment
 from life123 import BioSim1D, BioSim2D, BioSim3D
 from life123 import SpeciesRegistry

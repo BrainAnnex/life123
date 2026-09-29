@@ -1,6 +1,6 @@
 from life123 import SpeciesRegistry, UniformCompartment
 from life123.react_diffuse import ReactDiffuse
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 from life123 import BioSim1D, BioSim2D, BioSim3D
 
 

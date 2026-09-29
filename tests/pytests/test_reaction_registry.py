@@ -7,8 +7,8 @@ from tests.utilities.comparisons import *
 
 
 def test_constructor_ReactionRegistry():
-    chem_data = SpeciesRegistry()
-    rxns = ReactionRegistry(species_data=chem_data)
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
 
     assert rxns.reaction_list == []
 
@@ -17,8 +17,8 @@ def test_constructor_ReactionRegistry():
 
 
 def test_number_of_reactions():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
-    rxns = ReactionRegistry(species_data=chem_data)
+    species_registry = SpeciesRegistry(ids=["A", "B", "C"])
+    rxns = ReactionRegistry(species_data=species_registry)
 
     assert rxns.number_of_reactions() == 0
 

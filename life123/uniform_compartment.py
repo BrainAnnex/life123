@@ -9,7 +9,7 @@ from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_simulator import VariableTimeSteps
-from life123.index_species import SpeciesIndexMap
+from life123.species_index_map import SpeciesIndexMap
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -106,7 +106,7 @@ class UniformCompartment:
         self._reaction_registry_version = self.reaction_data.version    # Used for "lazy synchronization",
                                                                         # i.e. to check for changes externally made to the registry
 
-        self.system_time = 0.       # Global time of the system, from initialization on
+        self.system_time = 0.       # Global time of the system, from initialization
 
         # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the species
         #       actually involved in this dynamic simulation
@@ -182,7 +182,7 @@ class UniformCompartment:
 
         self.diagnostics_enabled = False  # Flag indicating whether using diagnostics
 
-        self.diagnostics = None         # Object of class Diagnostics
+        self.diagnostics = None         # Object of class "Diagnostics"
 
         if enable_diagnostics:
             self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
@@ -945,7 +945,7 @@ class UniformCompartment:
                   f"upon advancing reactions from system time t={self.system_time:,.5g}")
 
 
-        # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
+        # Preserve the RATES data, as requested ("part1", BEFORE updating the System Time, because reaction rates are
         # based on the *start* time of the simulation step)
         if step_count == 0:
             self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
@@ -1389,7 +1389,7 @@ class UniformCompartment:
             conc_dict = self._fetch_concs_for_rnx(rxn=rxn, conc_array=self.system)
             # For the chemicals in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
-            # ********** START OF NEW APPROACH
+            # ********** START OF NEW APPROACH         TODO: ditch the method SimulationReaction.step_simulation()
             increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
                                                                       conc_dict=conc_dict, exact=self.exact)
             # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
@@ -2033,7 +2033,10 @@ class UniformCompartment:
         """
         Take the reaction rates for the last (current) step of all reactions,
         stored as a dict in the object property `self.system_rxn_rates`,
-        and save them in the ongoing table storing the "rate history"
+        and save them in the ongoing table storing the "rate history".
+
+        Note: reaction rate history is regarded as akin to concentration history - something to periodically
+              sample and record, separate from diagnostics
 
         :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
         :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
@@ -2050,7 +2053,7 @@ class UniformCompartment:
         data_snapshot = {}     # rxn_rates_snapshot
         for k, v in self.system_rxn_rates.items():
             if type(v) == tuple:
-                # Only pairs are currently used (for sub-reactions of enzymatic reactions)
+                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
                 data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
                 data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
             else:

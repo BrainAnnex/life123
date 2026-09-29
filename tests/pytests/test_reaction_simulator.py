@@ -1,11 +1,16 @@
+import math
+
 import pytest
 import numpy as np
 from life123.reaction_kinetics import ReactionKinetics
 from life123.reaction_simulator import ReactionSimulator, AnalyticalReactionSolver, VariableTimeSteps
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
+from life123.reaction_registry import ReactionRegistry
 from life123.kinetics import Custom_Model
 from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
+from life123.species_index_map import SpeciesIndexMap
+from life123.diagnostics import Diagnostics
 from tests.utilities.comparisons import *
 
 
@@ -27,6 +32,131 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 ########    class ReactionSimulator    ###########################################################################
+
+def test_single_step_all_rxns():
+    species_registry = SpeciesRegistry(ids=["A", "B"])
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+    system = np.zeros(2, dtype='d')
+    ind = SpeciesIndexMap()
+    ind.add_species(["A", "B"])
+
+    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns)
+    sim.system = np.array([10, 50])
+
+    result = sim.single_step_all_rxns(delta_time=0.1)
+    print(result)   #TODO: in progress
+
+
+
+def test_single_step_single_rxn():
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B",
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+
+    ind = SpeciesIndexMap()
+    species_id_set =  rxn_sim.stoichiometry.get_all_species_ids()
+    ind.add_species(species_id_set)
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind)
+    assert sim.species_index_map.index_to_species == ['A', 'B']
+    assert sim.species_index_map.species_to_index == {'A' :0, 'B' :1}
+    assert np.allclose(sim.system, [10, 50])
+
+    increment_vector = np.zeros(2, dtype='d')
+    result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
+                                        rxn=rxn_sim, rxn_index=0)
+    assert np.allclose(increment_vector, [7, -7])
+    assert math.isclose(result, -70)
+
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(method="heun", system=system, species_index_map=ind)
+
+    increment_vector = np.zeros(2, dtype='d')
+    result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
+                                        rxn=rxn_sim, rxn_index=0)
+    assert np.allclose(increment_vector, [5.25, -5.25])
+    assert math.isclose(result, -70)
+
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(method="analytic", exact=True,
+                            system=system, species_index_map=ind)
+
+    increment_vector = np.zeros(2, dtype='d')
+    result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
+                                        rxn=rxn_sim, rxn_index=0)
+    assert np.allclose(increment_vector, [5.508570764023133, -5.508570764023133])
+    assert math.isclose(result, -70)
+
+
+def test_single_step_single_rxn_2():
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B",
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+
+    reaction_registry = ReactionRegistry(species_data=species_registry)
+    reaction_registry.register_reaction(rxn_defn)
+
+    ind = SpeciesIndexMap()
+    species_id_set =  rxn_sim.stoichiometry.get_all_species_ids()
+    ind.add_species(species_id_set)
+
+    diagnostics = Diagnostics(reactions=reaction_registry, species_to_index=ind.species_to_index)
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
+                            diagnostics_enabled=True, diagnostics=diagnostics)
+
+    increment_vector = np.zeros(2, dtype='d')
+    result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
+                                        rxn=rxn_sim, rxn_index=0)
+    assert np.allclose(increment_vector, [7, -7])
+    assert math.isclose(result, -70)
+
+
+
+def test_dispatcher_single_rxn():
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B
+    rxn_defn = ReactionDefinition(reactants="A", products="B",
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert compare_dicts(delta_conc, {'A': 7, 'B': -7})
+    assert math.isclose(rate, -70)
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert compare_dicts(delta_conc, {'A': 5.25, 'B': -5.25})
+    assert math.isclose(rate, -70)
+
+    sim = ReactionSimulator(method="analytic", exact=True)
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert compare_dicts(delta_conc, {'A': 5.508570764023133, 'B': -5.508570764023133}) # A lot closer to Heun than to forward Euler!
+    assert math.isclose(rate, -70)
+
+
 
 def test_forward_euler_single_rxn_1():
     sr = SpeciesRegistry(ids=["A", "B"])
@@ -203,13 +333,13 @@ def test_heun_single_rxn_1():
     with pytest.raises(ExcessiveTimeStepHard):      # Excessive time step that would make [B], as computed by forward Euler. negative
         ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.8)
 
-    with pytest.raises(ExcessiveTimeStepSoft):
+    with pytest.raises(ExcessiveTimeStepHard):
         # Excessive time step (0.7), leading to final rate of 175 which, when averaged with the initial rate of -70 would flip the reaction's direction
         # Euler final_conc:  {'A': 59, 'B': 1}   [A] = 10 + (-1) * -70 * 0.7   ;  [A] = 50 + 1 * -70 * 0.7
         # Final rate =  3. * 59 - 2. * 1 = 175
         ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.7)
 
-    with pytest.raises(ExcessiveTimeStepSoft):
+    with pytest.raises(ExcessiveTimeStepHard):
         # excessive time step (0.4001), leading to final rate of 70.0353 which, when averaged with the initial rate of -70 would flip the reaction's direction
         ReactionSimulator.heun_single_rxn(rxn=sim_rxn, conc_init={"A": 10, "B": 50}, delta_time=0.4001)
 

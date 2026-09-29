@@ -474,53 +474,6 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
     # and building the reaction "Stoichiometry" dataclass.
     # No kinetics and no thermodynamics!
 
-    # TODO: all these stoichiometry tests can be ditched, as soon as Stoichiometry.from_reactants_products()
-    #       gets phased in
-
-    sr = SpeciesRegistry(ids=["R", "P", "Q"])
-
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants="X", products="P", species_registry=sr)  # Un-registered reactant
-
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products="Y", species_registry=sr)  # Un-registered product
-
-    # Missing products or reactants
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["R"], products=None, species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=None, products="P", species_registry=sr)
-
-    # Bad products or reactants
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants={"k": 666}, products="P", species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products=123, species_registry=sr)
-
-
-    # Reactants and the products can't be the same
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A"], products=["A"], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A"], products=[("A")], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A"], products=[(1, "A")], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants="R", products="R", species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=[(2, "B")], products=[(2, "B")], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A", "B"], products=["A", "B"], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A", (3, "B")], products=["A", (3, "B")], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["A", "B"], products=["B", "A"], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=[(2, "A"), "B", "C"], products=["B", (1, "C"), (2, "A")], species_registry=sr)
-    with pytest.raises(Exception):
-        ReactionDefinition(reactants=["R", (2, "P")], products=[(2, "P"), "R"], species_registry=sr)
-
-
     sr = SpeciesRegistry(ids=["A", "B", "R", "P", "Q", "S", "E"])
 
     # Reaction R -> P
