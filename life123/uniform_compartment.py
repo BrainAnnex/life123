@@ -107,6 +107,7 @@ class UniformCompartment:
                                                                         # i.e. to check for changes externally made to the registry
 
         self.system_time = 0.       # Global time of the system, from initialization
+                                    # TODO: being transferred to ReactionSimulator
 
         # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the species
         #       actually involved in this dynamic simulation
@@ -577,16 +578,16 @@ class UniformCompartment:
 
     def indexes_of_active_chemicals(self) -> list[int]:
         """
-        Return the ordered list (numerically SORTED) of the INDEX numbers of all the chemicals
+        Return the ordered list (numerically SORTED) of the INDEX numbers of all the species
         involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+        but NOT counting species that always appear in a catalytic role in all the reactions they
         participate in
-        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here.)
+        (if a species participates in a non-catalytic role in ANY reaction, it'll appear here.)
 
         EXAMPLE: [2, 7, 8]  if only those 3 chemicals (with indexes of, respectively, 2, 7 and 8)
                             are actively involved in ANY of the registered reactions
 
-        CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
+        CAUTION: the concept of "active species" might change in future versions, where only SOME of
                  the reactions are simulated
         """
         set_active_species = self.get_reactions().active_chemicals

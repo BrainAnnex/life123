@@ -33,6 +33,52 @@ def update_concentrations(conc, delta_conc) -> None:
 
 ########    class ReactionSimulator    ###########################################################################
 
+
+def test_attempt_reaction_step():
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)
+    assert np.allclose(delta_conc, [7, -7])
+    assert math.isclose(rec_next_step, 0.1)
+
+    # Reset and re-run (this time with "heun")
+    sim.system = np.array([10, 50])
+    sim.method = "heun"
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)
+    assert np.allclose(delta_conc, [5.25, -5.25])
+    assert math.isclose(rec_next_step, 0.1)
+
+    # Reset and re-run (back to "forward_euler", but this time with variable step, and a smaller step)
+    sim.system = np.array([10, 50])
+    sim.method = "forward_euler"
+    sim.adaptive_steps.use_adaptive_preset(preset="fast")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True)
+    assert np.allclose(delta_conc, [1.4, -1.4])
+    assert math.isclose(rec_next_step, 0.02)
+
+    # Reset and re-run (this time with an explanations of variable time steps)
+    sim.system = np.array([10, 50])
+    sim.method = "forward_euler"
+    sim.adaptive_steps.use_adaptive_preset(preset="fast")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True,
+                                    explain_variable_steps=(-1, 1), step_counter=1)
+    assert np.allclose(delta_conc, [1.4, -1.4])
+    assert math.isclose(rec_next_step, 0.02)
+
+    #print(result)   #TODO: in progress
+
+
+
+
 def test_single_step_all_rxns():
     species_registry = SpeciesRegistry()
 
@@ -132,8 +178,9 @@ def test_single_step_single_rxn_2():
                             diagnostics_enabled=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
+    sim.system_time = 123
     result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
-                                        rxn=rxn_sim, rxn_index=0, system_time=123)
+                                        rxn=rxn_sim, rxn_index=0)
     assert np.allclose(increment_vector, [7, -7])
     assert math.isclose(result, -70)
 
@@ -159,9 +206,10 @@ def test_single_step_single_rxn_2():
                             diagnostics_enabled=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
+    sim.system_time = 666
     with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B]
         sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.8,
-                                  rxn=rxn_sim, rxn_index=0, system_time=666)
+                                  rxn=rxn_sim, rxn_index=0)
     details = ex.value.details
     assert details.get("function") == "_validate_increment"
     assert details.get("delta_time") == 0.8
