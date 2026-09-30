@@ -18,7 +18,8 @@ class Diagnostics:
         """
 
         assert reactions is not None, \
-            "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`"
+            "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`, " \
+            "which must be an object of type 'ReactionRegistry'"
 
         self.reactions = reactions                          # Object of type "ReactionRegistry"
 
@@ -55,6 +56,21 @@ class Diagnostics:
                                         #
                                         #   Note: entries are always added, even if an interval run is aborted
 
+
+
+
+    def __str__(self) -> str:
+        s = "3 diagnostic collections:"
+        s += "\n    1) diagnostic_conc_data (object of type 'CollectionTabular'): "
+        s += "  " + self.diagnostic_conc_data.__str__()
+
+        s += f"\n    2) diagnostic_rxn_data: a dictionary of length {len(self.diagnostic_rxn_data)} ;"
+        s += "  the keys are the reaction indices"
+
+        s += f"\n    3) diagnostic_decisions_data (object of type 'CollectionTabular'): "
+        s += "  " + self.diagnostic_decisions_data.__str__()
+
+        return s
 
 
 

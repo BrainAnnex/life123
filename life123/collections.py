@@ -44,7 +44,7 @@ class CollectionTabular:
 
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"`CollectionTabular` object with {len(self.collection_df)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
@@ -93,7 +93,8 @@ class CollectionTabular:
                       search_col=None, search_val=None, return_copy=True) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
-        - or a part thereof (in which case a column named "search_value" is inserted to the left.)
+        - or a part thereof (in which case a column named "search_value"
+                             is inserted to the left into the result.)
 
         Optionally, limit the dataframe to a specified numbers of rows at the end,
         or just return row(s) corresponding to a specific search value(s) in the specified column

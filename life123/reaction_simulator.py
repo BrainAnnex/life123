@@ -17,8 +17,18 @@ class ExcessiveTimeStepHard(Exception):
     """
     Used to raise Exceptions arising from excessively large time steps
     (that lead to negative concentration values, i.e. "HARD" errors)
+
+    The single argument passed in the call to:
+        raise ExcessiveTimeStepHard(my_exception_details)
+
+    is made conveniently available as a `details` attribute in the caught Exception:
+        except ExcessiveTimeStepHard as ex:
+            ex.details      # Contains exactly what you passed in my_exception_details
     """
-    pass
+    def __init__(self, details):
+        super().__init__(details)
+        self.details = details
+
 
 class ExcessiveTimeStepSoft(Exception):
     """
@@ -122,6 +132,11 @@ class ReactionSimulator:
         """
         Update the Numpy array passed as the argument `increment_vector`.
 
+        If the object variable `self.diagnostics_enabled` is True,
+        then a variety of routine reaction diagnostics are logged;
+        and addition diagnostics are logged in case of Exceptions
+        resulting from the proposed concentration increments
+
         :param increment_vector:Numpy array that gets updated in place
         :param delta_time:      The duration of the single time step to take
         :param rxn:             Object of type "SimulationReaction"
@@ -140,9 +155,6 @@ class ReactionSimulator:
         # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
 
-        #self.system_rxn_rates[rxn_index] = rxn_rate       # Save the value
-
-
         for (species_id, delta_conc) in increment_dict_single_rxn.items():
             species_index = self.species_index_map.index_of(species_id)
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
@@ -150,7 +162,7 @@ class ReactionSimulator:
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
             self._validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                     rxn_index=rxn_index, species_id=species_id,
+                                     rxn=rxn, rxn_index=rxn_index, species_id=species_id, rxn_rate=rxn_rate,
                                      delta_time=delta_time, system_time=system_time)
 
             # Accumulate the increment vector from the species in this reaction
@@ -168,7 +180,7 @@ class ReactionSimulator:
 
 
     def _validate_increment(self, delta_conc :float, baseline_conc :float,
-                            rxn_index :int, species_id: str, delta_time, system_time) -> None:
+                            rxn, rxn_index :int, species_id: str, rxn_rate, delta_time, system_time) -> None:
         """
         Examine the single requested concentration change `delta_conc`
         (typically, as computed by an ODE solver),
@@ -199,20 +211,31 @@ class ReactionSimulator:
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
             #   it's taken as a sign of excessive step size)
             if self.diagnostics_enabled:
+                # TODO: here we're saving diagnostics immediately upon detecting error,
+                #       but no such logging is done by errors detected within heun_single_rxn()
+                #       Maybe pack error message and data into Exception, and let the
+                #       Exception capturer at a higher level do the logging!
+
+                # We'll be saving 1 diagnostic entry under "decision data" and 1 under "rxn_data"
+                diagnostics_data = {  "action": "ABORT",
+                                      "caption": f"neg. conc. in {species_id} from rxn # {rxn_index}",
+                                      "time_step": delta_time}
+                if self.adaptive_steps:     # Add more diagnostics data if available
+                    diagnostics_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
+
                 self.diagnostics.save_diagnostic_decisions_data(system_time=system_time,
-                                                                data={"action": "ABORT",
-                                                                      "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {species_id} from rxn # {rxn_index}",
-                                                                      "time_step": delta_time},
+                                                                data=diagnostics_data,
                                                                 delta_conc_arr=None)
+
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{species_id}`")
+                                               rate=rxn_rate, caption=f"aborted: neg. conc. in `{species_id}`")
 
+            # After having saved the appropriate diagnostic data, raise the custom Exception
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the species `{species_id}` "
-                                    f"from the reaction `{self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
+                                    f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index}): "
                                     f"\n      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
 
@@ -296,11 +319,11 @@ class ReactionSimulator:
             P0 = conc_init[p]
             # Compute the respective increments of R0 and P0
             if rxn.model.reversible:
-                delta_p = AnalyticalReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                                         A0=R0, P0=P0, t=delta_time, incremental=True)
+                delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                                       A0=R0, P0=P0, t=delta_time, incremental=True)
             else:
-                delta_p = AnalyticalReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
-                                                                                           A0=R0, P0=P0, t=delta_time, incremental=True)
+                delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
+                                                                                         A0=R0, P0=P0, t=delta_time, incremental=True)
 
             # Work out the stoichiometry for all the species
             increment_dict_single_rxn = {r: -delta_p, p: delta_p}
@@ -344,7 +367,7 @@ class ReactionSimulator:
         delta_conc = {species: (stoich.vector[species] * delta_rxn)
                                     for species in all_species}
 
-        # TODO: maybe raise an "ExcessiveTimeStepSoft" Exception, if any of the delta_conc
+        # TODO: maybe raise an "ExcessiveTimeStepHard" Exception, if any of the delta_conc
         #       components would make its final concentration negative
 
         return (delta_conc, rate_initial)
@@ -381,25 +404,35 @@ class ReactionSimulator:
 
         min_conc = min(final_conc.values())
         if min_conc < 0:
-            raise ExcessiveTimeStepHard(f"heun_single_rxn(): excessive time step ({delta_time}), "
-                                        f"leading to negative concentrations")
+            exception_data = {
+                "message": f"heun_single_rxn(): excessive time step ({delta_time}), "
+                           f"leading to negative concentrations",
+                "function": "heun_single_rxn",
+                "delta_time": delta_time
+            }
+            raise ExcessiveTimeStepHard(exception_data)
 
         # Now compute the rate at END of time step, UNDER THE ASSUMPTION that the reaction
         # proceeded as predicted by the "Forward Euler" approximation
         rate_final = rxn.model.rate(conc_dict = final_conc)
-        print(f"final rate: {rate_final}")
+        #print(f"final rate: {rate_final}")
 
         # We want to intercept scenarios where the reaction rate changes sign,
         # and the Heun update would reverse the reaction's direction or result in zero changes
         if (np.sign(rate_final) != np.sign(rate_initial)) \
             and (np.abs(rate_final) >= np.abs(rate_initial)):
-                raise ExcessiveTimeStepHard(f"heun_single_rxn(): excessive time step ({delta_time}), "
-                                            f"leading to final rate of {rate_final} which, when averaged with the "
-                                            f"initial rate of {rate_initial} would flip the reaction's direction")
+                exception_data = {
+                    "message":  f"heun_single_rxn(): excessive time step ({delta_time}), "
+                                f"leading to final rate of {rate_final:.5g} which, when averaged with the "
+                                f"initial rate of {rate_initial} would flip the reaction's direction",
+                    "function": "heun_single_rxn",
+                    "delta_time": delta_time
+                }
+                raise ExcessiveTimeStepHard(exception_data)
 
         # Finally, average the two rate, and use the average the advance the reaction
         rate_heun = (rate_initial + rate_final) / 2
-        print(f"rate_heun: {rate_heun}")
+        #print(f"rate_heun: {rate_heun}")
 
         delta_rxn = rate_heun * delta_time      # forward reaction - reverse reaction (corrected)
 
@@ -415,7 +448,7 @@ class ReactionSimulator:
 
 ####################################################################################################
 
-class AnalyticalReactionSolver:
+class AnalyticReactionSolver:
     """
     For reactions that have known analytical solutions (exact or approximate)
     """
@@ -525,7 +558,7 @@ class AnalyticalReactionSolver:
             and the general solution cannot be used, because in it we divide by the square root of that term!       
             '''
             #print("****** Switching to IR-reversible version")
-            return  AnalyticalReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
+            return  AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
 
 
         AP_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry

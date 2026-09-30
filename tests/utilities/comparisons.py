@@ -1,6 +1,7 @@
 # Utilities for comparisons
 
 import math
+import pandas as pd
 import collections
 
 
@@ -100,3 +101,23 @@ def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
             return  False
 
     return True
+
+
+def compare_pandas(df_1, df_2, disregard_order=False):
+    """
+    Return True if the two Pandas dataframes are equal
+
+    TODO: In-progress.  NOT YET FULLY TESTED
+    :return:
+    """
+    if not disregard_order:
+        return df_1.equals(df_2)
+
+    # Sort the columns and then sort the rows, in order to disregard both row and column order (TODO: turn into utility)
+    df_1_sorted = df_1.sort_index(axis=1)
+    df_1_sorted = df_1_sorted.sort_values(by=df_1_sorted.columns.tolist()).reset_index(drop=True)
+
+    df_2_sorted = df_2.sort_index(axis=1)
+    df_2_sorted = df_2_sorted.sort_values(by=df_2_sorted.columns.tolist()).reset_index(drop=True)
+
+    return df_1_sorted.equals(df_2_sorted)
