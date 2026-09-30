@@ -152,12 +152,21 @@ def test_single_step_single_rxn_2():
                             diagnostics_enabled=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
-    with pytest.raises(ExcessiveTimeStepHard):      # Excessive time step that would make [B]
+    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B]
         sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.8,
                                   rxn=rxn_sim, rxn_index=0, system_time=666)
+    details = ex.value.details
+    assert details.get("function") == "_validate_increment"
+    assert details.get("delta_time") == 0.8
+    assert details.get("caption") == "aborted: neg. conc. in `B` from rxn # 0"
+    assert details.get("system_time") == 666
+    assert details.get("rate") == -70
+    assert details.get("rxn_index") == 0
 
-    print(sim.diagnostics)
 
+    # TODO: move the part commented out below to the higher layer that catches the Exception
+    """
+    #print(sim.diagnostics)
     # part 1: diagnostic_rxn_data
     assert type(sim.diagnostics.diagnostic_rxn_data) is dict
     assert len(sim.diagnostics.diagnostic_rxn_data) == 1
@@ -179,6 +188,7 @@ def test_single_step_single_rxn_2():
     row = {"START_TIME": 666, "action": "ABORT", "caption": "", "time_step": 0.8}
     df_expected = pd.DataFrame(row, index=[0])
     assert compare_pandas(df_expected, df)
+    """
 
 
 

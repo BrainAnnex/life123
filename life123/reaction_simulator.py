@@ -210,12 +210,10 @@ class ReactionSimulator:
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
             #   it's taken as a sign of excessive step size)
-            if self.diagnostics_enabled:
-                # TODO: here we're saving diagnostics immediately upon detecting error,
-                #       but no such logging is done by errors detected within heun_single_rxn()
-                #       Maybe pack error message and data into Exception, and let the
-                #       Exception capturer at a higher level do the logging!
 
+            # TODO: move the part commented out below to the higher layer that catches the Exception
+            """
+            if self.diagnostics_enabled:
                 # We'll be saving 1 diagnostic entry under "decision data" and 1 under "rxn_data"
                 diagnostics_data = {  "action": "ABORT",
                                       "caption": f"neg. conc. in {species_id} from rxn # {rxn_index}",
@@ -231,13 +229,27 @@ class ReactionSimulator:
                                                increment_dict_single_rxn=None,
                                                aborted=True,
                                                rate=rxn_rate, caption=f"aborted: neg. conc. in `{species_id}`")
-
+            """
             # After having saved the appropriate diagnostic data, raise the custom Exception
-            raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
-                                    f"would lead to a NEGATIVE concentration of the species `{species_id}` "
-                                    f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index}): "
-                                    f"\n      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
-                                    )
+            exception_data = {
+                "_validate_increment": f"      The tentative time step ({delta_time:.6g}) "
+                                       f"would lead to a NEGATIVE concentration of the species `{species_id}` "
+                                       f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index}): "
+                                       f"\n      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}",
+                "function": "_validate_increment",
+                "delta_time": delta_time,
+                #"action": "ABORT",
+                "caption": f"aborted: neg. conc. in `{species_id}` from rxn # {rxn_index}",
+                "system_time":  system_time,
+                #"increment_dict_single_rxn": None,
+                #"aborted": True,
+                "rate": rxn_rate,
+                "rxn_index": rxn_index,
+            }
+            if self.adaptive_steps:     # Add more diagnostics data if available
+                exception_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
+
+            raise ExcessiveTimeStepHard(exception_data)
 
 
 
@@ -405,7 +417,7 @@ class ReactionSimulator:
         min_conc = min(final_conc.values())
         if min_conc < 0:
             exception_data = {
-                "message": f"heun_single_rxn(): excessive time step ({delta_time}), "
+                "message": f"heun_single_rxn(): excessive time step ({delta_time:.6g}), "
                            f"leading to negative concentrations",
                 "function": "heun_single_rxn",
                 "delta_time": delta_time
@@ -422,7 +434,7 @@ class ReactionSimulator:
         if (np.sign(rate_final) != np.sign(rate_initial)) \
             and (np.abs(rate_final) >= np.abs(rate_initial)):
                 exception_data = {
-                    "message":  f"heun_single_rxn(): excessive time step ({delta_time}), "
+                    "message":  f"heun_single_rxn(): excessive time step ({delta_time:.6g}), "
                                 f"leading to final rate of {rate_final:.5g} which, when averaged with the "
                                 f"initial rate of {rate_initial} would flip the reaction's direction",
                     "function": "heun_single_rxn",
