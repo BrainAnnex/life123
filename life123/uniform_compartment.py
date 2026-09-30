@@ -1189,7 +1189,7 @@ class UniformCompartment:
 
         :return:                The pair (delta_concentrations, recommended_next_step)
         """
-        #TODO: explain_variable_steps should be a boolean
+        # TODO: explain_variable_steps should be a boolean
         # *****  CORE OPERATION  *****
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
 

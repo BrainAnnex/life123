@@ -10,12 +10,18 @@ class SpeciesIndexMap:
     """
 
 
-    def __init__(self):
+    def __init__(self, species_ids=None):
+        """
 
+        :param species_ids: [OPTIONAL] Set, list or tuple of the ID's of species whose indexing needs to be managed;
+                                more can be added later
+        """
         # Pair of indexes to reconcile the species id's to their index position in the system state array
         self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
         self.species_to_index: dict[str, int] = {}      # EXAMPLE: {"Species A": 0, "Species X": 1}
 
+        if species_ids is not None:
+            self.add_species(species_ids)
 
 
     def number_of_system_species(self) -> int:

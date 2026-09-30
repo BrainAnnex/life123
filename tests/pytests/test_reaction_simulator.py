@@ -34,19 +34,27 @@ def update_concentrations(conc, delta_conc) -> None:
 ########    class ReactionSimulator    ###########################################################################
 
 def test_single_step_all_rxns():
-    species_registry = SpeciesRegistry(ids=["A", "B"])
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
     rxns = ReactionRegistry(species_data=species_registry)
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
                       kinetic_parameters={"kF": 3., "kR": 2.})
-    system = np.zeros(2, dtype='d')
-    ind = SpeciesIndexMap()
-    ind.add_species(["A", "B"])
 
+    ind = SpeciesIndexMap({"A", "B"})
+
+    system = np.array([10, 50])
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns)
-    sim.system = np.array([10, 50])
-
     result = sim.single_step_all_rxns(delta_time=0.1)
-    print(result)   #TODO: in progress
+    assert np.allclose(result, [7, -7])
+
+    # Reset and re-run
+    sim.system = np.array([10, 50])
+    sim.method = "heun"
+    result = sim.single_step_all_rxns(delta_time=0.1)
+    assert np.allclose(result, [5.25, -5.25])
+
+    #print(result)   #TODO: in progress
 
 
 
@@ -54,7 +62,7 @@ def test_single_step_single_rxn():
 
     species_registry = SpeciesRegistry()
 
-    # Reaction : A <-> B
+    # Reaction : A <-> B  (created as an independent object)
     rxn_defn = ReactionDefinition(reactants="A", products="B",
                                   species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
@@ -116,7 +124,6 @@ def test_single_step_single_rxn_2():
     ind = SpeciesIndexMap()
     species_id_set =  rxn_sim.stoichiometry.get_all_species_ids()
     ind.add_species(species_id_set)
-
 
     diagnostics = Diagnostics(reactions=reaction_registry, species_to_index=ind.species_to_index)
 
