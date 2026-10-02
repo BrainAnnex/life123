@@ -135,121 +135,9 @@ class ReactionSimulator:
 
 
 
-    def explain_variable_timestep_prelude(self, decision_data, explain_variable_steps, step_counter,
-                                          delta_time, delta_concentrations) -> None:
-        """
-        If requested, print out an explanation for the user about the current variable time step,
-        and the decision made
+    ####  MAIN SEQUENCE STARTS HERE  ###
 
-        :param decision_data:           The requested time duration of the reaction step
-        :param explain_variable_steps:
-        :param step_counter:
-        :param delta_time:
-        :param delta_concentrations:
-        :return:                        None
-        """
-        if explain_variable_steps \
-                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-            step_factor = decision_data['step_factor']
-            action = decision_data['action']
-            all_norms = decision_data['norms']
-            operation = decision_data['operation']
-
-            if action == "abort":
-                step_status = "aborted"
-            else:
-                step_status = "completed"
-
-            print(f"\n(STEP {step_counter} {step_status}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
-                  f"due to tentative Δt={delta_time:.5g} ...")
-            print("    Previous: ", self.previous_system)
-            print("    Baseline: ", self.system)
-            print("    Deltas:   ", delta_concentrations)
-
-            if len(self.reaction_registry.active_chemicals) < self.number_of_system_species():
-                print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
-                f"species only: {self.reaction_registry.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
-
-            self.adaptive_steps.display_overview(action=action, operation=operation, step_factor=step_factor, all_norms=all_norms)
-
-            #print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
-
-
-    def explain_variable_timestep_upon_success(self, step_factor, delta_time, explain_variable_steps, recommended_next_step, applicable_norms) -> None:
-        """
-        Print out, if requested, a 2-line wrap-up informational message
-        at the end of a successful variable step of simulation
-
-        :param step_factor:
-        :param delta_time:              The requested time duration of the reaction step
-        :param explain_variable_steps:
-        :param recommended_next_step:
-        :param applicable_norms:
-        :return:                        None
-        """
-        if explain_variable_steps \
-                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-            msg = "       "
-
-            if step_factor > 1:         # "INCREASE
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, " \
-                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
-            elif step_factor < 1:       # "DECREASE"
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, " \
-                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
-            else:                       # "STAY THE COURSE"
-                msg +=  f"INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size."
-
-            msg += f"\n    [The current step started at System Time: {self.system_time:.5g} , and will continue to {self.system_time + delta_time:.5g}]"
-            print(msg)
-
-
-
-    def gather_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action) -> None:
-        """
-        Gather diagnostic data, if enabled, about the variable step.
-        Add this data to the dict self.diagnostic_data_snapshot
-
-        :param all_norms:
-        :param step_factor:
-        :param delta_time:
-        :param action:
-        :return:            None
-        """
-        if self.diagnostics_enabled:
-            # Populate the dict self.diagnostic_data_snapshot
-            self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
-            self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
-            self.diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
-            self.diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
-            self.diagnostic_data_snapshot['action'] = f"OK ({action})"
-            self.diagnostic_data_snapshot['step_factor'] = step_factor
-            self.diagnostic_data_snapshot['time_step'] = delta_time
-
-
-    def save_diagnostics_end_of_step(self, delta_concentrations):
-        """
-        THIS DATA GETS SAVED INTO  "diagnostic_decisions_data".
-
-        Save diagnostic data, if enabled, at the conclusion of the simulation step
-        (which might be variable or fixed).
-
-        Used to save the diagnostic concentration values, and concentration changes,
-        indexed by the given System Time.
-        Note: if an interval run is aborted, by our convention an entry is STILL created here
-
-        :param delta_concentrations:
-        :return:
-        """
-        # NOTE: self.diagnostic_data_snapshot is only applicable to VARIABLE steps
-        if self.diagnostics_enabled:
-            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
-                                                            delta_conc_arr=delta_concentrations,
-                                                            data=self.diagnostic_data_snapshot)
-
-
-
-    def foo2(self, all_norms, step_factor, delta_time, delta_concentrations):
+    def _foo2(self, all_norms, step_factor, delta_time, delta_concentrations):
         # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
         return
         if self.diagnostics_enabled:
@@ -269,7 +157,7 @@ class ReactionSimulator:
             self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
 
-    def foo5(self, explain_variable_steps, delta_time):
+    def _foo5(self, explain_variable_steps, delta_time):
         return
         # TODO: this call could wait until the interception of ExcessiveTimeStepHard
         # All this can way until the interception of ExcessiveTimeStepHard
@@ -290,6 +178,60 @@ class ReactionSimulator:
             self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
     
+
+
+    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None,
+                                        step_counter=1) -> np.array:
+        """
+        This is the common entry point for FIXED-step simulations,
+        both for single-compartment reactions,
+        and for the reaction component of reaction-diffusions in 1D, 2D and 3D.
+        """
+        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
+
+        if conc_array is not None:
+            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
+
+        # Validate the setup
+        assert self.system is not None, "ReactionSimulator.reaction_step_common_fixed_step(): " \
+                                        "the concentration values of the various species must be set first"
+
+        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
+        #print(f"             delta_time={delta_time}, system={self.system}, ")
+
+        try:
+            delta_concentrations, _  =  \
+                self.attempt_reaction_step(delta_time, variable_steps=False,
+                                           explain_variable_steps=None, step_counter=step_counter)
+
+        # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT),
+        # in order to re-raise an Exception with a more detailed error message
+        except ExcessiveTimeStepHard as ex:
+            # Single reactions steps can fail with this error condition if the attempted time step was too large,
+            # under the following scenarios:
+            #       1. negative concentrations from any one reaction
+            #       2. negative concentration from the combined effect of multiple reactions
+            #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
+            raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
+                            f"Try REDUCING the time step. \n{ex}")
+
+
+        return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
+
+
+
+
+    def reaction_step_common_variable_step(self, delta_time: float, conc_array=None,
+                             variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
+        """
+        This is the common entry point for VARIABLE-step simulations,
+        both for single-compartment reactions,
+        and for the reaction component of reaction-diffusions in 1D, 2D and 3D.
+        """
+        pass
+
 
 
     def attempt_reaction_step(self, delta_time :float, variable_steps :bool, explain_variable_steps=None, step_counter=None) -> (np.array, float):
@@ -335,10 +277,10 @@ class ReactionSimulator:
             all_norms = decision_data['norms']
             applicable_norms = decision_data['applicable_norms']
 
-            self.explain_variable_timestep_prelude(decision_data=decision_data,
-                                                   explain_variable_steps=explain_variable_steps,
-                                                   step_counter=step_counter,
-                                                   delta_time=delta_time, delta_concentrations=delta_concentrations)
+            self._explain_variable_timestep_prelude(decision_data=decision_data,
+                                                    explain_variable_steps=explain_variable_steps,
+                                                    step_counter=step_counter,
+                                                    delta_time=delta_time, delta_concentrations=delta_concentrations)
 
 
             # Abort the current step if some rate of change is deemed excessive.
@@ -346,7 +288,7 @@ class ReactionSimulator:
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
 
                 # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
-                self.foo2(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, delta_concentrations=delta_concentrations)
+                self._foo2(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, delta_concentrations=delta_concentrations)
 
 
                 exception_data = {
@@ -363,17 +305,17 @@ class ReactionSimulator:
             recommended_next_step = delta_time * step_factor
 
             # Append data to self.diagnostic_data_snapshot
-            self.gather_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
+            self._gather_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
             #print(self.diagnostic_data_snapshot)
 
-            self.explain_variable_timestep_upon_success(step_factor=step_factor, delta_time=delta_time,
-                                                        explain_variable_steps=explain_variable_steps,
-                                                        recommended_next_step=recommended_next_step, applicable_norms=applicable_norms)
+            self._explain_variable_timestep_upon_success(step_factor=step_factor, delta_time=delta_time,
+                                                         explain_variable_steps=explain_variable_steps,
+                                                         recommended_next_step=recommended_next_step, applicable_norms=applicable_norms)
 
         # END if variable_steps
 
 
-        self.save_diagnostics_end_of_step(delta_concentrations=delta_concentrations)    # "diagnostic_decisions_data"
+        self._save_diagnostics_end_of_step(delta_concentrations=delta_concentrations)    # "diagnostic_decisions_data"
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
@@ -381,7 +323,7 @@ class ReactionSimulator:
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
             # TODO: this call could wait until the interception of ExcessiveTimeStepHard
-            self.foo5(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
+            self._foo5(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
@@ -398,6 +340,121 @@ class ReactionSimulator:
 
 
         return  (delta_concentrations, recommended_next_step)       # Maybe also return tentative_updated_system
+
+
+
+    def _explain_variable_timestep_prelude(self, decision_data, explain_variable_steps, step_counter,
+                                           delta_time, delta_concentrations) -> None:
+        """
+        If requested, print out an explanation for the user about the current variable time step,
+        and the decision made
+
+        :param decision_data:           The requested time duration of the reaction step
+        :param explain_variable_steps:
+        :param step_counter:
+        :param delta_time:
+        :param delta_concentrations:
+        :return:                        None
+        """
+        if explain_variable_steps \
+                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+            step_factor = decision_data['step_factor']
+            action = decision_data['action']
+            all_norms = decision_data['norms']
+            operation = decision_data['operation']
+
+            if action == "abort":
+                step_status = "aborted"
+            else:
+                step_status = "completed"
+
+            print(f"\n(STEP {step_counter} {step_status}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
+                  f"due to tentative Δt={delta_time:.5g} ...")
+            print("    Previous: ", self.previous_system)
+            print("    Baseline: ", self.system)
+            print("    Deltas:   ", delta_concentrations)
+
+            if len(self.reaction_registry.active_chemicals) < self.number_of_system_species():
+                print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
+                f"species only: {self.reaction_registry.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
+
+            self.adaptive_steps.display_overview(action=action, operation=operation, step_factor=step_factor, all_norms=all_norms)
+
+            #print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
+
+
+    def _explain_variable_timestep_upon_success(self, step_factor, delta_time, explain_variable_steps, recommended_next_step, applicable_norms) -> None:
+        """
+        Print out, if requested, a 2-line wrap-up informational message
+        at the end of a successful variable step of simulation
+
+        :param step_factor:
+        :param delta_time:              The requested time duration of the reaction step
+        :param explain_variable_steps:
+        :param recommended_next_step:
+        :param applicable_norms:
+        :return:                        None
+        """
+        if explain_variable_steps \
+                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+            msg = "       "
+
+            if step_factor > 1:         # "INCREASE
+                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, " \
+                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
+            elif step_factor < 1:       # "DECREASE"
+                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, " \
+                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
+            else:                       # "STAY THE COURSE"
+                msg +=  f"INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size."
+
+            msg += f"\n    [The current step started at System Time: {self.system_time:.5g} , and will continue to {self.system_time + delta_time:.5g}]"
+            print(msg)
+
+
+
+    def _gather_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action) -> None:
+        """
+        Gather diagnostic data, if enabled, about the variable step.
+        Add this data to the dict self.diagnostic_data_snapshot
+
+        :param all_norms:
+        :param step_factor:
+        :param delta_time:
+        :param action:
+        :return:            None
+        """
+        if self.diagnostics_enabled:
+            # Populate the dict self.diagnostic_data_snapshot
+            self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
+            self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+            self.diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
+            self.diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
+            self.diagnostic_data_snapshot['action'] = f"OK ({action})"
+            self.diagnostic_data_snapshot['step_factor'] = step_factor
+            self.diagnostic_data_snapshot['time_step'] = delta_time
+
+
+    def _save_diagnostics_end_of_step(self, delta_concentrations):
+        """
+        THIS DATA GETS SAVED INTO  "diagnostic_decisions_data".
+
+        Save diagnostic data, if enabled, at the conclusion of the simulation step
+        (which might be variable or fixed).
+
+        Used to save the diagnostic concentration values, and concentration changes,
+        indexed by the given System Time.
+        Note: if an interval run is aborted, by our convention an entry is STILL created here
+
+        :param delta_concentrations:
+        :return:
+        """
+        # NOTE: self.diagnostic_data_snapshot is only applicable to VARIABLE steps
+        if self.diagnostics_enabled:
+            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                            delta_conc_arr=delta_concentrations,
+                                                            data=self.diagnostic_data_snapshot)
+
 
 
 

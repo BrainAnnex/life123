@@ -35,6 +35,16 @@ def update_concentrations(conc, delta_conc) -> None:
 ########    class ReactionSimulator    ###########################################################################
 
 
+def test_reaction_step_common_fixed_step():
+    pass    # TODO
+
+
+
+def test_reaction_step_common_variable_step():
+    pass    # TODO
+
+
+
 def test_attempt_reaction_step(capsys):
     species_registry = SpeciesRegistry()
 
