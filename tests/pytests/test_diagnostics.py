@@ -5,6 +5,7 @@ from pandas.testing import assert_frame_equal
 from life123 import SpeciesRegistry, CollectionTabular
 from life123.diagnostics import Diagnostics
 from life123.reaction_registry import ReactionRegistry
+from life123.species_index_map import SpeciesIndexMap
 
 
 
@@ -81,14 +82,29 @@ def test__delta_names():
 
 
 def test__delta_conc_dict():
-    chem_data = SpeciesRegistry(ids=["A", "B", "X"])
-    diag = Diagnostics(ReactionRegistry(chem_data))
+    species_ids = ["A", "B", "X"]
+    species_registry = SpeciesRegistry(ids=species_ids)
 
-    assert diag._delta_conc_dict(np.array([10, 20, 30])) == \
+    # OLD system being phased out
+    diag = Diagnostics(ReactionRegistry(species_registry))
+
+    assert diag._delta_conc_array_to_dict(np.array([10, 20, 30])) == \
            {"Delta A": 10, "Delta B": 20, "Delta X": 30}
 
     with pytest.raises(Exception):
-        diag._delta_conc_dict(np.array([10, 20, 30, 40]))    # One element too many
+        diag._delta_conc_array_to_dict(np.array([10, 20, 30, 40]))    # One element too many
+
+
+    # NEW system
+    ind = SpeciesIndexMap(species_ids)
+    diag = Diagnostics(reactions=ReactionRegistry(species_registry), species_index_map=ind)
+
+    assert diag._delta_conc_array_to_dict(np.array([10, 20, 30])) == \
+           {"Delta A": 10, "Delta B": 20, "Delta X": 30}
+
+    with pytest.raises(Exception):
+        diag._delta_conc_array_to_dict(np.array([10, 20, 30, 40]))    # One element too many
+
 
 
 

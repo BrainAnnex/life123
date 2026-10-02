@@ -1,4 +1,5 @@
-import pandas
+import pandas as pd
+from pandas.testing import assert_frame_equal
 import pytest
 import numpy as np
 from life123.reaction_kinetics import ReactionKinetics
@@ -140,8 +141,8 @@ def test_attempt_reaction_step(capsys):
     assert math.isclose(rec_next_step, 0.015)    # Speed up (larger step)
 
 
-def test_attempt_reaction_step_2():
-    # Diagnostics enabled
+def test_attempt_reaction_step_2_a():
+    # With DIAGNOSTICS enabled, for FIXED reaction step
 
     species_registry = SpeciesRegistry()
 
@@ -154,10 +155,76 @@ def test_attempt_reaction_step_2():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)
+                            diagnostics_enabled=True)   # Diagnostics are enabled at instantiation time
+    sim.system_time = 88
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)     # FIXED time step
     assert np.allclose(delta_conc, [7, -7])
     assert math.isclose(rec_next_step, 0.1)
+
+    # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
+    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(coll_tab) is CollectionTabular
+    df = coll_tab.get_dataframe()
+    row = {"START_TIME": 88, "time_step": 0.1, "aborted": False, "Delta A": 7.0, "Delta B": -7.0, "rate": -70., "caption": ""}
+    df_expected = pd.DataFrame(row, index=[0])
+    assert compare_pandas(df_expected, df, disregard_order=True)
+
+    # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step()
+    assert type(sim.diagnostics.diagnostic_decisions_data) is CollectionTabular
+    df = sim.diagnostics.diagnostic_decisions_data.get_dataframe()
+    assert type(df) is pd.DataFrame
+    assert len(df) == 1
+    row = {"START_TIME": 88, "Delta A": 7.0, "Delta B": -7.0, "caption": ""}
+    df_expected = pd.DataFrame(row, index=[0])
+    assert compare_pandas(df_expected, df, disregard_order=True)
+
+
+
+def test_attempt_reaction_step_2_b():
+    # With DIAGNOSTICS enabled, for VARIABLE reaction step
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True)   # Diagnostics are enabled at instantiation time
+    sim.system_time = 99
+    sim.adaptive_steps.use_adaptive_preset(preset="fast")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True)     # VARIABLE time step
+    assert np.allclose(delta_conc, [1.4, -1.4])
+    assert math.isclose(rec_next_step, 0.02)
+
+    # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
+    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(coll_tab) is CollectionTabular
+    df = coll_tab.get_dataframe()
+    row = {"START_TIME": 99, "time_step": 0.02, "aborted": False, "Delta A": 1.4, "Delta B": -1.4, "rate": -70., "caption": ""}
+    df_expected = pd.DataFrame(row, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step(), this time with
+    #   extra fields resulting from the VARIABLE step
+    assert type(sim.diagnostics.diagnostic_decisions_data) is CollectionTabular
+    df = sim.diagnostics.diagnostic_decisions_data.get_dataframe()
+    assert type(df) is pd.DataFrame
+    assert len(df) == 1
+    # More fields are present now, because of the variable step
+    row = {"START_TIME": 99, "Delta A": 1.4, "Delta B": -1.4,
+           "norm_A": 0.98, "norm_B": 0.14, "norm_C": None, "norm_D": None, "action": "OK (stay)", "step_factor": 1, "time_step": 0.02,
+           "caption": ""}
+    df_expected = pd.DataFrame(row, index=[0])
+    assert_frame_equal(df, df_expected)
 
 
 
@@ -271,7 +338,7 @@ def test_single_step_single_rxn_2():
     collection = sim.diagnostics.diagnostic_rxn_data[0]
     assert type(collection) is CollectionTabular
     df = collection.get_dataframe()
-    assert type(df) is pandas.DataFrame
+    assert type(df) is pd.DataFrame
 
     row = {"START_TIME": 123, "time_step": 0.1, "aborted": False, "Delta A": 7.0, "Delta B": -7.0, "rate": -70.0, "caption": ""}
     df_expected = pd.DataFrame(row, index=[0])

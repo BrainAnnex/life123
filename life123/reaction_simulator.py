@@ -49,7 +49,7 @@ class ReactionSimulator:
     """
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
-                 diagnostics=None, diagnostics_enabled=False, method="forward_euler"):
+                 diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid"):
 
         self.system :np.ndarray = system
         self.species_index_map :SpeciesIndexMap = species_index_map
@@ -59,7 +59,8 @@ class ReactionSimulator:
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
         self.diagnostics = diagnostics  # Object of class "Diagnostics"
         self.diagnostic_data = {}       # TODO: experimental
-        self.diagnostic_data_snapshot = {}
+        self.diagnostic_data_snapshot = {}      # TODO: consider turning into local variable,
+                                                #       as it used to be in UniformCompartment
 
         self.method :str = method
 
@@ -76,7 +77,11 @@ class ReactionSimulator:
         self.adaptive_steps = VariableTimeSteps()
 
         if (self.diagnostics_enabled) and (not self.diagnostics):
-            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index)
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index,
+                                           species_index_map=self.species_index_map)
+
+        if preset:
+            self.adaptive_steps.use_adaptive_preset(preset)
 
 
 
@@ -200,15 +205,16 @@ class ReactionSimulator:
 
 
 
-    def save_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action):
+    def gather_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action) -> None:
         """
-        Save diagnostic data, if enabled, about the variable step
+        Gather diagnostic data, if enabled, about the variable step.
+        Add this data to the dict self.diagnostic_data_snapshot
 
         :param all_norms:
         :param step_factor:
         :param delta_time:
         :param action:
-        :return:
+        :return:            None
         """
         if self.diagnostics_enabled:
             # Populate the dict self.diagnostic_data_snapshot
@@ -223,15 +229,23 @@ class ReactionSimulator:
 
     def save_diagnostics_end_of_step(self, delta_concentrations):
         """
-        Save diagnostic data, if enabled, about the conclusion of the simulation step
-        (which might be variable or fixed)
+        THIS DATA GETS SAVED INTO  "diagnostic_decisions_data".
+
+        Save diagnostic data, if enabled, at the conclusion of the simulation step
+        (which might be variable or fixed).
+
+        Used to save the diagnostic concentration values, and concentration changes,
+        indexed by the given System Time.
+        Note: if an interval run is aborted, by our convention an entry is STILL created here
 
         :param delta_concentrations:
         :return:
         """
+        # NOTE: self.diagnostic_data_snapshot is only applicable to VARIABLE steps
         if self.diagnostics_enabled:
             self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
-                                                           data=self.diagnostic_data_snapshot, delta_conc_arr=delta_concentrations)
+                                                            delta_conc_arr=delta_concentrations,
+                                                            data=self.diagnostic_data_snapshot)
 
 
 
@@ -348,7 +362,9 @@ class ReactionSimulator:
             # Put together a recommendation to the higher-level functions, about the next best step size
             recommended_next_step = delta_time * step_factor
 
-            self.save_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
+            # Append data to self.diagnostic_data_snapshot
+            self.gather_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
+            #print(self.diagnostic_data_snapshot)
 
             self.explain_variable_timestep_upon_success(step_factor=step_factor, delta_time=delta_time,
                                                         explain_variable_steps=explain_variable_steps,
@@ -357,7 +373,7 @@ class ReactionSimulator:
         # END if variable_steps
 
 
-        self.save_diagnostics_end_of_step(delta_concentrations=delta_concentrations)
+        self.save_diagnostics_end_of_step(delta_concentrations=delta_concentrations)    # "diagnostic_decisions_data"
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
@@ -488,7 +504,7 @@ class ReactionSimulator:
             self.diagnostics.save_rxn_data(rxn_index=rxn_index,
                                            system_time=self.system_time, time_step=delta_time,
                                            increment_dict_single_rxn=increment_dict_single_rxn,
-                                           rate=rxn_rate)
+                                           rate=rxn_rate)   # Save to "diagnostic_rxn_data"
 
         return rxn_rate
 

@@ -1,7 +1,6 @@
 # Utilities for comparisons
 
 import math
-import pandas as pd
 import collections
 
 
@@ -103,12 +102,14 @@ def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
     return True
 
 
-def compare_pandas(df_1, df_2, disregard_order=False):
+def compare_pandas(df_1, df_2, disregard_order=False) -> bool:
     """
-    Return True if the two Pandas dataframes are equal
+    Return True if the two Pandas dataframes are equal.
+    For floating-point values, use instead:
+        from pandas.testing import assert_frame_equal
+        assert_frame_equal(df_1, df_2)
 
-    TODO: In-progress.  NOT YET FULLY TESTED
-    :return:
+    :return:    A boolean
     """
     if not disregard_order:
         return df_1.equals(df_2)

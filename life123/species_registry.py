@@ -5,7 +5,6 @@ from __future__ import annotations      # To facilitate type annotations
 
 
 from dataclasses import dataclass, field, fields, asdict
-from itertools import islice
 from typing import NamedTuple, Any
 from copy import deepcopy
 from life123.visualization.colors import Colors
@@ -424,11 +423,12 @@ class SpeciesRegistry:
     def get_all_species_ids(self) -> list[str]:
         """
         Return a list with the id's of all the species,
-        in their index order of registration.
+        NOT in any particular order
 
         :return:    A list of strings with the species id's,
-                        in their registered index order
+                        NOT in any particular order
         """
+        # TODO: offer the option to sort by some criteria
         return list(self.by_id)     # The dictionary keys as a list
 
 

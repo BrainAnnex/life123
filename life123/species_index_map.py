@@ -79,7 +79,8 @@ class SpeciesIndexMap:
                                 no harm in also including species that are already managed (they will be ignored)
         :return:            The number of newly-managed species
         """
-        species_id_list = sorted(list(species_ids))      # The sorting is just for UX reasons
+        species_id_list = sorted(list(species_ids))     # The sorting is just for UX reasons
+                                                        # TODO: maybe only sort sets, and follow user's order in lists/tuples
 
         number_added = 0
         for i, sp_id in enumerate(species_id_list):

@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from life123.collections import CollectionTabular
-#from life123.reaction_registry import ReactionRegistry
 
 
 
@@ -10,11 +9,14 @@ class Diagnostics:
     For the management of reaction diagnostic data
     """
 
-    def __init__(self, reactions, species_to_index=None):
+    def __init__(self, reactions, species_to_index=None, species_index_map=None):
         """
         
-        :param reactions:       Object of type "ReactionRegistry"
-        :parm species_to_index: [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
+        :param reactions:           Object of type "ReactionRegistry"
+        :param species_to_index:    [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
+                                        TODO: being phased out in favor of new arg `species_index_map`
+
+        :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
         """
 
         assert reactions is not None, \
@@ -25,19 +27,22 @@ class Diagnostics:
 
         self.species_data = reactions.get_species_data()    # Object of type "SpeciesRegistry"
 
-        self.species_to_index = species_to_index            # EXAMPLE: {"Species A": 0, "Species X": 1}
+        self.species_index_map = species_index_map
+        self.species_to_index = species_to_index            # TODO: BEING PHASED OUT in favor of self.species_index_map!
+                                                            # A dict mapping species ID to their array index
+                                                            # EXAMPLE: {"Species A": 0, "Species X": 1}
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
         self.diagnostic_conc_data = CollectionTabular(parameter_name="TIME")
-                                        # An expanded version of the normal System History.
+                                        # An expanded version of the normal System History (species concentration trajectory.)
                                         #   Columns of the dataframes:
                                         #       'TIME' 	'A' 'B' ...  'caption'
                                         #
                                         #   Note: if an interval run is aborted, NO entry is created here
-                                        #         (this approach DIFFERS from that of other diagnostic data)
+                                        #         (this convention DIFFERS from that of other diagnostic data)
 
 
-        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
+        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER SINGLE REACTION: a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are objects of type "MovieTabular",
                                         #   which contain Pandas dataframes with the following columns
                                         #   (referring to one specific reaction):
@@ -54,7 +59,8 @@ class Diagnostics:
                                         #               [plus, if applicable, other fields such as
                                         #               'action', 'norm_A', 'norm_B', 'step_factors']
                                         #
-                                        #   Note: entries are always added, even if an interval run is aborted
+                                        #   Note:   - entries are always added, even if an interval run is aborted
+                                        #           - these values are for ALL participating reactions, COMBINED
 
 
 
@@ -73,6 +79,16 @@ class Diagnostics:
         return s
 
 
+
+
+
+    #####################################################################################################
+
+    '''                             ~   diagnostic_rxn_data   ~                                       '''
+
+    def ______DIAGNOSTIC_RXN_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     #####  1. diagnostic_rxn_data  #####
 
@@ -269,6 +285,15 @@ class Diagnostics:
 
 
 
+
+    #####################################################################################################
+
+    '''                             ~   diagnostic_conc_data   ~                                 '''
+
+    def ______DIAGNOSTIC_CONC_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     #####  2. diagnostic_conc_data  #####
 
     def save_diagnostic_conc_data(self, system_data, system_time, caption="") -> None:
@@ -304,27 +329,41 @@ class Diagnostics:
 
 
 
+    #####################################################################################################
+
+    '''                             ~   diagnostic_decisions_data   ~                                 '''
+
+    def ______DIAGNOSTIC_DECISION_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     #####  3. diagnostic_decisions_data  #####
 
-    def save_diagnostic_decisions_data(self, system_time, data :dict,
-                                       delta_conc_arr :np.ndarray|None, caption="") -> None:
+    def save_diagnostic_decisions_data(self, system_time, delta_conc_arr :np.ndarray, data=None, caption="") -> None:
         """
-        Used to save the diagnostic concentration data during the run, indexed by the given System Time.
-        Note: if an interval run is aborted, by convention an entry is STILL created here
+        Used to save the concentration changes,
+        plus optionally other data (typically, about variable-steps variables, if applicable),
+        during steps of the simulation run, indexed by the given System Time.
+
+        Note:   - entries are always added, even if an interval run is aborted
+                - these values are for ALL participating reactions, COMBINED
 
         :param system_time:
-        :param data:
-        :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
+        :param delta_conc_arr:  A Numpy array of "delta concentrations", mapped to the same index positions
+                                    as their concentration counterparts.  EXAMPLE: array[1.23, 52.2]
+        :param data:            [OPTIONAL] Typically, extra data about variable-steps variables, if applicable
         :param caption:         [OPTIONAL] String with a caption for this record
         :return:                None
         """
         delta_conc_dict = {}
         if delta_conc_arr is not None:
-            delta_conc_dict = self._delta_conc_dict(delta_conc_arr)
+            delta_conc_dict = self._delta_conc_array_to_dict(delta_conc_arr)
+            #print(delta_conc_dict)
             # EXAMPLE:  {"Delta A": 1.23, "Delta X": 52.2}
 
-
-        delta_conc_dict.update(data)        # Merge the data dict into the delta_conc_dict
+        if data is not None:
+            delta_conc_dict.update(data)        # Merge the data dict (containing misc. data typically about variable steps)
+                                                # into `delta_conc_dict` (containing concentration increments)
 
         self.diagnostic_decisions_data.store(par=system_time,
                                              data_snapshot=delta_conc_dict, caption=caption)
@@ -733,14 +772,24 @@ class Diagnostics:
 
 
 
-    def _delta_conc_dict(self, delta_conc_arr :np.ndarray) -> dict:
+    def _delta_conc_array_to_dict(self, delta_conc_arr :np.ndarray) -> dict:
         """
         Convert a Numpy array into a dict, based on all the registered chemicals.
-        The keys are the chemical names, prefixed by "Delta "
+        The keys are the species id's, prefixed by "Delta "
 
         :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
         :return:                A dictionary such as {"Delta A": 1.23, "Delta X": 52.2}
         """
+        if self.species_index_map:
+            # NEW system
+            index_to_delta_species = ["Delta " + species_id
+                                            for species_id in self.species_index_map.index_to_species]
+            # EXAMPLE:  ['Delta A', 'Delta X']
+
+            return dict(zip(index_to_delta_species, delta_conc_arr, strict=True))
+
+
+        # OLD system, being phased out
         chemical_delta_list = self._delta_names()    # EXAMPLE: ["Delta A", "Delta X"]
         assert len(chemical_delta_list) == len(delta_conc_arr), \
             f"_delta_conc_dict(): mismatch in number of chemicals ({len(chemical_delta_list)} " \

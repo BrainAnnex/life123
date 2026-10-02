@@ -45,7 +45,8 @@ class CollectionTabular:
 
 
     def __str__(self) -> str:
-        return f"`CollectionTabular` object with {len(self.collection_df)} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"`CollectionTabular` object with {len(self.collection_df)} snapshot(s)" \
+        f" parametrized by `{self.parameter_name}`.  To access, use get_dataframe() method"
 
 
 
