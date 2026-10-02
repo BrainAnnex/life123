@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from life123.collections import CollectionTabular
-from life123.reaction_registry import ReactionRegistry
+#from life123.reaction_registry import ReactionRegistry
 
 
 
@@ -10,7 +10,7 @@ class Diagnostics:
     For the management of reaction diagnostic data
     """
 
-    def __init__(self, reactions :ReactionRegistry, species_to_index=None):
+    def __init__(self, reactions, species_to_index=None):
         """
         
         :param reactions:       Object of type "ReactionRegistry"

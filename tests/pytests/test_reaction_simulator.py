@@ -34,7 +34,7 @@ def update_concentrations(conc, delta_conc) -> None:
 ########    class ReactionSimulator    ###########################################################################
 
 
-def test_attempt_reaction_step():
+def test_attempt_reaction_step(capsys):
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -65,17 +65,99 @@ def test_attempt_reaction_step():
     assert np.allclose(delta_conc, [1.4, -1.4])
     assert math.isclose(rec_next_step, 0.02)
 
-    # Reset and re-run (this time with an explanations of variable time steps)
+    # Reset and re-run (this time with a printed explanation of variable time steps)
     sim.system = np.array([10, 50])
     sim.method = "forward_euler"
     sim.adaptive_steps.use_adaptive_preset(preset="fast")
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True,
-                                    explain_variable_steps=(-1, 1), step_counter=1)
+                                                          explain_variable_steps=(-1, 1), step_counter=1)
+
+    captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
+    assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.02 ..." in captured.out
+    assert "    Previous:  None" in captured.out
+    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Deltas:    [ 1.4 -1.4]" in captured.out
+    assert "    Norms:     { 'norm_A': 0.98, 'norm_B': 0.14 }" in captured.out
+    assert "    Thresholds:" in captured.out
+    assert "                   norm_A : low 0.8 | (VALUE 0.98) | high 1.2 | abort 1.7" in captured.out
+    assert "                   norm_B : (VALUE 0.14) | low 0.15 | high 0.8 | abort 1.8" in captured.out
+    assert "    => Action: 'STAY'  (with step size factor of 1)" in captured.out
+    assert "       INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size." in captured.out
+    assert "    [The current step started at System Time: 0 , and will continue to 0.02]" in captured.out
+
     assert np.allclose(delta_conc, [1.4, -1.4])
-    assert math.isclose(rec_next_step, 0.02)
+    assert math.isclose(rec_next_step, 0.02)    # Stayed on course (no change)
 
-    #print(result)   #TODO: in progress
 
+    # Reset and re-run (again with a printed explanation of variable time steps)
+    sim.system = np.array([10, 50])
+    sim.method = "forward_euler"
+    sim.adaptive_steps.use_adaptive_preset(preset="fast")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.025, variable_steps=True,
+                                                          explain_variable_steps=(-1, 1), step_counter=1)
+
+    captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
+    assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.025 ..." in captured.out
+    assert "    Previous:  None" in captured.out
+    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Deltas:    [ 1.75 -1.75]" in captured.out
+    assert "    Norms:     { 'norm_A': 1.5312, 'norm_B': 0.175 }" in captured.out
+    assert "    Thresholds:" in captured.out
+    assert "                   norm_A : low 0.8 | high 1.2 | (VALUE 1.5312) | abort 1.7" in captured.out
+    assert "                   norm_B : low 0.15 | (VALUE 0.175) | high 0.8 | abort 1.8" in captured.out
+    assert "    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}" in captured.out
+    assert "    => Action: 'HIGH'  ('downshift' with step size factor of 0.8)" in captured.out
+    assert "       INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, multiplied by 0.8 (set to 0.02) at the next round, because ['norm_A'] is high" in captured.out
+    assert "    [The current step started at System Time: 0 , and will continue to 0.025]" in captured.out
+
+
+    assert np.allclose(delta_conc, [1.75, -1.75])
+    assert math.isclose(rec_next_step, 0.02)    # Slowed down!
+
+
+    # Reset and re-run (again with a printed explanation of variable time steps)
+    sim.system = np.array([10, 50])
+    sim.method = "forward_euler"
+    sim.adaptive_steps.use_adaptive_preset(preset="fast")
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.01, variable_steps=True,
+                                                          explain_variable_steps=(-1, 1), step_counter=1)
+
+    captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
+    assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.01 ..." in captured.out
+    assert "    Previous:  None" in captured.out
+    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Deltas:    [ 0.7 -0.7]" in captured.out
+    assert "    Norms:     { 'norm_A': 0.245, 'norm_B': 0.07 }" in captured.out
+    assert "    Thresholds:" in captured.out
+    assert "                   norm_A : (VALUE 0.245) | low 0.8 | high 1.2 | abort 1.7" in captured.out
+    assert "                   norm_B : (VALUE 0.07) | low 0.15 | high 0.8 | abort 1.8" in captured.out
+    assert "    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}" in captured.out
+    assert "    => Action: 'LOW'  ('upshift' with step size factor of 1.5)" in captured.out
+    assert "       INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, multiplied by 1.5 (set to 0.015) at the next round, because all norms are low" in captured.out
+    assert "    [The current step started at System Time: 0 , and will continue to 0.01]" in captured.out
+
+    assert np.allclose(delta_conc, [0.7, -0.7])
+    assert math.isclose(rec_next_step, 0.015)    # Speed up (larger step)
+
+
+def test_attempt_reaction_step_2():
+    # Diagnostics enabled
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True)
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)     # FIXED time step
+    assert np.allclose(delta_conc, [7, -7])
+    assert math.isclose(rec_next_step, 0.1)
 
 
 
@@ -1120,7 +1202,7 @@ def test_delete_thresholds():
 
 
 def test_adjust_timestep():
-    rd = VariableTimeSteps()
+    var_ts = VariableTimeSteps()
 
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
@@ -1129,98 +1211,98 @@ def test_adjust_timestep():
     n_chems = len(baseline)     # 5 chemicals (with indexes 0 thru 4)
 
 
-    normA = rd.norm_A(delta_conc=delta)
+    normA = var_ts.norm_A(delta_conc=delta)
     assert np.allclose(normA, 1.85)
 
-    normB = rd.norm_B(baseline_conc=baseline, delta_conc=delta)
+    normB = var_ts.norm_B(baseline_conc=baseline, delta_conc=delta)
     assert np.allclose(normB, 0.8)
 
 
-    rd.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
-    rd.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
+    var_ts.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
+    var_ts.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
     indexes_of_active_chemicals = [0]     # To indicate that just the 0-th chemical is to be considered in the norms
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.25, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'operation': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.25, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
 
     indexes_of_active_chemicals = [0, 1]     # To indicate that just chemicals with indices 0 and 1 are to be considered in the norms
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.3125, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'operation': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.3125, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
 
     indexes_of_active_chemicals = [0, 1, 2, 3, 4]       # All the chemicals are to be considered in the norms, from now on
 
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,  delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,  delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
 
-    rd.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort, but normB (0.8) still does
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort, but normB (0.8) still does
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but triggers a high.
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but triggers a high.
                                                                         # normA (1.85) triggers a high, too
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_A', 'norm_B']}
+    assert result == {'action': 'high', 'operation': 'downshift', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_A', 'norm_B']}
 
-    rd.set_thresholds(norm="norm_A", low=0.5, high=1.86, abort=1.87)    # normA (1.85) no longer triggers high nor abort
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_A", low=0.5, high=1.86, abort=1.87)    # normA (1.85) no longer triggers high nor abort
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but still triggers a high
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but still triggers a high
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
+    assert result == {'action': 'high', 'operation': 'downshift', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.82)    # normB (0.8) no longer triggers high nor abort
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.82)    # normB (0.8) no longer triggers high nor abort
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'operation': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
 
-    rd.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.88)   # normA (1.85) will now trigger a "low"
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.88)   # normA (1.85) will now trigger a "low"
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'operation': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
     # We're still on the 'stay' action because we aren't below ALL the thresholds
 
-    rd.set_thresholds(norm="norm_B", low=0.81, high=0.82, abort=0.83)   # normB (0.8) will now trigger a "low", too
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_B", low=0.81, high=0.82, abort=0.83)   # normB (0.8) will now trigger a "low", too
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'low', 'operation': 'upshift', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
 
-    rd.set_thresholds(norm="norm_C", low=1.34, high=2.60, abort=2.61)   # normC (1.333) will still continue to trigger a "low"
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_C", low=1.34, high=2.60, abort=2.61)   # normC (1.333) will still continue to trigger a "low"
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'low', 'operation': 'upshift', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
 
-    rd.set_thresholds(norm="norm_C", low=1.32, high=2.60, abort=2.61)   # normC (1.333) will no longer trigger a "low" - but not a "high" nor an "abort"
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_C", low=1.32, high=2.60, abort=2.61)   # normC (1.333) will no longer trigger a "low" - but not a "high" nor an "abort"
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'operation': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
 
-    rd.set_thresholds(norm="norm_C", low=1.3, high=1.32, abort=2.61)   # normC (1.333) will now trigger a "high"
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,  delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
+    var_ts.set_thresholds(norm="norm_C", low=1.3, high=1.32, abort=2.61)   # normC (1.333) will now trigger a "high"
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,  delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'high', 'operation': 'downshift', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
 
-    rd.set_thresholds(norm="norm_C", low=1, high=1.31, abort=1.32)   # normC (1.333) will now trigger an "abort"
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_C", low=1, high=1.31, abort=1.32)   # normC (1.333) will now trigger an "abort"
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
 
-    rd.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    rd.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
-    result = rd.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
+    var_ts.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
+    result = var_ts.adjust_timestep(n_chems=n_chems, indexes_of_active_chemicals=indexes_of_active_chemicals,
                                 delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
+    assert result == {'action': 'abort', 'operation': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
 
     # TODO: also test with the other norms
 

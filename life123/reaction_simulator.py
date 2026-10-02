@@ -7,9 +7,9 @@ import math
 import cmath
 import numpy as np
 from life123.species_index_map import SpeciesIndexMap
+from life123.diagnostics import Diagnostics
 #from life123.reactions import SimulationReaction
 #from life123.reaction_registry import ReactionRegistry
-#from life123.diagnostics import Diagnostics
 
 
 
@@ -50,6 +50,7 @@ class ReactionSimulator:
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler"):
+
         self.system :np.ndarray = system
         self.species_index_map :SpeciesIndexMap = species_index_map
         self.reaction_registry  = reaction_registry
@@ -73,6 +74,9 @@ class ReactionSimulator:
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
+
+        if (self.diagnostics_enabled) and (not self.diagnostics):
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index)
 
 
 
@@ -126,10 +130,26 @@ class ReactionSimulator:
 
 
 
-    def foo(self, explain_variable_steps, action, all_norms, step_counter, step_factor,
-            delta_time, delta_concentrations):
+    def explain_variable_timestep_prelude(self, decision_data, explain_variable_steps, step_counter,
+                                          delta_time, delta_concentrations) -> None:
+        """
+        If requested, print out an explanation for the user about the current variable time step,
+        and the decision made
 
-        if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+        :param decision_data:           The requested time duration of the reaction step
+        :param explain_variable_steps:
+        :param step_counter:
+        :param delta_time:
+        :param delta_concentrations:
+        :return:                        None
+        """
+        if explain_variable_steps \
+                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+            step_factor = decision_data['step_factor']
+            action = decision_data['action']
+            all_norms = decision_data['norms']
+            operation = decision_data['operation']
+
             if action == "abort":
                 step_status = "aborted"
             else:
@@ -145,14 +165,73 @@ class ReactionSimulator:
                 print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
                 f"species only: {self.reaction_registry.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
 
-            print("    Norms:    ", all_norms)
-            print("    Thresholds:    ")
-            self.adaptive_steps.display_value_against_thresholds(all_norms)
+            self.adaptive_steps.display_overview(action=action, operation=operation, step_factor=step_factor, all_norms=all_norms)
 
-            if action != "stay":    # The step is trivially 1 when the action is "stay"
-                print("    Step Factors:    ", self.adaptive_steps.step_factors)
+            #print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
 
-            print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
+
+    def explain_variable_timestep_upon_success(self, step_factor, delta_time, explain_variable_steps, recommended_next_step, applicable_norms) -> None:
+        """
+        Print out, if requested, a 2-line wrap-up informational message
+        at the end of a successful variable step of simulation
+
+        :param step_factor:
+        :param delta_time:              The requested time duration of the reaction step
+        :param explain_variable_steps:
+        :param recommended_next_step:
+        :param applicable_norms:
+        :return:                        None
+        """
+        if explain_variable_steps \
+                and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+            msg = "       "
+
+            if step_factor > 1:         # "INCREASE
+                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, " \
+                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
+            elif step_factor < 1:       # "DECREASE"
+                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, " \
+                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
+            else:                       # "STAY THE COURSE"
+                msg +=  f"INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size."
+
+            msg += f"\n    [The current step started at System Time: {self.system_time:.5g} , and will continue to {self.system_time + delta_time:.5g}]"
+            print(msg)
+
+
+
+    def save_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action):
+        """
+        Save diagnostic data, if enabled, about the variable step
+
+        :param all_norms:
+        :param step_factor:
+        :param delta_time:
+        :param action:
+        :return:
+        """
+        if self.diagnostics_enabled:
+            # Populate the dict self.diagnostic_data_snapshot
+            self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
+            self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+            self.diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
+            self.diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
+            self.diagnostic_data_snapshot['action'] = f"OK ({action})"
+            self.diagnostic_data_snapshot['step_factor'] = step_factor
+            self.diagnostic_data_snapshot['time_step'] = delta_time
+
+
+    def save_diagnostics_end_of_step(self, delta_concentrations):
+        """
+        Save diagnostic data, if enabled, about the conclusion of the simulation step
+        (which might be variable or fixed)
+
+        :param delta_concentrations:
+        :return:
+        """
+        if self.diagnostics_enabled:
+            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                           data=self.diagnostic_data_snapshot, delta_conc_arr=delta_concentrations)
 
 
 
@@ -174,42 +253,6 @@ class ReactionSimulator:
 
             # Make a note of the abort action in all the reaction-specific diagnostics
             self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
-                    
-
-    def foo3(self, all_norms, step_factor, delta_time, action, explain_variable_steps, recommended_next_step, applicable_norms):
-        return
-        if self.diagnostics_enabled:
-            # Expand the dict self.diagnostic_data_snapshot
-            self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
-            self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
-            self.diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
-            self.diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
-            self.diagnostic_data_snapshot['action'] = f"OK ({action})"
-            self.diagnostic_data_snapshot['step_factor'] = step_factor
-            self.diagnostic_data_snapshot['time_step'] = delta_time
-
-
-        if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-            msg = "       "
-
-            if step_factor > 1:         # "INCREASE
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
-                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
-            elif step_factor < 1:     # "DECREASE"
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
-                        f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
-            else:   # "STAY THE COURSE"
-                msg +=  f"INFO: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
-
-            msg += f"\n    [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
-            print(msg)
-
-
-    def foo4(self, delta_concentrations):
-        return
-        if self.diagnostics_enabled:
-            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
-                                                           data=self.diagnostic_data_snapshot, delta_conc_arr=delta_concentrations)
 
 
     def foo5(self, explain_variable_steps, delta_time):
@@ -270,16 +313,18 @@ class ReactionSimulator:
                                                                 indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations,
                                                                 baseline_conc=self.system, prev_conc=self.previous_system)
-            print("decision_data: ", decision_data)
+            #print("decision_data: ", decision_data)
             # EXAMPLE: {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.98, 'norm_B': 0.14}, 'applicable_norms': 'ALL'}
+
             step_factor = decision_data['step_factor']
             action = decision_data['action']
             all_norms = decision_data['norms']
             applicable_norms = decision_data['applicable_norms']
 
-            self.foo(explain_variable_steps=explain_variable_steps, action=action, all_norms=all_norms, 
-                     step_counter=step_counter, step_factor=step_factor,
-                     delta_time=delta_time, delta_concentrations=delta_concentrations)
+            self.explain_variable_timestep_prelude(decision_data=decision_data,
+                                                   explain_variable_steps=explain_variable_steps,
+                                                   step_counter=step_counter,
+                                                   delta_time=delta_time, delta_concentrations=delta_concentrations)
 
 
             # Abort the current step if some rate of change is deemed excessive.
@@ -302,13 +347,17 @@ class ReactionSimulator:
 
             # Put together a recommendation to the higher-level functions, about the next best step size
             recommended_next_step = delta_time * step_factor
-            self.foo3(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action,
-                      explain_variable_steps=explain_variable_steps, recommended_next_step=recommended_next_step, applicable_norms=applicable_norms)
+
+            self.save_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
+
+            self.explain_variable_timestep_upon_success(step_factor=step_factor, delta_time=delta_time,
+                                                        explain_variable_steps=explain_variable_steps,
+                                                        recommended_next_step=recommended_next_step, applicable_norms=applicable_norms)
 
         # END if variable_steps
 
 
-        self.foo4(delta_concentrations=delta_concentrations)
+        self.save_diagnostics_end_of_step(delta_concentrations=delta_concentrations)
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
@@ -1259,8 +1308,30 @@ class VariableTimeSteps:
 
 
 
-    def display_overview(self, decision_data) -> None:
-        pass
+    def display_overview(self, action :str, operation :str, step_factor :dict, all_norms :dict) -> None:
+        """
+
+        :param action:
+        :param all_norms:
+        :return:            None
+        """
+        # Round off all the norm values before printing them
+        print("    Norms:     {",
+              ", ".join(f"'{key}': {value:.5g}" for key, value in all_norms.items()),
+              "}")      # EXAMPLE:     Norms:    { 'norm_A': 0.98, 'norm_B': 0.14 }
+
+        print("    Thresholds:    ")
+        self.display_value_against_thresholds(all_norms)
+
+
+
+        if action != "stay":    # The step is trivially 1 when the action is "stay"
+            print("    Step Factors:    ", self.step_factors)
+
+        if action == 'stay':
+            print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
+        else:
+            print(f"    => Action: '{action.upper()}'  ('{operation}' with step size factor of {step_factor})")
 
 
 
@@ -1446,12 +1517,13 @@ class VariableTimeSteps:
                                     in the step prior to the current one (i.e. an "archive" value)
         :return:                A dict:
                                     "action"           - String with the name of the computed recommended action:
-                                                            either "low", "stay", "high" or "abort"
+                                                            either "low", "stay", "high" or "abort"     TODO: possibly rename "action" to "determination"
+                                    "operation"        - String: either 'upshift', 'stay', 'downshift', 'abort'
                                     "step_factor"      - A factor by which to multiply the time step at the next iteration round;
                                                             if no change is deemed necessary, 1
                                     "norms"            - A dict of all the computed norm name/values (any of the norms, except norm_A,
                                                             may be missing)
-                                    "applicable_norms" - The name of the norm that triggered the decision; if all norms were involved,
+                                    "applicable_norms" - The name of the norm(s) that triggered the decision; if all norms were involved,
                                                             it will be "ALL"
         """
         if baseline_conc is not None:
@@ -1504,7 +1576,7 @@ class VariableTimeSteps:
                 # If any rules declares an abort, no need to proceed further: it's an abort
                 #self.norm_usage[norm_name] += 1
                 self.increase_norm_count(norm_name)
-                return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": [norm_name]}
+                return {"action": "abort", "operation": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": [norm_name]}
 
             if ("high" in rule) and (result > rule["high"]):
                 # If any rules declares a "high", still need to consider the other rules - in case any of them over-rides
@@ -1521,7 +1593,7 @@ class VariableTimeSteps:
             for n in high_seen_at:
                 #self.norm_usage[n] += 1
                 self.increase_norm_count(n)
-            return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
+            return {"action": "high", "operation": "downshift", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
 
 
         if all_small:
@@ -1530,11 +1602,11 @@ class VariableTimeSteps:
                 self.increase_norm_count(i)
                 #self.norm_usage[i] += 1
 
-            return {"action": "low", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
+            return {"action": "low", "operation": "upshift", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
 
 
         # If we get thus far, none of the rules were found applicable
-        return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
+        return {"action": "stay", "operation": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
 
 
 

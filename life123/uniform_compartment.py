@@ -1689,7 +1689,7 @@ class UniformCompartment:
         self.diagnostics_enabled = True
         if not self.diagnostics:
             self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.index_species.species_to_index)
-            #self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_to_index)
+
 
 
     def pause_diagnostics(self):
@@ -1705,7 +1705,7 @@ class UniformCompartment:
 
 
 
-    def get_diagnostics(self) -> Diagnostics:
+    def get_diagnostics(self):
         """
 
         :return:    Object of type life123.diagnostics.Diagnostics
