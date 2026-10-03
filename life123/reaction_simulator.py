@@ -180,12 +180,35 @@ class ReactionSimulator:
     
 
 
-    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None,
-                                        step_counter=1) -> np.array:
+    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None) -> np.array:
         """
         This is the common entry point for FIXED-step simulations,
         both for single-compartment reactions,
         and for the reaction component of reaction-diffusions in 1D, 2D and 3D.
+
+        "Compartments" may or may not correspond to the "bins" of the higher layers;
+        the calling code might have opted to merge some bins into a single "compartment".
+
+        Using the given concentration data for all the applicable species in a single compartment,
+        do a single reaction time step for ALL the reactions -
+        based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
+
+        Return the increment vector for all the chemical species concentrations in the compartment
+
+        NOTES:  * the actual system concentrations are NOT changed
+                * this method doesn't modify the step sizes: in case of any error caused by an excessively-large
+                  step size, an Exception is raised.
+
+        :param delta_time:      The requested time duration of the reaction step
+        :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for ALL the chemical species, in their index order.
+                                    If not provided, self.system is used instead
+
+        :return:                The increment vector for the concentrations of ALL the chemical species,
+                                    in their array index order, as a Numpy array
+                                    EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
+                                        array([7. , -21.])
         """
         # TODO: no longer pass conc_array .  Use the object variable self.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
@@ -198,24 +221,32 @@ class ReactionSimulator:
         assert self.system is not None, "ReactionSimulator.reaction_step_common_fixed_step(): " \
                                         "the concentration values of the various species must be set first"
 
-        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
+        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common_fixed_step() with:")
         #print(f"             delta_time={delta_time}, system={self.system}, ")
 
         try:
             delta_concentrations, _  =  \
                 self.attempt_reaction_step(delta_time, variable_steps=False,
-                                           explain_variable_steps=None, step_counter=step_counter)
+                                           explain_variable_steps=None)
 
         # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT),
-        # in order to re-raise an Exception with a more detailed error message
+        #       in order to re-raise an Exception with expanded error message and additional error data
         except ExcessiveTimeStepHard as ex:
             # Single reactions steps can fail with this error condition if the attempted time step was too large,
             # under the following scenarios:
             #       1. negative concentrations from any one reaction
             #       2. negative concentration from the combined effect of multiple reactions
             #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
-            raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
-                            f"Try REDUCING the time step. \n{ex}")
+            exception_data = ex.details     # Start with the details of the caught exception...
+            # ... and add/edit some
+            exception_data["previous_function"] = exception_data["function"]
+            exception_data["function"] = "reaction_step_common_fixed_step"   # Overwrite
+            old_message = exception_data.get("message")
+            exception_data["message"] = f"reaction_step_common_fixed_step(): unable to complete the reaction step.  " \
+                                        f"Try REDUCING the time step, or switching to variable time steps. \n" \
+                                        f"DETAILS: \n{old_message}"
+
+            raise ExcessiveTimeStepHard(exception_data)
 
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
@@ -319,7 +350,7 @@ class ReactionSimulator:
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
-        # if so, raised an "ExcessiveTimeStepHard" exception (a custom exception)
+        # if so, raise an "ExcessiveTimeStepHard" exception (a custom exception)
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
             # TODO: this call could wait until the interception of ExcessiveTimeStepHard
@@ -619,10 +650,10 @@ class ReactionSimulator:
             """
             # After having saved the appropriate diagnostic data, raise the custom Exception
             exception_data = {
-                "_validate_increment": f"      The tentative time step ({delta_time:.6g}) "
-                                       f"would lead to a NEGATIVE concentration of the species `{species_id}` "
-                                       f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index}): "
-                                       f"\n      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}",
+                "message": f"      The tentative time step ({delta_time:.6g}) "
+                           f"would lead to a NEGATIVE concentration in the species `{species_id}` "
+                           f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index})\n"
+                           f"      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}",
                 "function": "_validate_increment",
                 "delta_time": delta_time,
                 #"action": "ABORT",
@@ -633,8 +664,8 @@ class ReactionSimulator:
                 "rate": rxn_rate,
                 "rxn_index": rxn_index,
             }
-            if self.adaptive_steps:     # Add more diagnostics data if available
-                exception_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
+            #if self.adaptive_steps:     # Add more diagnostics data if available
+            #    exception_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
 
             raise ExcessiveTimeStepHard(exception_data)
 
@@ -807,7 +838,8 @@ class ReactionSimulator:
                 "message": f"heun_single_rxn(): excessive time step ({delta_time:.6g}), "
                            f"leading to negative concentrations",
                 "function": "heun_single_rxn",
-                "delta_time": delta_time
+                "delta_time": delta_time,
+                "rate": rate_initial
             }
             raise ExcessiveTimeStepHard(exception_data)
 
@@ -825,7 +857,9 @@ class ReactionSimulator:
                                 f"leading to final rate of {rate_final:.5g} which, when averaged with the "
                                 f"initial rate of {rate_initial} would flip the reaction's direction",
                     "function": "heun_single_rxn",
-                    "delta_time": delta_time
+                    "delta_time": delta_time,
+                    "rate": rate_initial,
+                    "rate_final": rate_final
                 }
                 raise ExcessiveTimeStepHard(exception_data)
 

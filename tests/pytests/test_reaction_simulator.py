@@ -36,7 +36,55 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 def test_reaction_step_common_fixed_step():
-    pass    # TODO
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    system = np.array([10, 50])
+    sim = ReactionSimulator(system=system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler")
+
+    result = sim.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [7, -7])
+
+
+    sim.system = np.array([10, 50])     # Reset the system state
+    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B] negative
+        sim.reaction_step_common_fixed_step(delta_time=0.8)
+    details = ex.value.details
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert details["delta_time"] == 0.8
+    assert details["system_time"] == 0
+    assert details["rate"] == -70.0
+    assert details["rxn_index"] == 0
+    assert details["previous_function"] == "_validate_increment"
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+      The tentative time step (0.8) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 50 at system time 0; requested change (NOT carried out): -56"""
+
+
+    sim.system = np.array([10, 50])     # Reset the system state
+    sim.method = "heun"
+    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B] negative
+        sim.reaction_step_common_fixed_step(delta_time=0.8)
+    details = ex.value.details
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert details["delta_time"] == 0.8
+    assert details["rate"] == -70.0
+    assert details["previous_function"] == "heun_single_rxn"
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+heun_single_rxn(): excessive time step (0.8), leading to negative concentrations"""
+
+    #for k, v in details.items():
+    #    print(k, " : ", v)
 
 
 
@@ -46,6 +94,8 @@ def test_reaction_step_common_variable_step():
 
 
 def test_attempt_reaction_step(capsys):
+    # NO diagnostics.  Instead, capture informational output
+    
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -57,7 +107,8 @@ def test_attempt_reaction_step(capsys):
 
     system = np.array([10, 50])
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler")
-    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)
+
+    delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False) # FIXED steps
     assert np.allclose(delta_conc, [7, -7])
     assert math.isclose(rec_next_step, 0.1)
 
@@ -366,7 +417,7 @@ def test_single_step_single_rxn_2():
 
     increment_vector = np.zeros(2, dtype='d')
     sim.system_time = 666
-    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B]
+    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B] negative
         sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.8,
                                   rxn=rxn_sim, rxn_index=0)
     details = ex.value.details
@@ -613,6 +664,7 @@ def test_heun_single_rxn_1():
     details = ex.value.details
     assert details.get("function") == "heun_single_rxn"
     assert details.get("delta_time") == 0.8
+    assert details.get("rate") == -70
     assert details.get("message") == "heun_single_rxn(): excessive time step (0.8), " \
                                      "leading to negative concentrations"
 
@@ -625,6 +677,8 @@ def test_heun_single_rxn_1():
     details = ex.value.details
     assert details.get("function") == "heun_single_rxn"
     assert details.get("delta_time") == 0.7
+    assert details.get("rate") == -70
+    assert math.isclose(details.get("rate_final"), 175)
     assert details.get("message") == "heun_single_rxn(): excessive time step (0.7), " \
                                      "leading to final rate of 175 which, when averaged with the " \
                                      "initial rate of -70.0 would flip the reaction's direction"
@@ -636,6 +690,8 @@ def test_heun_single_rxn_1():
     details = ex.value.details
     assert details.get("function") == "heun_single_rxn"
     assert details.get("delta_time") == 0.4001
+    assert details.get("rate") == -70
+    assert math.isclose(details.get("rate_final"), 70.035)
     assert details.get("message") == "heun_single_rxn(): excessive time step (0.4001), " \
                                      "leading to final rate of 70.035 which, when averaged with the " \
                                      "initial rate of -70.0 would flip the reaction's direction"
@@ -647,6 +703,7 @@ def test_heun_single_rxn_1():
     # Heun's rate = (-70 + 66.5)/2 = -1.75
     assert result[0] == {'A': 0.6825, 'B': -0.6825}     #  delta [A] = (-1) * (-1.75) * 0.39
     assert result[1] == -70
+
 
     return       # TODO: continue
     # Reaction : A -> B  (no reverse reaction)
