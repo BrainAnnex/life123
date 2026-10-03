@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
@@ -89,7 +91,32 @@ heun_single_rxn(): excessive time step (0.8), leading to negative concentrations
 
 
 def test_reaction_step_common_variable_step():
-    pass    # TODO
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    initial_system = np.array([10, 50])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")
+
+    sim.system = initial_system
+    incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.02)
+    assert np.allclose(incr, [1.4, -1.4])
+    assert math.isclose(step_taken, 0.02)           # Done as suggested
+    assert math.isclose(step_recommended, 0.02)     # "Stay on course"
+    assert sim.number_neg_concs == 0
+    assert sim.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
+                                                           'step_factor': 1,
+                                                           'applicable_norms': 'ALL'}
+
+
 
 
 

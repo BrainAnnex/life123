@@ -169,7 +169,7 @@ class UniformCompartment:
 
 
 
-        # The following 3 diagnostic values get reset at every run
+        # The following 2 diagnostic values get reset at every run
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
 
