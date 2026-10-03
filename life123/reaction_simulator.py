@@ -6,7 +6,7 @@
 import math
 import cmath
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
@@ -49,13 +49,23 @@ class ExcessiveTimeStepSoft(Exception):
                             #       and of making the class more efficient
 class ReactionStep:
     """
-
+    Diagnostic data for the last reaction step.
+    Note that if an intended step, in variable-step mode, lead to multiple steps,
+    this data gets overwritten at each step
     """
+    delta_time : float                          # REQUIRED
+                                                # Note: this is the size of the step eventually ACTUALLY taken,
+                                                #       not necessarily what first attempted (in the case of variable steps)
+
 
     # All the attributes below are only applicable to variable steps
-    norms: dict[str, Any]|None = None           #
+
+    number_neg_concs : int = 0                  # Zero default upon starting a new sim step
+    number_soft_aborts : int = 0                # Zero default upon starting a new sim step
+
+    norms: dict[str, Any] | None = None         #
                                                 # EXAMPLE: {'norm_A': 0.98, 'norm_B': 0.14}
-    decision_data: dict[str, Any]|None = None   #
+    decision_data: dict[str, Any] | None = None #
                                                 # EXAMPLE: {'action': 'stay', 'operation': 'stay',
                                                 #           'step_factor': 1,
                                                 #           'applicable_norms': 'ALL'}
@@ -79,15 +89,11 @@ class ReactionSimulator:
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
         self.diagnostics = diagnostics  # Object of class "Diagnostics"
-        self.diagnostic_data = {}       # TODO: experimental
         self.diagnostic_data_snapshot = {}      # TODO: consider turning into local variable,
                                                 #       as was done in UniformCompartment,
                                                 #       or into a dataclass
-        # The following 2 diagnostic values get reset at every run  # TODO: organize into dict, object or dataclass
-        self.number_neg_concs = 0
-        self.number_soft_aborts = 0
 
-        self.reaction_step_diagnostics = ReactionStep()     # Internal data about a single reaction step
+        self.reaction_step_diagnostics = None   # Internal data about a single reaction step
                                                 #     (taken in full OR aborted!)
 
 
@@ -156,28 +162,23 @@ class ReactionSimulator:
 
 
 
-    def gather_diagnostic_data(self, new_data :dict):
-        # TODO: experimental
-        if self.diagnostics_enabled:
-            for k, v in new_data.items():
-                self.diagnostic_data[k] = v
 
 
+    ########  MAIN SEQUENCE STARTS HERE  #######
 
-    ####  MAIN SEQUENCE STARTS HERE  ###
-
-    def _foo2(self, all_norms, step_factor, delta_time, delta_concentrations):
+    def _foo2(self, delta_concentrations):
         # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
         return
         if self.diagnostics_enabled:
             # Define the dict self.diagnostic_data_snapshot
+            all_norms = self.reaction_step_diagnostics.norms
             self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
             self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
             self.diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
             self.diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
             self.diagnostic_data_snapshot['action'] = "ABORT"
-            self.diagnostic_data_snapshot['step_factor'] = step_factor
-            self.diagnostic_data_snapshot['time_step'] = delta_time
+            self.diagnostic_data_snapshot['step_factor'] = self.reaction_step_diagnostics.decision_data["step_factor"]
+            self.diagnostic_data_snapshot['time_step'] = self.reaction_step_diagnostics.delta_time
             self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                 data=self.diagnostic_data_snapshot, delta_conc_arr=delta_concentrations,
                                                 caption="excessive norm value(s)")
@@ -207,6 +208,7 @@ class ReactionSimulator:
             self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
     
+
 
 
     def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None) -> np.array:
@@ -286,10 +288,32 @@ class ReactionSimulator:
     def reaction_step_common_variable_step(self, delta_time: float, conc_array=None,
                                            explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
+        TODO: corresponds to reaction_step_common() in UniformCompartment -> to phase out
+
         This is the common entry point for VARIABLE-step simulations,
         both for single-compartment reactions,
         and for the reaction component of reaction-diffusions in 1D, 2D and 3D.
 
+        "Compartments" may or may not correspond to the "bins" of the higher layers;
+        the calling code might have opted to merge some bins into a single "compartment".
+
+        Using the given concentration data for all the applicable species in a single compartment,
+        do a single reaction time step for ALL the reactions -
+        based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
+
+        Return the increment vector for all the chemical species concentrations in the compartment
+
+        NOTES:  * the actual system concentrations are NOT changed
+                * this method doesn't decide on step sizes - except in case of ("hard" or "soft") aborts, which are
+                    followed by repeats with a smaller step.  Also, it makes suggestions
+                    to the calling module about the next step to best take (whether as a result of an abort,
+                    or for other considerations)
+
+        :param delta_time:      The requested time duration of the reaction step
+        :param conc_array:      [OPTIONAL] All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for ALL the species, in their array index order.
+                                    If not provided, self.system is used instead
         :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
                                             a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range
@@ -354,7 +378,7 @@ class ReactionSimulator:
                 #       1. negative concentrations from any one reaction - caught by  validate_increment()
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #print("*** CAUGHT a HARD ABORT")
-                self.number_neg_concs += 1
+                self.reaction_step_diagnostics.number_neg_concs += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     explanation = ex
                     explanation += f"\n      -> will backtrack, and re-do step with a SMALLER delta time, " \
@@ -375,7 +399,7 @@ class ReactionSimulator:
                 # under the following scenario:
                 #       * excessive norm(s) measures in the overall step - caught in this function
                 #print("*** CAUGHT a soft ABORT")
-                self.number_soft_aborts += 1
+                self.reaction_step_diagnostics.number_soft_aborts += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     print(f"       {ex}")
                 delta_time *= self.adaptive_steps.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
@@ -396,8 +420,6 @@ class ReactionSimulator:
         # If we get thus far, it's the normal exit of the reaction step
 
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
-
-
 
 
 
@@ -436,7 +458,7 @@ class ReactionSimulator:
                                                                 indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations,
                                                                 baseline_conc=self.system, prev_conc=self.previous_system)
-            print("decision_data: ", decision_data)
+            #print("decision_data: ", decision_data)
             # EXAMPLE: {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.98, 'norm_B': 0.14}, 'applicable_norms': 'ALL'}
 
             saved_decision_data = {k : v  for k, v in decision_data.items() if k != "norms"}   # Drop the "norms" key
@@ -445,13 +467,11 @@ class ReactionSimulator:
 
             step_factor = decision_data['step_factor']
             action = decision_data['action']
-            all_norms = decision_data['norms']
             applicable_norms = decision_data['applicable_norms']
 
-            self._explain_variable_timestep_prelude(decision_data=decision_data,
-                                                    explain_variable_steps=explain_variable_steps,
+            self._explain_variable_timestep_prelude(explain_variable_steps=explain_variable_steps,
                                                     step_counter=step_counter,
-                                                    delta_time=delta_time, delta_concentrations=delta_concentrations)
+                                                    delta_concentrations=delta_concentrations)
 
 
             # Abort the current step if some rate of change is deemed excessive.
@@ -459,7 +479,7 @@ class ReactionSimulator:
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
 
                 # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
-                self._foo2(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, delta_concentrations=delta_concentrations)
+                self._foo2(delta_concentrations=delta_concentrations)
 
 
                 exception_data = {
@@ -476,7 +496,7 @@ class ReactionSimulator:
             recommended_next_step = delta_time * step_factor
 
             # Append data to self.diagnostic_data_snapshot
-            self._gather_diagnostics_for_var_step(all_norms=all_norms, step_factor=step_factor, delta_time=delta_time, action=action)
+            self._gather_diagnostics_for_var_step(step_factor=step_factor, delta_time=delta_time, action=action)
             #print(self.diagnostic_data_snapshot)
 
             self._explain_variable_timestep_upon_success(step_factor=step_factor, delta_time=delta_time,
@@ -514,25 +534,24 @@ class ReactionSimulator:
 
 
 
-    def _explain_variable_timestep_prelude(self, decision_data, explain_variable_steps, step_counter,
-                                           delta_time, delta_concentrations) -> None:
+    def _explain_variable_timestep_prelude(self, explain_variable_steps, step_counter,
+                                           delta_concentrations) -> None:
         """
         If requested, print out an explanation for the user about the current variable time step,
         and the decision made
 
-        :param decision_data:           The requested time duration of the reaction step
         :param explain_variable_steps:
         :param step_counter:
-        :param delta_time:
         :param delta_concentrations:
         :return:                        None
         """
         if explain_variable_steps \
                 and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-            step_factor = decision_data['step_factor']
-            action = decision_data['action']
-            all_norms = decision_data['norms']
-            operation = decision_data['operation']
+            step_factor = self.reaction_step_diagnostics.decision_data['step_factor']
+            action      = self.reaction_step_diagnostics.decision_data['action']
+            operation   = self.reaction_step_diagnostics.decision_data['operation']
+            all_norms  = self.reaction_step_diagnostics.norms
+            delta_time = self.reaction_step_diagnostics.delta_time
 
             if action == "abort":
                 step_status = "aborted"
@@ -571,31 +590,31 @@ class ReactionSimulator:
             msg = "       "
 
             if step_factor > 1:         # "INCREASE
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, " \
+                msg +=  f"INFO: COMPLETED STEP NORMALLY and MADE INTERVAL LARGER, " \
                         f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
             elif step_factor < 1:       # "DECREASE"
-                msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, " \
+                msg +=  f"INFO: COMPLETED STEP NORMALLY and MADE INTERVAL SMALLER, " \
                         f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
             else:                       # "STAY THE COURSE"
-                msg +=  f"INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size."
+                msg +=  f"INFO: COMPLETED STEP NORMALLY - we're inside the target range of all norms.  No change to step size."
 
             msg += f"\n    [The current step started at System Time: {self.system_time:.5g} , and will continue to {self.system_time + delta_time:.5g}]"
             print(msg)
 
 
 
-    def _gather_diagnostics_for_var_step(self, all_norms, step_factor, delta_time, action) -> None:
+    def _gather_diagnostics_for_var_step(self, step_factor, delta_time, action) -> None:
         """
         Gather diagnostic data, if enabled, about the variable step.
         Add this data to the dict self.diagnostic_data_snapshot
 
-        :param all_norms:
         :param step_factor:
         :param delta_time:
         :param action:
         :return:            None
         """
         if self.diagnostics_enabled:
+            all_norms = self.reaction_step_diagnostics.norms
             # Populate the dict self.diagnostic_data_snapshot
             self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
             self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
@@ -659,6 +678,7 @@ class ReactionSimulator:
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
                                 array([7. , -21.])
         """
+        self.reaction_step_diagnostics = ReactionStep(delta_time=delta_time)     # RESET
 
         # The increment vector is cumulative for ALL the requested reactions.  Initialize it to all zeros
         number_species = self.species_index_map.number_of_system_species()
@@ -1751,7 +1771,7 @@ class VariableTimeSteps:
         Based on the magnitude of the measures, propose a course of action about what to do for the next step.
 
         :param n_chems:         The total number of registered species - exclusive of water and of macro-molecules
-        :param indexes_of_active_chemicals: The ordered list (numerically sorted) of the INDEX numbers of all the chemicals
+        :param indexes_of_active_chemicals: The ordered list (numerically sorted) of the INDEX numbers of all the species
                                                 involved in ANY of the registered reactions,
                                                 but NOT counting chemicals that always appear in a catalytic role in all the reactions they
                                                 participate in

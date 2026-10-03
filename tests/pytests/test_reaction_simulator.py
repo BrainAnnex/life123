@@ -34,6 +34,7 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 
+
 ########    class ReactionSimulator    ###########################################################################
 
 
@@ -54,6 +55,7 @@ def test_reaction_step_common_fixed_step():
 
     result = sim.reaction_step_common_fixed_step(delta_time=0.1)
     assert np.allclose(result, [7, -7])
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.1)
 
 
     sim.system = np.array([10, 50])     # Reset the system state
@@ -70,6 +72,7 @@ def test_reaction_step_common_fixed_step():
 DETAILS: 
       The tentative time step (0.8) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
       Baseline concentration value of `B` : 50 at system time 0; requested change (NOT carried out): -56"""
+
 
 
     sim.system = np.array([10, 50])     # Reset the system state
@@ -107,16 +110,130 @@ def test_reaction_step_common_variable_step():
 
     sim.system = initial_system
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.02)
-    assert np.allclose(incr, [1.4, -1.4])
     assert math.isclose(step_taken, 0.02)           # Done as suggested
     assert math.isclose(step_recommended, 0.02)     # "Stay on course"
-    assert sim.number_neg_concs == 0
-    assert sim.number_soft_aborts == 0
+    assert np.allclose(incr, [1.4, -1.4])
+
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.02)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
                                                            'step_factor': 1,
                                                            'applicable_norms': 'ALL'}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.98, 'norm_B': 0.14})
 
 
+    # New simulation, with somewhat large time step
+    initial_system = np.array([10, 50])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")
+
+    sim.system = initial_system
+    incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.04)
+    #print(incr, step_taken, step_recommended)
+    assert math.isclose(step_taken, 0.024)          # Smaller than suggested [but 20% longer than in our previous test run, above]
+    assert math.isclose(step_recommended, 0.0192)   # "Go even smaller" in next round (80% of current value)
+    assert np.allclose(incr, [1.68, -1.68])
+
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
+                                                           'step_factor': 0.8,
+                                                           'applicable_norms': ['norm_A']}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 1.4112, 'norm_B': 0.168})
+    assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
+
+
+
+
+
+    # New simulation, with excessively small time step
+    initial_system = np.array([10, 50])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")
+
+    sim.system = initial_system
+    incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.01)    # , explain_variable_steps=[-1,1]
+    #print(incr, step_taken, step_recommended)
+    assert math.isclose(step_taken, 0.01)           # Done as suggested
+    assert math.isclose(step_recommended, .015)     # "Go larger smaller" in next round (50% more of current value)
+    assert np.allclose(incr, [0.7, -0.7])
+
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.01)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'low', 'operation': 'upshift',
+                                                           'step_factor': 1.5,
+                                                           'applicable_norms': 'ALL'}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.245, 'norm_B':0.07})
+    assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
+
+
+
+def test_reaction_step_common_variable_step_2(capsys):
+    # Capture informational output in the case of a variable step that gets "rewound" and re-done
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    # New simulation, with slightly larger time step
+    initial_system = np.array([10, 50])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")
+
+    sim.system = initial_system
+    incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.04, explain_variable_steps=[-1,1])
+    captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
+
+    assert math.isclose(step_taken, 0.024)          # Smaller than suggested [but 20% longer than in our previous test run, above]
+    assert math.isclose(step_recommended, 0.0192)   # "Go even smaller" in nest round (80% of current value)
+    assert np.allclose(incr, [1.68, -1.68])
+
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
+                                                           'step_factor': 0.8,
+                                                           'applicable_norms': ['norm_A']}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 1.4112, 'norm_B': 0.168})
+    assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
+
+    assert "(STEP 1 aborted) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.04 ..." in captured.out
+    output_expected = """
+(STEP 1 aborted) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.04 ...
+    Previous:  None
+    Baseline:  [10 50]
+    Deltas:    [ 2.8 -2.8]
+    Norms:     { 'norm_A': 3.92 }
+    Thresholds:    
+                   norm_A : low 0.8 | high 1.2 | abort 1.7 | (VALUE 3.92)
+                   norm_B :  (skipped; not needed)
+    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}
+    => Action: 'ABORT'  ('abort' with step size factor of 0.6)
+       {'message': "* INFO: the tentative time step (0.04) leads to a value of ['norm_A'] > its ABORT threshold:\\n       -> will backtrack, and re-do step with a SMALLER Δt, x0.6 (now set to 0.024) [Step started at t=0, and will rewind there]", 'delta_time': 0.04}
+
+(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.024 ...
+    Previous:  None
+    Baseline:  [10 50]
+    Deltas:    [ 1.68 -1.68]
+    Norms:     { 'norm_A': 1.4112, 'norm_B': 0.168 }
+    Thresholds:    
+                   norm_A : low 0.8 | high 1.2 | (VALUE 1.4112) | abort 1.7
+                   norm_B : low 0.15 | (VALUE 0.168) | high 0.8 | abort 1.8
+    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}
+    => Action: 'HIGH'  ('downshift' with step size factor of 0.8)
+       INFO: COMPLETED STEP NORMALLY and MADE INTERVAL SMALLER, multiplied by 0.8 (set to 0.0192) at the next round, because ['norm_A'] is high
+    [The current step started at System Time: 0 , and will continue to 0.024]
+"""
+
+    assert output_expected == captured.out
 
 
 
@@ -171,7 +288,7 @@ def test_attempt_reaction_step(capsys):
     assert "                   norm_A : low 0.8 | (VALUE 0.98) | high 1.2 | abort 1.7" in captured.out
     assert "                   norm_B : (VALUE 0.14) | low 0.15 | high 0.8 | abort 1.8" in captured.out
     assert "    => Action: 'STAY'  (with step size factor of 1)" in captured.out
-    assert "       INFO: COMPLETE STEP NORMALLY - we're inside the target range of all norms.  No change to step size." in captured.out
+    assert "       INFO: COMPLETED STEP NORMALLY - we're inside the target range of all norms.  No change to step size." in captured.out
     assert "    [The current step started at System Time: 0 , and will continue to 0.02]" in captured.out
 
     assert np.allclose(delta_conc, [1.4, -1.4])
@@ -196,7 +313,7 @@ def test_attempt_reaction_step(capsys):
     assert "                   norm_B : low 0.15 | (VALUE 0.175) | high 0.8 | abort 1.8" in captured.out
     assert "    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}" in captured.out
     assert "    => Action: 'HIGH'  ('downshift' with step size factor of 0.8)" in captured.out
-    assert "       INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL SMALLER, multiplied by 0.8 (set to 0.02) at the next round, because ['norm_A'] is high" in captured.out
+    assert "       INFO: COMPLETED STEP NORMALLY and MADE INTERVAL SMALLER, multiplied by 0.8 (set to 0.02) at the next round, because ['norm_A'] is high" in captured.out
     assert "    [The current step started at System Time: 0 , and will continue to 0.025]" in captured.out
 
 
@@ -222,7 +339,7 @@ def test_attempt_reaction_step(capsys):
     assert "                   norm_B : (VALUE 0.07) | low 0.15 | high 0.8 | abort 1.8" in captured.out
     assert "    Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}" in captured.out
     assert "    => Action: 'LOW'  ('upshift' with step size factor of 1.5)" in captured.out
-    assert "       INFO: COMPLETE STEP NORMALLY and MAKE INTERVAL LARGER, multiplied by 1.5 (set to 0.015) at the next round, because all norms are low" in captured.out
+    assert "       INFO: COMPLETED STEP NORMALLY and MADE INTERVAL LARGER, multiplied by 1.5 (set to 0.015) at the next round, because all norms are low" in captured.out
     assert "    [The current step started at System Time: 0 , and will continue to 0.01]" in captured.out
 
     assert np.allclose(delta_conc, [0.7, -0.7])
