@@ -16,13 +16,13 @@ def test_store():
     m.store(par=10, data_snapshot=d, caption="first entry")  # Add a snapshot
     assert d == d_original
     assert len(m) == 1
-    assert str(m) == "`CollectionTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use get_dataframe() method"
+    assert str(m) == "`CollectionTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
 
     m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")  # Add a snapshot
     assert len(m) == 2
-    assert str(m) == "`CollectionTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use get_dataframe() method"
+    assert str(m) == "`CollectionTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
     row = list(m.collection_df.iloc[1])                 # By row index
@@ -30,7 +30,7 @@ def test_store():
 
     m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot
     assert len(m) == 3
-    assert str(m) == "`CollectionTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use get_dataframe() method"
+    assert str(m) == "`CollectionTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
     row = list(m.collection_df.iloc[1])                 # By row index
@@ -40,7 +40,7 @@ def test_store():
 
     m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
     assert len(m) == 4
-    assert str(m) == "`CollectionTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use get_dataframe() method"
+    assert str(m) == "`CollectionTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
     df = m.collection_df
     data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
                    {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
@@ -52,7 +52,7 @@ def test_store():
 
     m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")  # Add a snapshot
     assert len(m) == 5
-    assert str(m) == "`CollectionTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use get_dataframe() method"
+    assert str(m) == "`CollectionTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
     df = m.collection_df
 
     data_values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})

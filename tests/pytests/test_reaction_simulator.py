@@ -13,6 +13,7 @@ from life123.kinetics import Custom_Model
 from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
+from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.collections import CollectionTabular
 from tests.utilities.comparisons import *
 
@@ -36,6 +37,109 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 ########    class ReactionSimulator    ###########################################################################
+
+
+def test__single_compartment_react_main_loop():
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    sim = ReactionSimulator(system=np.array([10., 50.]), species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler")
+    sim.system_time = 8
+
+    new_count, recommended_next_step = sim._single_compartment_react_main_loop(time_step=0.1, variable_steps=False,
+                                                                               step_count=0, n_steps=1000)
+    assert new_count == 1
+    assert math.isclose(recommended_next_step, 0.1)
+    assert np.allclose(sim.system, [17., 43.])
+    assert np.allclose(sim.previous_system, [10., 50.])
+    assert math.isclose(sim.system_time, 8.1)
+
+    # Check the concentration history
+    df = sim.conc_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 8.1, "A": 17.0, "B": 43.0, "step": "1", "caption": ""}   # Note: "step" is a string!
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Check the rate history
+    expected_rates = {0: -70.0}
+    assert compare_dicts(sim.system_rxn_rates, expected_rates)
+    df = sim.rate_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 8, "rxn0_rate": -70.0, "step": "0"}
+    # Note: "step" is a string!  System time and step refer to the START of the simulation step
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+
+
+    # RESET to initial concentrations, and simulate a step just shy of excessive
+    sim.system = np.array([10., 50.])
+    sim.system_time = 0
+    sim.rate_history = HistoryReactionRate(active=True)
+    sim.conc_history = HistoryUniformConcentration(active=True)
+    # Pick a time step just below 50/70 (where 70 is the initial reaction rate),
+    # to bring the second species concentration to almost zero
+    new_count, recommended_next_step = sim._single_compartment_react_main_loop(time_step=0.7142857142, variable_steps=False,
+                                                                               step_count=5, n_steps=1000)
+    assert new_count == 6
+    assert math.isclose(recommended_next_step, 0.7142857142)
+    assert np.allclose(sim.system, [60., 0.])       # This time step was so large that it converted all B to A !
+    assert math.isclose(sim.system_time, 0.7142857142)
+    assert np.allclose(sim.previous_system, [10., 50.])
+
+    # Check the concentration history
+    df = sim.conc_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 0.7142857142, "A": 60.0, "B": 0.0, "step": "6", "caption": ""}   # Note: "step" is a string!
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Check the rate history
+    expected_rates = {0: -70.0}
+    assert compare_dicts(sim.system_rxn_rates, expected_rates)
+    df = sim.rate_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 0, "rxn0_rate": -70.0, "step": "5"}
+    # Note: "step" is a string!  System time and step refer to the START of the simulation step
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+
+
+    # RESET to initial concentrations, and attempt an excessive step
+    sim.system = np.array([10., 50.])
+    sim.system_time = 20
+    # Pick a time step just above the previous time, to tip [B] into negative values
+    with pytest.raises(ExcessiveTimeStepHard) as ex:
+        sim._single_compartment_react_main_loop(time_step=0.714285715, variable_steps=False,
+                                                step_count=1, n_steps=1000)
+    details = ex.value.details
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert math.isclose(details["delta_time"], 0.714285715)
+    assert details["caption"] == 'aborted: neg. conc. in `B` from rxn # 0'
+    assert details["system_time"] == 20
+    assert details["rate"] == -70.0
+    assert details["rxn_index"] == 0
+    assert details["previous_function"] == "_validate_increment"
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+      The tentative time step (0.714286) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 50 at system time 20; requested change (NOT carried out): -50"""
+
+    # The following values are all unchanged
+    assert sim.system_time == 20
+    assert np.allclose(sim.system, [10., 50.])
+    assert np.allclose(sim.previous_system, [10., 50.])
+
+
+    # TODO: test variable steps
+
+
 
 
 def test_reaction_step_common_fixed_step():
@@ -372,8 +476,8 @@ def test_attempt_reaction_step_2_a():
     coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
-    row = {"START_TIME": 88, "time_step": 0.1, "aborted": False, "Delta A": 7.0, "Delta B": -7.0, "rate": -70., "caption": ""}
-    df_expected = pd.DataFrame(row, index=[0])
+    row_expected = {"START_TIME": 88, "time_step": 0.1, "aborted": False, "Delta A": 7.0, "Delta B": -7.0, "rate": -70., "caption": ""}
+    df_expected = pd.DataFrame(row_expected, index=[0])
     assert compare_pandas(df_expected, df, disregard_order=True)
 
     # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step()
@@ -381,8 +485,8 @@ def test_attempt_reaction_step_2_a():
     df = sim.diagnostics.diagnostic_decisions_data.get_dataframe()
     assert type(df) is pd.DataFrame
     assert len(df) == 1
-    row = {"START_TIME": 88, "Delta A": 7.0, "Delta B": -7.0, "caption": ""}
-    df_expected = pd.DataFrame(row, index=[0])
+    row_expected = {"START_TIME": 88, "Delta A": 7.0, "Delta B": -7.0, "caption": ""}
+    df_expected = pd.DataFrame(row_expected, index=[0])
     assert compare_pandas(df_expected, df, disregard_order=True)
 
 
@@ -417,6 +521,7 @@ def test_attempt_reaction_step_2_b():
     row = {"START_TIME": 99, "time_step": 0.02, "aborted": False, "Delta A": 1.4, "Delta B": -1.4, "rate": -70., "caption": ""}
     df_expected = pd.DataFrame(row, index=[0])
     assert_frame_equal(df, df_expected)
+
 
     # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step(), this time with
     #   extra fields resulting from the VARIABLE step

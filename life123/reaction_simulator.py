@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
+from life123.history import HistoryUniformConcentration, HistoryReactionRate
+#from life123.uniform_compartment import UniformCompartment
 #from life123.reactions import SimulationReaction
 #from life123.reaction_registry import ReactionRegistry
 
@@ -83,6 +85,7 @@ class ReactionSimulator:
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid"):
 
         self.system :np.ndarray = system
+
         self.species_index_map :SpeciesIndexMap = species_index_map
         self.reaction_registry  = reaction_registry
         self.exact :bool = exact
@@ -99,14 +102,21 @@ class ReactionSimulator:
 
         self.method :str = method
 
-        self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
-                                        # Note that reactions natively supported that contain multiple elementary reactions (such as
-                                        #       enzymatic reactions) will have tuples of all the individual rates
-                                        # EXAMPLE: {0: 0.42, 1: (4.26, 6.2), 2: -3.7}
+        self.system_rxn_rates = {}      # Keys are the reaction indexes.
+                                        # Reaction rates at the start of the last (current) step, for each of the involved reactions
+                                        # EXAMPLE: {0: 0.42, 1: 6.2, 2: -3.7}
 
         self.system_time = 0.       # Global time of the system, from initialization
         self.previous_system = None # Concentration data of all the species at the previous simulation step
 
+
+        self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
+                                                                    # of (some of) the chemical reaction rates:
+                                                                    # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
+
+        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
+                                                                        # of (some of) the species concentrations:
+                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
@@ -119,6 +129,7 @@ class ReactionSimulator:
             self.adaptive_steps.use_adaptive_preset(preset)
 
 
+    #########  MISC. UTILITIES  #########
 
     def number_of_system_species(self) -> int:
         """
@@ -162,9 +173,119 @@ class ReactionSimulator:
 
 
 
+    def capture_rate_snapshot(self, step_count=None, caption=None,
+                             force=False, system_time=None) -> None:
+        """
+        Take the reaction rates for the last (current) step of all reactions,
+        stored as a dict in the object property `self.system_rxn_rates`,
+        and save them in the ongoing table storing the "rate history".
+
+        Note: reaction rate history is regarded as akin to concentration history - something to periodically
+              sample and record, separate from diagnostics
+
+        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
+        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
+        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
+        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
+        :return:            None
+        """
+        if not force and not self.rate_history.to_capture(step_count):
+            return
+
+        if system_time is None:
+            system_time = self.system_time
+
+        data_snapshot = {}     # rxn_rates_snapshot
+        for k, v in self.system_rxn_rates.items():
+            if type(v) == tuple:
+                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
+                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
+                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
+            else:
+                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
+        '''
+           EXAMPLE of data_snapshot:
+                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
+        '''
+        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
 
 
-    ########  MAIN SEQUENCE STARTS HERE  #######
+
+    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
+        """
+
+        :param step_count:  [OPTIONAL] Step count in the simulation
+        :param caption:     [OPTIONAL]
+        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
+                                the capture frequency will NOT considered in the
+                                decision about saving it, but a check will be performed
+                                to make sure it's not a duplicate of the earlier capture
+
+        :return:                    None
+        """
+        if not self.conc_history.to_capture(step_count, extra=extra):
+            return
+
+        data_snapshot = self.get_conc_dict(chem_labels=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                {"A": 1.3, "B": 4.9}        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
+
+
+
+    def get_conc_dict(self, chem_labels=None, system_data=None) -> dict|None:
+        """
+        Retrieve the concentrations of the requested species (by default all),
+        as a dictionary indexed by the species id
+
+        :param chem_labels: [OPTIONAL] List or tuple of the id's of the species;
+                                by default, return all
+        :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
+                                index of the chemical species; by default, use the SYSTEM DATA
+
+        :return:            A dictionary, indexed by the chemical labels, of the concentration values;
+                                or None if no data available
+                                EXAMPLE: {"A": 1.2, "D": 4.67}
+        """
+        # TODO: this ought to be returned to UniformCompartment
+        # TODO: probably change the None returns to empty dict's
+        if system_data is None:
+            system_data = self.system
+        else:
+            assert system_data.size == self.number_of_system_species(), \
+                f"UniformCompartment.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
+                f"as the declared number of chemicals ({self.number_of_system_species()})"
+
+
+        if chem_labels is None:
+            if system_data is None:
+                return {}
+            else:
+                return {self.species_index_map.species_at(index): system_data[index]
+                        for index, conc in enumerate(system_data)}
+        else:
+            assert type(chem_labels) == list or type(chem_labels) == tuple, \
+                f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
+                f" (it was of type {type(chem_labels)})"
+
+            conc_dict = {}
+            for name in chem_labels:
+                species_index = self.species_index_map.index_of(name)
+                conc_dict[name] = system_data[species_index]
+
+            return conc_dict
+
+
+
+
+
+    #################  MAIN SEQUENCE STARTS HERE  ################
 
     def _foo2(self, delta_concentrations):
         # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
@@ -210,8 +331,87 @@ class ReactionSimulator:
     
 
 
+    def _single_compartment_react_main_loop(self, time_step, variable_steps :bool,
+                                            step_count, n_steps :int,
+                                            explain_variable_steps=None) -> (int, float):
+        """
+        Helper function to single_compartment_react(), for its main loop.
+        Perform the reaction step (either fixed or variable step, as appropriate),
+        then UPDATE THE SYSTEM STATE, and preserve the RATES data.
+        If the number of steps taken so far is getting excessive, raise an Exception
 
-    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None) -> np.array:
+        :param time_step:               The requested time duration of the reaction step;
+                                            in case of adaptive variable steps, a smaller step might actually get taken
+        :param variable_steps:          If True, the steps sizes will get automatically adjusted, based on thresholds
+        :param step_count:              Step count in the simulation (the initial value at start of simulation should be zero)
+        :param n_steps:                 The desired number of steps;
+                                            the actual number might be considerably higher in case of adaptive variable steps.
+                                            Here it's used purely as a safeguard against infinite loops
+        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
+                                            a brief explanation will be printed about how the variable step sizes were chosen,
+                                            when the System time inside that range.
+                                            Only applicable if variable_steps is True
+        :return:                        The pair (new step count, recommended next step);
+                                            the latter is only meaningful in case of adaptive variable steps
+        """
+        # ----------  CORE OPERATION OF MAIN LOOP  ----------
+        if variable_steps:
+            delta_concentrations, step_actually_taken, recommended_next_step = \
+                self.reaction_step_common_variable_step(delta_time=time_step,
+                                                        explain_variable_steps=explain_variable_steps,
+                                                        step_counter=step_count)
+        else:
+            # Fixed steps
+            delta_concentrations = \
+                self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
+            step_actually_taken = time_step
+            recommended_next_step = time_step
+
+
+        # Update the System State
+        self.previous_system = self.system.copy()   # Clone the earlier state (note: this is used for adaptive time steps. TODO: maybe jettison for fixed steps)
+        self.system += delta_concentrations
+        if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
+            print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
+                  f"upon advancing reactions from system time t={self.system_time:,.5g}")
+
+
+        # Preserve the RATES data, as requested ("part1", BEFORE updating the System Time, because reaction rates are
+        # based on the *start* time of the simulation step)
+        if step_count == 0:
+            self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
+        else:
+            self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
+
+
+        # UPDATE THE SYSTEM TIME and step count (now we're at the END of the current time step)
+        # Note: we've taken exactly 1 more step - though not necessarily of the requested size, in case of adaptive variable steps
+        self.system_time += step_actually_taken
+        step_count += 1
+
+
+        # Preserve the CONCENTRATION data, as requested ("part2", AFTER updating the System Time, because current concentrations
+        # refer to the System Time at the end of the simulation step)
+        self.capture_conc_snapshot(step_count=step_count) # Save historical concentration values (if enabled)
+                                                          # We use the updated step count because we save the conc. values at the END of the step
+
+
+        # The following is only applicable to variable steps (TODO: maybe move to calling module)
+        if variable_steps:
+            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
+                raise Exception(f"_single_compartment_react_main_loop(): "
+                                f"the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
+                                f" try reducing the time_step")   # TODO: is the explanation correctly phrased?
+
+
+        return step_count, recommended_next_step
+
+
+
+
+
+    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None,
+                                        step_counter=1) -> np.array:
         """
         This is the common entry point for FIXED-step simulations,
         both for single-compartment reactions,
@@ -235,6 +435,7 @@ class ReactionSimulator:
         :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order.
                                     If not provided, self.system is used instead
+        :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
         :return:                The increment vector for the concentrations of ALL the chemical species,
                                     in their array index order, as a Numpy array
@@ -258,7 +459,7 @@ class ReactionSimulator:
         try:
             delta_concentrations, _  =  \
                 self.attempt_reaction_step(delta_time, variable_steps=False,
-                                           explain_variable_steps=None)
+                                           explain_variable_steps=None, step_counter=step_counter)
 
         # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT),
         #       in order to re-raise an Exception with expanded error message and additional error data
@@ -315,7 +516,7 @@ class ReactionSimulator:
                                     as a Numpy array for ALL the species, in their array index order.
                                     If not provided, self.system is used instead
         :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
-                                            a brief explanation is printed about how the variable step sizes were chosen,
+                                            a brief explanation will be printed about how the variable step sizes were chosen,
                                             when the System time inside that range
         :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
@@ -431,9 +632,10 @@ class ReactionSimulator:
 
         :param delta_time:              The requested time duration of the reaction step
         :param variable_steps:          If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
-                                            when the System time inside that range;
-                                            only applicable if variable_steps is True
+        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
+                                            a brief explanation will be printed about how the variable step sizes were chosen,
+                                            when the System time inside that range.
+                                            Only applicable if variable_steps is True
         :param step_counter:            A pair with a time range to show in the explanations about the variable step sizes;
                                             only applicable if explain_variable_steps is True
 
@@ -540,7 +742,9 @@ class ReactionSimulator:
         If requested, print out an explanation for the user about the current variable time step,
         and the decision made
 
-        :param explain_variable_steps:
+        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
+                                            a brief explanation will be printed about how the variable step sizes were chosen,
+                                            when the System time inside that range.
         :param step_counter:
         :param delta_concentrations:
         :return:                        None
@@ -580,7 +784,9 @@ class ReactionSimulator:
 
         :param step_factor:
         :param delta_time:              The requested time duration of the reaction step
-        :param explain_variable_steps:
+        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
+                                            a brief explanation will be printed about how the variable step sizes were chosen,
+                                            when the System time inside that range.
         :param recommended_next_step:
         :param applicable_norms:
         :return:                        None

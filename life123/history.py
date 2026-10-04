@@ -142,7 +142,10 @@ class History:
 
         :param system_time:
         :param data_snapshot:   Data format will vary in different child classes
-        :param step_count:
+        :param step_count:      [OPTIONAL] Integer representing a step count in a simulation
+                                     or other stepwise changes.
+                                     Since they are optional, they are treated as strings,
+                                     and missing values will be empty strings
         :param caption:         [OPTIONAL] String to save alongside this snapshot; if not provided,
                                     the object property self.initial_caption is used, if that was set
         :return:                The caption that was actually used
@@ -348,7 +351,7 @@ class HistoryBinConcentration(History):
 
 class HistoryReactionRate(History):
     """
-    For the management of historical reaction-rate data for Uniform Compartments
+    For the management of historical reaction-rate data for various reaction (for Uniform Compartments)
     """
 
     def __init__(self, rxns=None, *args, **kwargs):
@@ -362,6 +365,13 @@ class HistoryReactionRate(History):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
         self.restrict_rxns = rxns
         self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
+
+
+
+    def __str__(self) -> str:
+        s = "`HistoryReactionRate` object, used for the management of historical reaction-rate data for various reaction.  \n" \
+            "To access, use its get_history() method"
+        return s
 
 
 
@@ -403,7 +413,8 @@ class HistoryReactionRate(History):
 
 class HistoryUniformConcentration(History):
     """
-    For the management of historical concentration data for Uniform Compartments
+    For the management of historical concentration data (for Uniform Compartments),
+    i.e. species concentration trajectories
     """
 
     def __init__(self, *args, **kwargs):
@@ -412,8 +423,18 @@ class HistoryUniformConcentration(History):
         :param args:
         :param kwargs:
         """
+        # TODO: maybe generalize this object to represent concentration trajectories in any type of bin
+
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
         self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
+
+
+
+
+    def __str__(self) -> str:
+        s = "`HistoryUniformConcentration` object, used for the management of historical concentration data.  \n" \
+            "To access, use its get_history() method"
+        return s
 
 
 
@@ -436,7 +457,8 @@ class HistoryUniformConcentration(History):
 
         :param system_time:
         :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
-        :param step_count:
+        :param step_count:      [OPTIONAL] Integer representing a step count in a simulation
+                                     or other stepwise changes
         :param caption:         [OPTIONAL] String to save alongside this snapshot
         :return:                None
         """

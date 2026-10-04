@@ -138,7 +138,7 @@ class UniformCompartment:
 
 
         self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
-                                                                        # of (some of) the chemical concentrations:
+                                                                        # of (some of) the species concentrations:
                                                                         # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
@@ -381,10 +381,10 @@ class UniformCompartment:
 
     def get_conc_dict(self, chem_labels=None, system_data=None) -> dict|None:
         """
-        Retrieve the concentrations of the requested chemicals (by default all),
+        Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
 
-        :param chem_labels: [OPTIONAL] List or tuple of the labels of the chemical species;
+        :param chem_labels: [OPTIONAL] List or tuple of the id's of the species;
                                 by default, return all
         :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
