@@ -26,10 +26,10 @@ class UniformCompartment:
     This class is currently covering multiple roles
     that are expected to get separated in the future:
 
-        1. reaction-system/model holder
+        1. reaction-system/model holder (utilizing class "ReactionRegistry")
         2. holder of state space
-        3. scratch workspace for one reaction calculation
-        4. time integrator (simulator for the kinetics of the reactions)
+        3. scratch workspace for one reaction calculation -> BEING RELOCATED TO class "ReactionSimulator"
+        4. time integrator (simulator for the kinetics of the reactions) -> BEING RELOCATED TO class "ReactionSimulator"
 
     Note that UniformCompartment is treated as a "reaction handler" by spatial modules
     that offer reaction-diffusion (BioSim1D, BioSim2D, BioSim3D)

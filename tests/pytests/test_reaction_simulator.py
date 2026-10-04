@@ -1,5 +1,4 @@
 import math
-
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
@@ -70,7 +69,7 @@ def test__single_compartment_react_main_loop():
 
     # Check the rate history
     expected_rates = {0: -70.0}
-    assert compare_dicts(sim.system_rxn_rates, expected_rates)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, expected_rates)
     df = sim.rate_history.get_history().get_dataframe()
     row_expected = {"SYSTEM TIME": 8, "rxn0_rate": -70.0, "step": "0"}
     # Note: "step" is a string!  System time and step refer to the START of the simulation step
@@ -102,7 +101,7 @@ def test__single_compartment_react_main_loop():
 
     # Check the rate history
     expected_rates = {0: -70.0}
-    assert compare_dicts(sim.system_rxn_rates, expected_rates)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, expected_rates)
     df = sim.rate_history.get_history().get_dataframe()
     row_expected = {"SYSTEM TIME": 0, "rxn0_rate": -70.0, "step": "5"}
     # Note: "step" is a string!  System time and step refer to the START of the simulation step
@@ -160,6 +159,7 @@ def test_reaction_step_common_fixed_step():
     result = sim.reaction_step_common_fixed_step(delta_time=0.1)
     assert np.allclose(result, [7, -7])
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
     sim.system = np.array([10, 50])     # Reset the system state
@@ -225,6 +225,7 @@ def test_reaction_step_common_variable_step():
                                                            'step_factor': 1,
                                                            'applicable_norms': 'ALL'}
     assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.98, 'norm_B': 0.14})
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
     # New simulation, with somewhat large time step
@@ -247,7 +248,7 @@ def test_reaction_step_common_variable_step():
                                                            'applicable_norms': ['norm_A']}
     assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 1.4112, 'norm_B': 0.168})
     assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
-
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
 
@@ -272,6 +273,7 @@ def test_reaction_step_common_variable_step():
                                                            'applicable_norms': 'ALL'}
     assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.245, 'norm_B':0.07})
     assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
 
@@ -308,8 +310,8 @@ def test_reaction_step_common_variable_step_2(capsys):
                                                            'applicable_norms': ['norm_A']}
     assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 1.4112, 'norm_B': 0.168})
     assert math.isclose(step_recommended, step_taken * sim.reaction_step_diagnostics.decision_data['step_factor'])
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
-    assert "(STEP 1 aborted) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.04 ..." in captured.out
     output_expected = """
 (STEP 1 aborted) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.04 ...
     Previous:  None
@@ -336,7 +338,6 @@ def test_reaction_step_common_variable_step_2(capsys):
        INFO: COMPLETED STEP NORMALLY and MADE INTERVAL SMALLER, multiplied by 0.8 (set to 0.0192) at the next round, because ['norm_A'] is high
     [The current step started at System Time: 0 , and will continue to 0.024]
 """
-
     assert output_expected == captured.out
 
 
@@ -359,6 +360,8 @@ def test_attempt_reaction_step(capsys):
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False) # FIXED steps
     assert np.allclose(delta_conc, [7, -7])
     assert math.isclose(rec_next_step, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Reset and re-run (this time with "heun")
     sim.system = np.array([10, 50])
@@ -366,6 +369,8 @@ def test_attempt_reaction_step(capsys):
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)
     assert np.allclose(delta_conc, [5.25, -5.25])
     assert math.isclose(rec_next_step, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Reset and re-run (back to "forward_euler", but this time with variable step, and a smaller step)
     sim.system = np.array([10, 50])
@@ -374,6 +379,8 @@ def test_attempt_reaction_step(capsys):
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True)
     assert np.allclose(delta_conc, [1.4, -1.4])
     assert math.isclose(rec_next_step, 0.02)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Reset and re-run (this time with a printed explanation of variable time steps)
     sim.system = np.array([10, 50])
@@ -397,6 +404,7 @@ def test_attempt_reaction_step(capsys):
 
     assert np.allclose(delta_conc, [1.4, -1.4])
     assert math.isclose(rec_next_step, 0.02)    # Stayed on course (no change)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
     # Reset and re-run (again with a printed explanation of variable time steps)
@@ -420,9 +428,9 @@ def test_attempt_reaction_step(capsys):
     assert "       INFO: COMPLETED STEP NORMALLY and MADE INTERVAL SMALLER, multiplied by 0.8 (set to 0.02) at the next round, because ['norm_A'] is high" in captured.out
     assert "    [The current step started at System Time: 0 , and will continue to 0.025]" in captured.out
 
-
     assert np.allclose(delta_conc, [1.75, -1.75])
     assert math.isclose(rec_next_step, 0.02)    # Slowed down!
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
     # Reset and re-run (again with a printed explanation of variable time steps)
@@ -448,6 +456,8 @@ def test_attempt_reaction_step(capsys):
 
     assert np.allclose(delta_conc, [0.7, -0.7])
     assert math.isclose(rec_next_step, 0.015)    # Speed up (larger step)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
 
 def test_attempt_reaction_step_2_a():
@@ -469,6 +479,8 @@ def test_attempt_reaction_step_2_a():
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)     # FIXED time step
     assert np.allclose(delta_conc, [7, -7])
     assert math.isclose(rec_next_step, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
     assert type(sim.diagnostics.diagnostic_rxn_data) is dict
@@ -511,6 +523,8 @@ def test_attempt_reaction_step_2_b():
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True)     # VARIABLE time step
     assert np.allclose(delta_conc, [1.4, -1.4])
     assert math.isclose(rec_next_step, 0.02)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
     assert type(sim.diagnostics.diagnostic_rxn_data) is dict
@@ -552,12 +566,16 @@ def test_single_step_all_rxns():
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns)
     result = sim.single_step_all_rxns(delta_time=0.1)
     assert np.allclose(result, [7, -7])
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     # Reset and re-run
     sim.system = np.array([10, 50])
     sim.method = "heun"
     result = sim.single_step_all_rxns(delta_time=0.1)
     assert np.allclose(result, [5.25, -5.25])
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
 
     #print(result)   #TODO: in progress
 

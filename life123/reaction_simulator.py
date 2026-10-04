@@ -6,7 +6,7 @@
 import math
 import cmath
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
@@ -59,6 +59,11 @@ class ReactionStep:
                                                 # Note: this is the size of the step eventually ACTUALLY taken,
                                                 #       not necessarily what first attempted (in the case of variable steps)
 
+    system_rxn_rates: dict[int, float] | None = field(default_factory=dict)
+                                        # Reaction rates at the start of the last (current) step, for each of the involved reactions
+                                        # Keys are the reaction indexes
+                                        # EXAMPLE: {0: 0.42, 1: 6.2, 2: -3.7}
+
 
     # All the attributes below are only applicable to variable steps
 
@@ -78,7 +83,8 @@ class ReactionStep:
 
 class ReactionSimulator:
     """
-
+    Used to simulate the dynamics of reactions (in a single compartment.)
+    This might be thought of as a "zero-dimensional system".
     """
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
@@ -92,19 +98,15 @@ class ReactionSimulator:
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
         self.diagnostics = diagnostics  # Object of class "Diagnostics"
-        self.diagnostic_data_snapshot = {}      # TODO: consider turning into local variable,
-                                                #       as was done in UniformCompartment,
-                                                #       or into a dataclass
+        self.diagnostic_data_snapshot = {}      # TODO: unclear if still needed, now that we have
+                                                #       `self.reaction_step_diagnostics.system_rxn_rates`
 
         self.reaction_step_diagnostics = None   # Internal data about a single reaction step
-                                                #     (taken in full OR aborted!)
+                                                #   (taken in full OR aborted!)
+                                                #   Object of dataclass "ReactionStep"
 
 
         self.method :str = method
-
-        self.system_rxn_rates = {}      # Keys are the reaction indexes.
-                                        # Reaction rates at the start of the last (current) step, for each of the involved reactions
-                                        # EXAMPLE: {0: 0.42, 1: 6.2, 2: -3.7}
 
         self.system_time = 0.       # Global time of the system, from initialization
         self.previous_system = None # Concentration data of all the species at the previous simulation step
@@ -177,7 +179,7 @@ class ReactionSimulator:
                              force=False, system_time=None) -> None:
         """
         Take the reaction rates for the last (current) step of all reactions,
-        stored as a dict in the object property `self.system_rxn_rates`,
+        stored as a dict in the object property `self.reaction_step_diagnostics.system_rxn_rates`,
         and save them in the ongoing table storing the "rate history".
 
         Note: reaction rate history is regarded as akin to concentration history - something to periodically
@@ -196,7 +198,7 @@ class ReactionSimulator:
             system_time = self.system_time
 
         data_snapshot = {}     # rxn_rates_snapshot
-        for k, v in self.system_rxn_rates.items():
+        for k, v in self.reaction_step_diagnostics.system_rxn_rates.items():
             if type(v) == tuple:
                 # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
                 data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
@@ -865,7 +867,7 @@ class ReactionSimulator:
         Return the Numpy increment vector for ALL the species concentrations, in their index order
         (whether involved in these reactions or not)
 
-        The object variable `self.system_rxn_rates` is also set.
+        The object variable `self.reaction_step_diagnostics.system_rxn_rates` is also set.
 
         NOTES:  - the actual System Concentrations
                     and the System Time (stored in object variables) are NOT changed
@@ -884,15 +886,11 @@ class ReactionSimulator:
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
                                 array([7. , -21.])
         """
-        self.reaction_step_diagnostics = ReactionStep(delta_time=delta_time)     # RESET
+        self.reaction_step_diagnostics = ReactionStep(delta_time=delta_time)     # RESET, ahead of this reaction step
 
         # The increment vector is cumulative for ALL the requested reactions.  Initialize it to all zeros
         number_species = self.species_index_map.number_of_system_species()
         increment_vector = np.zeros(number_species, dtype=float)       # One element per species
-
-        # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
-        # the keys are the reaction indexes
-        self.system_rxn_rates = {}      # Reset, ahead of this round of reactions.  EXAMPLE: {0: 40., 1: 4.4}
 
 
         if rxn_list is None:    # Meaning ALL reactions
@@ -907,7 +905,9 @@ class ReactionSimulator:
             rxn = self.reaction_registry.get_reaction(rxn_index)
             rxn_rate = self.single_step_single_rxn(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
                                                    increment_vector=increment_vector)
-            self.system_rxn_rates[rxn_index] = rxn_rate       # Save the value
+            # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
+            # the keys are the reaction indexes
+            self.reaction_step_diagnostics.system_rxn_rates[rxn_index] = rxn_rate       # Save the value
 
         return increment_vector
 
