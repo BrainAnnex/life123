@@ -20,9 +20,9 @@ from tests.utilities.comparisons import *
 
 def update_concentrations(conc, delta_conc) -> None:
     """
-    Update the values of the dict `conc` based on the increments in `delta_conc` for the corresponding keys
+    UTILITY HELPER FUNCTION.  TODO: eventually move to one of the libraries
 
-    TODO: eventually move to one of the libraries
+    Update the values of the dict `conc` based on the increments in `delta_conc` for the corresponding keys
 
     :param conc:
     :param delta_conc:
@@ -38,7 +38,9 @@ def update_concentrations(conc, delta_conc) -> None:
 ########    class ReactionSimulator    ###########################################################################
 
 
-def test__single_compartment_react_main_loop():
+def test__single_compartment_react_main_loop_1():
+    # FIXED steps
+
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -81,7 +83,7 @@ def test__single_compartment_react_main_loop():
     # RESET to initial concentrations, and simulate a step just shy of excessive
     sim.system = np.array([10., 50.])
     sim.system_time = 0
-    sim.rate_history = HistoryReactionRate(active=True)
+    sim.rate_history = HistoryReactionRate(active=True)         # We're not instantiating a new "ReactionSimulator"; so, we must reset some values
     sim.conc_history = HistoryUniformConcentration(active=True)
     # Pick a time step just below 50/70 (where 70 is the initial reaction rate),
     # to bring the second species concentration to almost zero
@@ -136,8 +138,182 @@ DETAILS:
     assert np.allclose(sim.previous_system, [10., 50.])
 
 
-    # TODO: test variable steps
 
+def test__single_compartment_react_main_loop_2_a():
+    # VARIABLE steps
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    ### First simulation
+    sim = ReactionSimulator(system=np.array([10., 50.]), species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
+    sim.system_time = 8
+
+    new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.02, variable_steps=True,
+                                                                          step_count=0, n_steps=1000)
+    assert new_count == 1
+    assert math.isclose(step_recommended, 0.02)     # "Stay on course" (i.e. keep same step size)
+    assert np.allclose(sim.system, [11.4, 48.6])
+    assert np.allclose(sim.previous_system, [10., 50.])
+    assert math.isclose(sim.system_time, 8.02)
+
+    # Inspect the `sim.reaction_step_diagnostics` data object
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.02)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
+                                                           'step_factor': 1,
+                                                           'applicable_norms': 'ALL'}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.98, 'norm_B': 0.14})
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    # Check the concentration history
+    df = sim.conc_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 8.02, "A": 11.4, "B": 48.6, "step": "1", "caption": ""}   # Note: "step" is a string!
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Check the rate history
+    expected_rates = {0: -70.0}
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, expected_rates)
+    df = sim.rate_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 8, "rxn0_rate": -70.0, "step": "0"}
+    # Notes: "step" is a string!  System time and step refer to the START of the simulation step
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+
+
+    ### New simulation, with re-instantiated "ReactionSimulator" object, and somewhat large time step (but not so large as to cause hard errors)
+    initial_system = np.array([10., 50.])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
+    sim.system_time = 17
+
+    new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.04, variable_steps=True,
+                                                                          step_count=5, n_steps=1000)
+    assert new_count == 6
+    assert math.isclose(step_recommended, 0.0192)   # "Go smaller" in next round
+    assert np.allclose(sim.system, [11.68, 48.32])
+    assert np.allclose(sim.previous_system, [10., 50.])
+    assert math.isclose(sim.system_time, 17.024)    # A step of just 0.024 was actually taken
+
+    # Inspect the `sim.reaction_step_diagnostics` data object
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
+                                                           'step_factor': 0.8,
+                                                           'applicable_norms': ['norm_A']}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 1.4112, 'norm_B': 0.168})
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    # Check the concentration history
+    df = sim.conc_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 17.024, "A": 11.68, "B": 48.32, "step": "6", "caption": ""}   # Note: "step" is a string!
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Check the rate history
+    expected_rates = {0: -70.0}
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, expected_rates)
+    df = sim.rate_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 17, "rxn0_rate": -70.0, "step": "5"}
+    # Notes: "step" is a string!  System time and step refer to the START of the simulation step
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+
+
+    ### New simulation, with re-instantiated "ReactionSimulator" object, and excessive large time step (so large as to cause a backtracking)
+    initial_system = np.array([10., 50.])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
+    sim.system_time = 666
+
+    new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.8, variable_steps=True,
+                                                                          step_count=13, n_steps=1000)  # , explain_variable_steps=(-1, 1000)
+
+    assert new_count == 14
+    assert math.isclose(step_recommended, 0.0186624)   # "Go much smaller" in next round
+    assert np.allclose(sim.system, [11.306368, 48.693632])
+    assert np.allclose(sim.previous_system, [10., 50.])
+    assert math.isclose(sim.system_time, 666.0186624)    # A step of just 0.0186624 was actually taken
+
+    # Inspect the `sim.reaction_step_diagnostics` data object
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.0186624)    # 0.8 * 0.5 * (0.6)^6, from multiple re-tries
+    assert sim.reaction_step_diagnostics.number_neg_concs == 0
+    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
+    assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
+                                                           'step_factor': 1,
+                                                           'applicable_norms': 'ALL'}
+    assert compare_dicts(sim.reaction_step_diagnostics.norms, {'norm_A': 0.853298675712, 'norm_B': 0.1306368})
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    # Check the concentration history
+    df = sim.conc_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 666.0186624, "A": 11.306368, "B": 48.693632, "step": "14", "caption": ""}   # Note: "step" is a string!
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+    # Check the rate history
+    expected_rates = {0: -70.0}
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, expected_rates)
+    df = sim.rate_history.get_history().get_dataframe()
+    row_expected = {"SYSTEM TIME": 666, "rxn0_rate": -70.0, "step": "13"}
+    # Notes: "step" is a string!  System time and step refer to the START of the simulation step
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    assert_frame_equal(df, df_expected)
+
+
+
+def test__single_compartment_react_main_loop_2_b():
+    # VARIABLE steps, with diagnostics
+
+    species_registry = SpeciesRegistry()
+
+    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+
+    ind = SpeciesIndexMap({"A", "B"})
+    assert ind.index_to_species == ["A", "B"]
+
+    ### Repeat the simulation from previous test, this time with diagnostics enabled (excessive large time step; so large as to cause a backtracking)
+    initial_system = np.array([10., 50.])
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind, diagnostics_enabled=True,
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
+    sim.system_time = 666
+
+    new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.8, variable_steps=True,
+                                                                          step_count=13, n_steps=1000, explain_variable_steps=(-1, 1000))
+
+    assert new_count == 14
+    assert math.isclose(step_recommended, 0.0186624)   # "Go much smaller" in next round
+    assert np.allclose(sim.system, [11.306368, 48.693632])
+    assert np.allclose(sim.previous_system, [10., 50.])
+    assert math.isclose(sim.system_time, 666.0186624)    # A step of just 0.0186624 was actually taken
+
+
+    # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data"
+    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(coll_tab) is CollectionTabular
+    df = coll_tab.get_dataframe()
+    print(df)
+    row_expected = {"START_TIME": 666, "time_step": 0.0186624, "aborted": False, "Delta A": 1.4, "Delta B": -1.4, "rate": -70., "caption": ""}
+    df_expected = pd.DataFrame(row_expected, index=[0])
+    #assert_frame_equal(df, df_expected)
 
 
 
@@ -197,7 +373,7 @@ heun_single_rxn(): excessive time step (0.8), leading to negative concentrations
 
 
 
-def test_reaction_step_common_variable_step():
+def test_reaction_step_common_variable_step_1():
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -210,9 +386,9 @@ def test_reaction_step_common_variable_step():
 
     initial_system = np.array([10, 50])
     sim = ReactionSimulator(system=initial_system, species_index_map=ind,
-                            reaction_registry=rxns, method="forward_euler", preset="fast")
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
 
-    sim.system = initial_system
+    # Start with a step neither too small nor too large (in the context of the "fast" preset)
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.02)
     assert math.isclose(step_taken, 0.02)           # Done as suggested
     assert math.isclose(step_recommended, 0.02)     # "Stay on course"
@@ -228,12 +404,11 @@ def test_reaction_step_common_variable_step():
     assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
-    # New simulation, with somewhat large time step
+    # New simulation, with somewhat large time step (but not so large as to cause hard errors)
     initial_system = np.array([10, 50])
     sim = ReactionSimulator(system=initial_system, species_index_map=ind,
-                            reaction_registry=rxns, method="forward_euler", preset="fast")
+                            reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
 
-    sim.system = initial_system
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.04)
     #print(incr, step_taken, step_recommended)
     assert math.isclose(step_taken, 0.024)          # Smaller than suggested [but 20% longer than in our previous test run, above]
@@ -252,13 +427,11 @@ def test_reaction_step_common_variable_step():
 
 
 
-
     # New simulation, with excessively small time step
     initial_system = np.array([10, 50])
     sim = ReactionSimulator(system=initial_system, species_index_map=ind,
-                            reaction_registry=rxns, method="forward_euler", preset="fast")
+                            reaction_registry=rxns, method="forward_euler", preset="fast")    # Note the preset
 
-    sim.system = initial_system
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.01)    # , explain_variable_steps=[-1,1]
     #print(incr, step_taken, step_recommended)
     assert math.isclose(step_taken, 0.01)           # Done as suggested
@@ -323,7 +496,8 @@ def test_reaction_step_common_variable_step_2(capsys):
                    norm_B :  (skipped; not needed)
     Step Factors:     {'upshift': 1.5, 'downshift': 0.8, 'abort': 0.6, 'error': 0.5}
     => Action: 'ABORT'  ('abort' with step size factor of 0.6)
-       {'message': "* INFO: the tentative time step (0.04) leads to a value of ['norm_A'] > its ABORT threshold:\\n       -> will backtrack, and re-do step with a SMALLER Δt, x0.6 (now set to 0.024) [Step started at t=0, and will rewind there]", 'delta_time': 0.04}
+       * INFO: the tentative time step (0.04) leads to a value of ['norm_A'] > its ABORT threshold:
+       -> will backtrack, and re-do step with a SMALLER Δt, x0.6 (now set to 0.024) [Step started at t=0, and will rewind there]
 
 (STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.024 ...
     Previous:  None

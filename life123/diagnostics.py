@@ -339,17 +339,17 @@ class Diagnostics:
 
     #####  3. diagnostic_decisions_data  #####
 
-    def save_diagnostic_decisions_data(self, system_time, delta_conc_arr :np.ndarray, data=None, caption="") -> None:
+    def save_diagnostic_decisions_data(self, system_time, delta_conc_arr=None, data=None, caption="") -> None:
         """
         Used to save the concentration changes,
-        plus optionally other data (typically, about variable-steps variables, if applicable),
+        and/or other data (typically, about variable-steps variables, if applicable),
         during steps of the simulation run, indexed by the given System Time.
 
         Note:   - entries are always added, even if an interval run is aborted
                 - these values are for ALL participating reactions, COMBINED
 
         :param system_time:
-        :param delta_conc_arr:  A Numpy array of "delta concentrations", mapped to the same index positions
+        :param delta_conc_arr:  [OPTIONAL] A Numpy array of "delta concentrations", mapped to the same index positions
                                     as their concentration counterparts.  EXAMPLE: array[1.23, 52.2]
         :param data:            [OPTIONAL] Typically, extra data about variable-steps variables, if applicable
         :param caption:         [OPTIONAL] String with a caption for this record

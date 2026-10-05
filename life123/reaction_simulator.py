@@ -40,7 +40,9 @@ class ExcessiveTimeStepSoft(Exception):
     (that lead to norms regarded as excessive because of user-specified values,
      or to other signs of overshoots, i.e. "SOFT" errors)
     """
-    pass
+    def __init__(self, details):
+        super().__init__(details)
+        self.details = details
 
 
 
@@ -99,7 +101,7 @@ class ReactionSimulator:
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
         self.diagnostics = diagnostics  # Object of class "Diagnostics"
         self.diagnostic_data_snapshot = {}      # TODO: unclear if still needed, now that we have
-                                                #       `self.reaction_step_diagnostics.system_rxn_rates`
+                                                #       `self.reaction_step_diagnostics.system_rxn_rates` (maybe merge?)
 
         self.reaction_step_diagnostics = None   # Internal data about a single reaction step
                                                 #   (taken in full OR aborted!)
@@ -289,11 +291,11 @@ class ReactionSimulator:
 
     #################  MAIN SEQUENCE STARTS HERE  ################
 
-    def _foo2(self, delta_concentrations):
-        # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
-        return
+    def _save_soft_abort_diagnostics(self, delta_concentrations):
+        # TODO: maybe this call could wait until the interception of ExcessiveTimeStepSoft?
+
         if self.diagnostics_enabled:
-            # Define the dict self.diagnostic_data_snapshot
+            # Define the dict `self.diagnostic_data_snapshot`
             all_norms = self.reaction_step_diagnostics.norms
             self.diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
             self.diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
@@ -310,9 +312,8 @@ class ReactionSimulator:
             self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
 
-    def _foo5(self, explain_variable_steps, delta_time):
-        return
-        # TODO: this call could wait until the interception of ExcessiveTimeStepHard
+    def _save_hard_abort_diagnostics(self, explain_variable_steps, delta_time):
+        # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
         # All this can way until the interception of ExcessiveTimeStepHard
         if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
             print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
@@ -325,8 +326,7 @@ class ReactionSimulator:
                                                             data={"action": "ABORT",
                                                                   "step_factor": self.adaptive_steps.step_factors["error"],
                                                                   "caption": "neg. conc. from combined effect of all rxns",
-                                                                  "time_step": delta_time},
-                                                            delta_conc_arr=None)
+                                                                  "time_step": delta_time})
             # Save up diagnostic data for ALL reactions
             self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
@@ -517,7 +517,7 @@ class ReactionSimulator:
         :param conc_array:      [OPTIONAL] All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the species, in their array index order.
                                     If not provided, self.system is used instead
-        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form [t_start, t_end];
+        :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form (t_start, t_end);
                                             a brief explanation will be printed about how the variable step sizes were chosen,
                                             when the System time inside that range
         :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
@@ -545,7 +545,7 @@ class ReactionSimulator:
 
 
         if explain_variable_steps:
-            assert (type(explain_variable_steps) == list) and (len(explain_variable_steps) == 2), \
+            assert isinstance(explain_variable_steps, (list, tuple))  and  (len(explain_variable_steps) == 2), \
                 "reaction_step_common_variable_step(): the argument `explain_variable_steps`, " \
                 "if provided, must be a pair of numbers [t_start, t_end]"
 
@@ -583,12 +583,13 @@ class ReactionSimulator:
                 #print("*** CAUGHT a HARD ABORT")
                 self.reaction_step_diagnostics.number_neg_concs += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    explanation = ex
+                    explanation = ex.details.get("message")
                     explanation += f"\n      -> will backtrack, and re-do step with a SMALLER delta time, " \
                                     f"multiplied by {self.adaptive_steps.step_factors['error']} " \
                                     f"(set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) " \
                                     f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]"
                     print(explanation)
+
 
                 delta_time *= self.adaptive_steps.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
@@ -604,7 +605,8 @@ class ReactionSimulator:
                 #print("*** CAUGHT a soft ABORT")
                 self.reaction_step_diagnostics.number_soft_aborts += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    print(f"       {ex}")
+                    msg = ex.details.get("message")
+                    print(f"       {msg}")
                 delta_time *= self.adaptive_steps.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
@@ -682,8 +684,8 @@ class ReactionSimulator:
             # TODO: maybe ALWAYS check this, regardless of variable-steps option
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
 
-                # TODO: this call could wait until the interception of ExcessiveTimeStepSoft
-                self._foo2(delta_concentrations=delta_concentrations)
+                # TODO: maybe this call could wait until the interception of ExcessiveTimeStepSoft?
+                self._save_soft_abort_diagnostics(delta_concentrations=delta_concentrations)
 
 
                 exception_data = {
@@ -717,8 +719,8 @@ class ReactionSimulator:
         # if so, raise an "ExcessiveTimeStepHard" exception (a custom exception)
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
-            # TODO: this call could wait until the interception of ExcessiveTimeStepHard
-            self._foo5(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
+            # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
+            self._save_hard_abort_diagnostics(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
