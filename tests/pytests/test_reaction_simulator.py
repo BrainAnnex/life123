@@ -38,6 +38,11 @@ def update_concentrations(conc, delta_conc) -> None:
 ########    class ReactionSimulator    ###########################################################################
 
 
+def test_single_compartment_react():
+    pass    # TODO
+
+
+
 def test__single_compartment_react_main_loop_1():
     # FIXED steps
 
@@ -295,7 +300,7 @@ def test__single_compartment_react_main_loop_2_b():
     sim.system_time = 666
 
     new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.8, variable_steps=True,
-                                                                          step_count=13, n_steps=1000, explain_variable_steps=(-1, 1000)) #
+                                                                          step_count=13, n_steps=1000) # , explain_variable_steps=(-1, 1000)
 
     assert new_count == 14
     assert math.isclose(step_recommended, 0.0186624)   # "Go much smaller" in next round
@@ -310,8 +315,8 @@ def test__single_compartment_react_main_loop_2_b():
     coll_tab = sim.diagnostics.diagnostic_rxn_data[0]   # For reaction 0 (the only reaction we have)
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
-    with pd.option_context('display.max_columns', None):    # The configuration changes automatically revert after exiting the 'with' block
-        print(df)
+    #with pd.option_context('display.max_columns', None):    # The configuration changes automatically revert after exiting the 'with' block
+    #    print(df)
 
     rows_expected = [
                     {"START_TIME": 666, "time_step": 0.8, "aborted": True, "Delta A": np.nan, "Delta B": np.nan, "rate": -70., "caption": "aborted: neg. conc. in `B`"},
