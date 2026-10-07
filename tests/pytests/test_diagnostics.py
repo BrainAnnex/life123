@@ -107,7 +107,6 @@ def test__delta_conc_dict():
 
 
 
-
 def test_save_diagnostic_rxn_data():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
     rxns = ReactionRegistry(species_data=chem_data)
@@ -196,13 +195,12 @@ def test_save_diagnostic_rxn_data():
 
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
-    expected_df_0 = pd.DataFrame([[100,  4, False,  2, -2, "", np.nan],
-                                  [104,  6, False, -1,  1, "my comment", np.nan],
-                                  [110, 12, False, -4,  4, "start recording rate", 3.0]
+    expected_df_0 = pd.DataFrame([[100,  4, False,  2, -2, np.nan, ""],
+                                  [104,  6, False, -1,  1, np.nan, "my comment"],
+                                  [110, 12, False, -4,  4, 3.0, "start recording rate"]
                                   ],
-                                  columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "caption", "rate"])
+                                  columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "rate", "caption"])
                                   # Notice "retroactively" adding NaN's to the earlier rows that didn't save a rate value
-
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     #TODO: more test adding multiple entries for any reaction

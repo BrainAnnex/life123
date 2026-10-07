@@ -18,6 +18,11 @@ class Diagnostics:
 
         :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
         """
+        # TODO: maybe split this all-encompassing "Diagnostics" class into individual ones:
+        #           - diagnostic_rxn_data
+        #           - diagnostic_conc_data
+        #           - diagnostic_rxn_step_decision_data
+        #           - [possible future other classes (for example, for 1D, etc)]
 
         assert reactions is not None, \
             "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`, " \
@@ -43,7 +48,7 @@ class Diagnostics:
 
 
         self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER SINGLE REACTION: a dict with as many entries as reactions.
-                                        #   The keys are the reaction indices; the values are objects of type "MovieTabular",
+                                        #   The keys are the reaction indices; the values are objects of type "CollectionTabular",
                                         #   which contain Pandas dataframes with the following columns
                                         #   (referring to one specific reaction):
                                         #           'START TIME' , 'time_step' , 'aborted', 'Delta A' , 'Delta B' , ... , 'rate', 'caption'
@@ -82,6 +87,7 @@ class Diagnostics:
 
 
 
+
     #####################################################################################################
 
     '''                             ~   diagnostic_rxn_data   ~                                       '''
@@ -113,6 +119,7 @@ class Diagnostics:
         :param caption:                     [OPTIONAL] String to describe the snapshot
         :return:                            None
         """
+        # TODO: maybe changed the default for `aborted` to None
         # Validate the reaction index
         self.reactions.assert_valid_rxn_index(rxn_index)
 
@@ -133,7 +140,7 @@ class Diagnostics:
             # TODO: also validate that the keys in increment_dict_single_rxn match the labels of the chemicals in this rxn
             
 
-        # Initialize a "MovieTabular" object for this reaction, if needed
+        # Initialize a "CollectionTabular" object for this reaction, if needed
         if rxn_index not in self.diagnostic_rxn_data:
             self.diagnostic_rxn_data[rxn_index] = CollectionTabular(parameter_name="START_TIME")
 
@@ -180,19 +187,18 @@ class Diagnostics:
 
 
 
-    def annotate_abort_rxn_data(self, msg: str) -> None:
+    def annotate_abort_rxn_data(self, msg :str) -> None:
         """
-        Store the given value in the caption field of the last record
+        Store the given value in the caption field of the last record (i.e. update the value)
         for EACH of the reaction-specific dataframes.
-        Also, set the "aborted" fields to "True"
+        Also, set the "aborted" fields to True
 
         :param msg: Value to set the comment field to
         :return:    None
         """
         for rxn_index in range(self.reactions.number_of_reactions()):
             self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
-            self.diagnostic_rxn_data[rxn_index].set_field_last_snapshot(field_name="aborted", field_value="True")
-            # TODO: investigate why using "True" rather then True
+            self.diagnostic_rxn_data[rxn_index].set_field_last_snapshot(field_name="aborted", field_value=True)
 
 
 
@@ -272,7 +278,7 @@ class Diagnostics:
         if print_reaction:
             print("Reaction: ", self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
-        movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "MovieTabular"
+        movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "CollectionTabular"
 
         if movie_obj is None:
             print(f"get_diagnostic_rxn_data(): no diagnostics data exists for reaction index {rxn_index} ; "

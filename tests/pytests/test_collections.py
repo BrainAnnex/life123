@@ -3,96 +3,117 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import CollectionTabular, CollectionArray, Collection
+from tests.utilities.comparisons import *
 
 
 
 ###############  For class CollectionTabular  ###############
 
 def test_store():
-    m = CollectionTabular()
+    ct = CollectionTabular()
 
     d = {"A": 1, "B": 2, "C": 3}
-    d_original = d
-    m.store(par=10, data_snapshot=d, caption="first entry")  # Add a snapshot
-    assert d == d_original
-    assert len(m) == 1
-    assert str(m) == "`CollectionTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
-    row = list(m.collection_df.iloc[0])                 # By row index
+    ct.store(par=10, data_snapshot=d, caption="first entry")  # Add a snapshot
+    assert d == {"A": 1, "B": 2, "C": 3}        # Unchanged
+    assert len(ct) == 1
+    assert str(ct) == "`CollectionTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
+    data = ct.get_raw_data()
+    assert data == [{"A": 1, "B": 2, "C": 3, "SYSTEM TIME" :10, "caption": "first entry"}]
+
+    ct.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption=None)  # Add a snapshot (no caption)
+    assert len(ct) == 2
+    assert str(ct) == "`CollectionTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
+    data = ct.get_raw_data()
+    assert data == [    {"A": 1, "B": 2, "C": 3,    "SYSTEM TIME" :10, "caption": "first entry"},
+                        {"A": 10, "B": 20, "C": 30, "SYSTEM TIME" :20}
+                   ]
+
+    ct.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot (blank caption)
+    assert len(ct) == 3
+    assert str(ct) == "`CollectionTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
+    data = ct.get_raw_data()
+    assert data == [    {"A": 1, "B": 2, "C": 3,    "SYSTEM TIME" :10, "caption": "first entry"},
+                        {"A": 10, "B": 20, "C": 30, "SYSTEM TIME" :20},
+                        {"A": -1, "B": -2, "C": -3, "SYSTEM TIME" :30, "caption": ""}
+                   ]
+
+
+
+def test_get_dataframe_1():
+    ct = CollectionTabular()
+
+    ct.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
+    df = ct.get_dataframe()
+    assert list(df.columns) == ["SYSTEM TIME", "A", "B", "C", "caption"]
+    row = list(df.iloc[0])                      # By row index
     assert row == [10, 1, 2, 3, 'first entry']
 
-    m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")  # Add a snapshot
-    assert len(m) == 2
-    assert str(m) == "`CollectionTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
-    row = list(m.collection_df.iloc[0])                 # By row index
+    ct.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption=None)
+    df = ct.get_dataframe()
+    assert list(df.columns) == ["SYSTEM TIME", "A", "B", "C", "caption"]
+
+    row = list(df.iloc[0])                      # The previous row
     assert row == [10, 1, 2, 3, 'first entry']
-    row = list(m.collection_df.iloc[1])                 # By row index
-    assert row == [20, 10, 20, 30, 'second entry']
+    row = list(df.iloc[1])                      # The new row
+    np.testing.assert_equal(row, [20, 10, 20, 30, np.nan])
 
-    m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot
-    assert len(m) == 3
-    assert str(m) == "`CollectionTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
-    row = list(m.collection_df.iloc[0])                 # By row index
-    assert row == [10, 1, 2, 3, 'first entry']
-    row = list(m.collection_df.iloc[1])                 # By row index
-    assert row == [20, 10, 20, 30, 'second entry']
-    row = list(m.collection_df.iloc[2])                 # By row index
-    assert row == [30, -1, -2, -3, '']
+    ct.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot (blank caption)
+    df = ct.get_dataframe()
+    assert list(df.columns) == ["SYSTEM TIME", "A", "B", "C", "caption"]
+    row = list(df.iloc[2])
+    assert row == [30, -1, -2, -3, ""]
 
-    m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
-    assert len(m) == 4
-    assert str(m) == "`CollectionTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
-    df = m.collection_df
-    data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
-                   {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
-                   {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
-                   {"SYSTEM TIME": 40, "A": 111, "B": 222,         "caption": "notice that C is missing"}
-                  ]
-    expected = pd.DataFrame(data_values)
-    assert df.equals(expected)
+    ct.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
+    df = ct.get_dataframe()
+    assert list(df.columns) == ["SYSTEM TIME", "A", "B", "C", "caption"]
+    row = list(df.iloc[3])
+    np.testing.assert_equal(row, [40, 111, 222, np.nan, "notice that C is missing"])
 
-    m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")  # Add a snapshot
-    assert len(m) == 5
-    assert str(m) == "`CollectionTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`.  To access, use its get_dataframe() method"
-    df = m.collection_df
+    # Add a snapshot with an extra field, a boolean
+    ct.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "aborted": True}, caption="notice the newly-appeared field")
+    df = ct.get_dataframe()
+    assert list(df.columns) == ["SYSTEM TIME", "A", "B", "C", "aborted", "caption"]
+    row = list(df.iloc[4])
+    np.testing.assert_equal(row, [50, 8, 88, 888, True, "notice the newly-appeared field"])
 
-    data_values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
-    expected = pd.DataFrame(data_values)
-    assert_frame_equal(df, expected, check_dtype=False)    # To allow for slight discrepancies in floating-point
-                                                           # (since int's get converted to floats in columns with Nan's)
-    """
-       SYSTEM TIME    A    B      C                      caption    D
-    0           10    1    2    3.0                  first entry  NaN
-    1           20   10   20   30.0                 second entry  NaN
-    2           30   -1   -2   -3.0                               NaN
-    3           40  111  222    NaN     notice that C is missing  NaN
-    4           50    8   88  888.0  notice the newly-appeared D  1.0
-    """
+    data =  [
+                {"SYSTEM TIME": 10, "A": 1, "B": 2, "C": 3, "caption": "first entry"},
+                {"SYSTEM TIME": 20, "A": 10, "B": 20, "C": 30},
+                {"SYSTEM TIME": 30, "A": -1, "B": -2, "C": -3, "caption": ""},
+                {"SYSTEM TIME": 40, "A": 111, "B": 222, "caption": "notice that C is missing"},
+                {"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "aborted": True, "caption": "notice the newly-appeared field"}
+            ]
+    df_expected = pd.DataFrame(data)
+    #print(df)
+    #print(df_expected)
+
+    assert compare_pandas(df, df_expected, disregard_order=True)
 
 
 
-def test_get_dataframe():
-    m = CollectionTabular()
+def test_get_dataframe_2():
+    ct = CollectionTabular()
 
-    # Same data as used in test_CollectionTabular(), except that the `SYSTEM TIME` parameter now has floats values
-    m.store(par=10,   data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
-    m.store(par=12.4, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")
-    m.store(par=33.1, data_snapshot={"A": -1, "B": -2, "C": -3})
-    m.store(par=40,   data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")
-    m.store(par=50.5, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")
+    # Now the `SYSTEM TIME` parameter now has floats values
+    ct.store(par=10,   data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
+    ct.store(par=12.4, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")
+    ct.store(par=33.1, data_snapshot={"A": -1, "B": -2, "C": -3})
+    ct.store(par=40,   data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")
+    ct.store(par=50.5, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")
 
     """
-       SYSTEM TIME      A    B      C                      caption    D
-    0           10      1    2    3.0                  first entry  NaN
-    1           12.4   10   20   30.0                 second entry  NaN
-    2           33.1   -1   -2   -3.0                               NaN
-    3           40    111  222    NaN     notice that C is missing  NaN
-    4           50.5    8   88  888.0  notice the newly-appeared D  1.0
+       SYSTEM TIME      A    B      C     D                    caption
+    0           10      1    2    3.0   NaN                first entry  
+    1           12.4   10   20   30.0   NaN               second entry  
+    2           33.1   -1   -2   -3.0   NaN                            
+    3           40    111  222    NaN   NaN   notice that C is missing  
+    4           50.5    8   88  888.0   1.0  notice the newly-appeared  
     """
     # Check the extraction of the last row
-    df_last_row = m.get_dataframe(tail=1)
+    df_last_row = ct.get_dataframe(tail=1)
     #print("\n", df_last_row)
 
-    data_values = [{"SYSTEM TIME": 50.5, "A": 8, "B": 88, "C": 888, "caption": "notice the newly-appeared D", "D": 1}]
+    data_values = [{"SYSTEM TIME": 50.5, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"}]
     expected_df = pd.DataFrame(data_values, index=[4])
     #print("\n", expected_df)
 
@@ -100,72 +121,41 @@ def test_get_dataframe():
                                                                     # (since int's get converted to floats in columns with Nan's)
 
     # Check the extraction of the last 2 rows
-    df_last_2_rows = m.get_dataframe(tail=2)
+    df_last_2_rows = ct.get_dataframe(tail=2)
 
-    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "caption": "notice that C is missing"},
-                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "caption": "notice the newly-appeared D", "D": 1}]
+    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "D": np.nan,"caption": "notice that C is missing"},
+                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "D": 1,     "caption": "notice the newly-appeared D"}]
     expected_df = pd.DataFrame(data_values, index=[3, 4])
 
     assert_frame_equal(df_last_2_rows, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
     # Check the extraction of a row by value SEARCH (using a value for "SYSTEM TIME" a tad smaller than what is in the dataframe)
-    df_extracted_row = m.get_dataframe(search_col="SYSTEM TIME", search_val=33.099)
+    df_extracted_row = ct.get_dataframe(search_col="SYSTEM TIME", search_val=33.099)
 
-    data_values = [{"search_value": 33.099, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
+    data_values = [{"search_value": 33.099, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "D": np.nan, "caption": ""}]
     expected_df = pd.DataFrame(data_values, index=[2])
     #print("\n", expected_df)
     assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
     # Check the extraction of a row by value (this time using a slightly larger value for "SYSTEM TIME" than what is in the dataframe)
-    df_extracted_row = m.get_dataframe(search_col="SYSTEM TIME", search_val=33.1234)
+    df_extracted_row = ct.get_dataframe(search_col="SYSTEM TIME", search_val=33.1234)
     #print("\n", df_extracted_row)
 
-    data_values = [{"search_value": 33.1234, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
+    data_values = [{"search_value": 33.1234, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "D": np.nan, "caption": ""}]
     expected_df = pd.DataFrame(data_values, index=[2])
     assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
     # Check the extraction of a group of row by value-range filtering
-    df_filtered = m.get_dataframe(search_col="SYSTEM TIME", val_start=35)        # This corresponds to the last 2 rows
+    df_filtered = ct.get_dataframe(search_col="SYSTEM TIME", val_start=35)        # This corresponds to the last 2 rows
 
-    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "caption": "notice that C is missing"},
-                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "caption": "notice the newly-appeared D", "D": 1}]
+    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "D": np.nan, "caption": "notice that C is missing"},
+                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "D": 1,      "caption": "notice the newly-appeared D"}]
     expected_df = pd.DataFrame(data_values, index=[3, 4])
 
     assert_frame_equal(df_filtered, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
-
-
-
-def test_get_2():
-    m = CollectionTabular()
-
-    m.store(par=10, data_snapshot={"A": 1, "B": 2, }, caption="first entry")  # Add a snapshot
-    row = list(m.collection_df.iloc[0])                 # By row index, reaching into the internal data structure
-    assert row == [10, 1, 2, 'first entry']
-
-    df_returned_copy = m.get_dataframe(return_copy=True)
-    expected_df = pd.DataFrame([{"SYSTEM TIME": 10, "A": 1, "B": 2, "caption": "first entry"}])
-    assert_frame_equal(df_returned_copy, expected_df)
-
-    # Now we mess around with the returned value
-    df_returned_copy.loc[0, "A"] = 999
-
-    row = list(m.collection_df.iloc[0])
-    assert row == [10, 1, 2, 'first entry']     # The internal data structure is untouched
-
-
-    df_returned_view = m.get_dataframe(return_copy=False)
-    expected_df = pd.DataFrame([{"SYSTEM TIME": 10, "A": 1, "B": 2, "caption": "first entry"}])
-    assert_frame_equal(df_returned_view, expected_df)
-
-    # Now we mess around with the returned value
-    df_returned_view.loc[0, "A"] = 999
-
-    row = list(m.collection_df.iloc[0])
-    assert row == [10, 999, 2, 'first entry']     # The internal data structure got messed up as well
-
 
 
 
@@ -174,8 +164,7 @@ def test_set_caption_last_snapshot():
     m.store(par=100, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
     m.store(par=200, data_snapshot={"A": 10, "B": 20, "C": 30})
     m.set_caption_last_snapshot("End of experiment")
-    #print(m.collection_df)
-    last_row = list(m.collection_df.loc[1])
+    last_row = list(m.get_dataframe().loc[1])
     assert last_row == [200, 10, 20, 30, 'End of experiment']
 
 
@@ -185,25 +174,25 @@ def test_set_field_last_snapshot():
     m.store(par=100, data_snapshot={"A": 1, "B": 2}, caption="first entry")     # Add a 1st row
 
     m.set_field_last_snapshot("B", 22)
-    last_row = list(m.collection_df.loc[0])
+    last_row = list(m.get_dataframe().loc[0])
     assert last_row == [100, 1, 22, 'first entry']
 
     m.set_field_last_snapshot("X", 99)
-    last_row = list(m.collection_df.loc[0])
-    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X"]   # New column present
-    assert last_row == [100, 1, 22, 'first entry', 99]
+    last_row = list(m.get_dataframe().loc[0])
+    assert list(m.get_dataframe().columns) == ["SYSTEM TIME", "A", "B", "X", "caption"]   # New column present
+    assert last_row == [100, 1, 22, 99, 'first entry']
 
     m.store(par=200, data_snapshot={"A": -1, "B": -2})      # Add a 2nd row
 
     m.set_field_last_snapshot("Y", -123)
 
-    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X", "Y"]   # New column present
+    assert list(m.get_dataframe().columns) == ["SYSTEM TIME", "A", "B", "X", "Y", "caption"]   # New column present
 
-    data_values = [ {"SYSTEM TIME": 100, "A": 1,  "B": 22, "caption": "first entry", "X": 99,     "Y": np.nan},
-                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "caption": "",            "X": np.nan, "Y": -123}]
+    data_values = [ {"SYSTEM TIME": 100, "A": 1,  "B": 22, "X": 99,     "Y": np.nan, "caption": "first entry"},
+                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "X": np.nan, "Y": -123,   "caption": ""}]
     expected_df = pd.DataFrame(data_values)
 
-    assert_frame_equal(m.collection_df, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+    assert_frame_equal(m.get_dataframe(), expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
 
@@ -212,25 +201,26 @@ def test_update_last_snapshot():
     m.store(par=100, data_snapshot={"A": 1, "B": 2}, caption="first entry")     # Add a 1st row
 
     m.update_last_snapshot({"A": 11, "B": 22})
-    last_row = list(m.collection_df.loc[0])
+    last_row = list(m.get_dataframe().loc[0])
     assert last_row == [100, 11, 22, 'first entry']
 
     m.update_last_snapshot({"A": 9, "X": 99})
-    last_row = list(m.collection_df.loc[0])
-    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X"]   # New column present
-    assert last_row == [100, 9, 22, 'first entry', 99]
+    last_row = list(m.get_dataframe().loc[0])
+    assert list(m.get_dataframe().columns) == ["SYSTEM TIME", "A", "B", "X", "caption"]   # New column present
+    assert last_row == [100, 9, 22, 99, 'first entry']
 
     m.store(par=200, data_snapshot={"A": -1, "B": -2})      # Add a 2nd row
 
     m.update_last_snapshot({"Y": -123})
 
-    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X", "Y"]   # New column present
+    assert list(m.get_dataframe().columns) == ["SYSTEM TIME", "A", "B", "X", "Y", "caption"]   # New column present
 
-    data_values = [ {"SYSTEM TIME": 100, "A": 9,  "B": 22, "caption": "first entry", "X": 99,     "Y": np.nan},
-                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "caption": "",            "X": np.nan, "Y": -123}]
+    data_values = [ {"SYSTEM TIME": 100, "A": 9,  "B": 22, "X": 99,     "Y": np.nan, "caption": "first entry"},
+                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "X": np.nan, "Y": -123,   "caption": ""}]
     expected_df = pd.DataFrame(data_values)
 
-    assert_frame_equal(m.collection_df, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+    assert_frame_equal(m.get_dataframe(), expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
 
 
 

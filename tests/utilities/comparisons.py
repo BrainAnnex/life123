@@ -102,12 +102,17 @@ def compare_dicts(d1 :dict, d2 :dict, **kwargs) -> bool:
     return True
 
 
+
 def compare_pandas(df_1, df_2, disregard_order=False) -> bool:
     """
     Return True if the two Pandas dataframes are equal.
     For floating-point values, use instead:
+
         from pandas.testing import assert_frame_equal
         assert_frame_equal(df_1, df_2)
+
+        OR
+        assert_frame_equal(df, expected, check_dtype=False)
 
     :return:    A boolean
     """

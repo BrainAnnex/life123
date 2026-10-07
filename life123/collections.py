@@ -7,7 +7,7 @@ import numpy as np
 class CollectionTabular:
     """
     A "tabular collection" is a Pandas dataframe
-    built up from a sequence of "snapshots" of data that's in  the form of a python dictionary
+    built up from a sequence of "snapshots" of data that's in the form of a python dictionary
     (representing a list of values and their corresponding names),
     such as the state of the system or of parts thereof.
 
@@ -30,7 +30,8 @@ class CollectionTabular:
         """
         self.parameter_name = parameter_name
 
-        self.collection_df = pd.DataFrame()      # Empty Pandas dataframe
+        self.snapshot_list = []                 # The data being accumulated;
+                                                # each element represents a "data snapshot" (which is a dict)
 
 
 
@@ -40,19 +41,26 @@ class CollectionTabular:
 
         :return:    An integer
         """
-        return len(self.collection_df)
+        return len(self.snapshot_list)
 
 
 
     def __str__(self) -> str:
-        return f"`CollectionTabular` object with {len(self.collection_df)} snapshot(s)" \
+        return f"`CollectionTabular` object with {self.__len__()} snapshot(s)" \
         f" parametrized by `{self.parameter_name}`.  To access, use its get_dataframe() method"
 
 
 
-    def store(self, par, data_snapshot: dict, caption="") -> None:
+    def get_raw_data(self):
+        return self.snapshot_list
+
+
+
+    def store(self, par, data_snapshot :dict, caption="") -> None:
         """
-        Save up the given data snapshot, alongside the specified parameter value and optional caption
+        Save up the given data snapshot, alongside the specified parameter value and optional caption.
+        NOTE: the caption - or any other field - may also be changed
+              by a later call to `set_caption_last_snapshot()`
 
         EXAMPLE :
                 store(par=8., data_snapshot={"A": 1., "B": 2.}, caption="State immediately before injection of 2nd reactant")
@@ -64,28 +72,20 @@ class CollectionTabular:
                                      will appear in earlier rows)
         :param caption:         [OPTIONAL] String to describe the snapshot.
                                     Use None to avoid including that column (if it already exists in the dataframe, it'll appear as NaN)
-        :return:                None (the object variable "self.collection_df" will get updated)
+
+        :return:                None (the object variable "self.collection" will get updated)
         """
+        #print(f"CollectionTabular.store(): par={par} | data_snapshot={data_snapshot} | caption={caption}")
         assert type(data_snapshot) == dict, \
             "CollectionTabular.store(): The argument `data_snapshot` must be a python dictionary"
 
-        if self.collection_df.empty:            # No Pandas dataframe was yet started
-            self.collection_df = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
-                                                                            #   from the given data dictionary
-            self.collection_df.insert(0, self.parameter_name, par)          # Add a column at the beginning, for the snapshot parameter
-            if caption is not None:
-                self.collection_df["caption"] = caption                     # Add a column at the end, for the caption
-        else:                                   # The Pandas dataframe was already started
-            d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
-            d[self.parameter_name] = par                # Expand the snapshot dict
-            if caption is not None:
-                d["caption"] = caption                  # Expand the snapshot dict
+        d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
 
-            self.collection_df = pd.concat([self.collection_df, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
-            # Note: we cannot do an in-place addition of a new row to an existing dataframe,
-            #       because this new row might contain fields not
-            #       yet present in the dataframe
-            #       TODO: look into in-place addition when the keys of the dict are all among existing df columns
+        d[self.parameter_name] = par                # Expand the snapshot dict
+        if caption is not None:
+            d["caption"] = caption                  # Expand the snapshot dict
+
+        self.snapshot_list.append(d)
 
 
 
@@ -120,18 +120,25 @@ class CollectionTabular:
         :param search_val:  [OPTIONAL] Number, or list/tuple of numbers, with value(s)
                                 to search in the above column
 
-        :param return_copy: [OPTIONAL] If True (default), the returned dataframe is guaranteed to be a (deep) copy -
+        :param return_copy: TODO: OBSOLETE  - [OPTIONAL] If True (default), the returned dataframe is guaranteed to be a (deep) copy -
                                 so that modifying it won't affect the internal dataframe
 
         :return:            A Pandas dataframe, with all or some of the rows
                                 that were stored in the main data structure.
                                 If a search was requested, insert a column named "search_value" to the left
         """
-        # The main data structure (a Pandas dataframe), with the "saved snapshots", is available as self.collection_df
-        if return_copy:
-            df = self.collection_df.copy()  # Note: some of the operations below also make a copy
-        else:
-            df = self.collection_df
+        # Turn the data into a Pandas dataframe
+        df = pd.DataFrame(self.snapshot_list)
+
+        # Make the column `self.parameter_name` to become the first (leftmost)
+        col_name = self.parameter_name
+        df.insert(0, col_name, df.pop(col_name))    # Extracts the column and inserts it at position 0
+
+        # Make the column "caption", if present, to become the last (rightmost)
+        col_name = "caption"
+        if col_name in df:
+            df[col_name] = df.pop(col_name)
+
 
         if head is not None:
             return df.head(head)    # This request is given top priority
@@ -189,11 +196,11 @@ class CollectionTabular:
 
         :return:    None
         """
-        self.collection_df = pd.DataFrame()      # Empty Pandas dataframe
+        self.snapshot_list = []
 
 
 
-    def set_caption_last_snapshot(self, caption: str) -> None:
+    def set_caption_last_snapshot(self, caption :str) -> None:
         """
         Set the caption field of the last (most recent) snapshot to the given value.
         Any previous value gets over-written
@@ -201,12 +208,15 @@ class CollectionTabular:
         :param caption: String containing a caption to write into the last (most recent) snapshot
         :return:        None
         """
-        index = len(self.collection_df) - 1
-        self.collection_df.loc[index, "caption"] = caption
+        # TODO: it'd be ideal not to have to depend on this...
+        #print(f"*** SETTING CAPTION TO: '{caption}'")
+        last_entry_index = len(self.snapshot_list) - 1
+        snapshot_dict = self.snapshot_list[last_entry_index]
+        snapshot_dict["caption"] = caption
 
 
 
-    def set_field_last_snapshot(self, field_name: str, field_value) -> None:
+    def set_field_last_snapshot(self, field_name :str, field_value) -> None:
         """
         Set the specified field of the last (most recent) snapshot to the given value.
         Any previous value gets over-written.
@@ -218,12 +228,15 @@ class CollectionTabular:
         :param field_value: Value to write into the above field for the last (most recent) snapshot
         :return:            None
         """
-        last_row_index = len(self.collection_df) - 1
-        self.collection_df.loc[last_row_index, field_name] = field_value
+        # TODO: it'd be ideal not to have to depend on this...
+        #print(f"*** SETTING field `{field_name}` TO: '{field_value}'")
+        last_entry_index = len(self.snapshot_list) - 1
+        snapshot_dict = self.snapshot_list[last_entry_index]
+        snapshot_dict[field_name] = field_value
 
 
 
-    def update_last_snapshot(self, update_values: dict) -> None:
+    def update_last_snapshot(self, update_values :dict) -> None:
         """
         Set some fields of the last (most recent) snapshot to the given values.
         Any previous value gets over-written.
@@ -234,8 +247,11 @@ class CollectionTabular:
         :param update_values:   Dict whose keys are the names of the columns to update
         :return:                None
         """
-        last_row_index = len(self.collection_df) - 1
-        self.collection_df.loc[last_row_index, update_values.keys()] = update_values.values()
+        # TODO: it'd be ideal not to have to depend on this...
+        last_entry_index = len(self.snapshot_list) - 1
+        snapshot_dict = self.snapshot_list[last_entry_index]
+        snapshot_dict |= update_values      # update a dictionary in place
+
 
 
 

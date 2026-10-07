@@ -312,7 +312,42 @@ class ReactionSimulator:
             self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
 
-    def _save_hard_abort_diagnostics(self, explain_variable_steps, delta_time):
+
+    def _save_hard_abort_diagnostics_single_rxn(self, exception_data :dict):
+        """
+        Save 1 diagnostic entry under "decision data" diagnostics
+        and 1 under "rxn_data" diagnostics
+
+        :param exception_data:
+        :return:
+        """
+        # Save under "decision data"
+        diagnostics_data = {  "action": "ABORT",
+                              "caption": f"neg. conc. in {exception_data['species_id']} from rxn # {exception_data['rxn_index']}",
+                              "time_step": exception_data["delta_time"]}
+        if self.adaptive_steps:     # Add more diagnostics data if available
+            diagnostics_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
+
+        self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                        data=diagnostics_data,
+                                                        delta_conc_arr=None)
+
+        # Save under "rxn_data" diagnostics
+        self.diagnostics.save_rxn_data(rxn_index=exception_data["rxn_index"], system_time=self.system_time,
+                                       time_step=exception_data["delta_time"],
+                                       increment_dict_single_rxn=None,
+                                       aborted=True,
+                                       rate=exception_data["rate"], caption=f"aborted: neg. conc. in `{exception_data['species_id']}`")
+
+
+
+    def _save_hard_abort_diagnostics_all_rxns(self, explain_variable_steps, delta_time):
+        """
+
+        :param explain_variable_steps:
+        :param delta_time:
+        :return:
+        """
         # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
         # All this can way until the interception of ExcessiveTimeStepHard
         if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
@@ -720,7 +755,7 @@ class ReactionSimulator:
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
             # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
-            self._save_hard_abort_diagnostics(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
+            self._save_hard_abort_diagnostics_all_rxns(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
@@ -997,26 +1032,7 @@ class ReactionSimulator:
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
             #   it's taken as a sign of excessive step size)
 
-            # TODO: move the part commented out below to the higher layer that catches the Exception
-            """
-            if self.diagnostics_enabled:
-                # We'll be saving 1 diagnostic entry under "decision data" and 1 under "rxn_data"
-                diagnostics_data = {  "action": "ABORT",
-                                      "caption": f"neg. conc. in {species_id} from rxn # {rxn_index}",
-                                      "time_step": delta_time}
-                if self.adaptive_steps:     # Add more diagnostics data if available
-                    diagnostics_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
-
-                self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
-                                                                data=diagnostics_data,
-                                                                delta_conc_arr=None)
-
-                self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                               increment_dict_single_rxn=None,
-                                               aborted=True,
-                                               rate=rxn_rate, caption=f"aborted: neg. conc. in `{species_id}`")
-            """
-            # After having saved the appropriate diagnostic data, raise the custom Exception
+            # After having saved the appropriate diagnostic data, raise the custom Exception "ExcessiveTimeStepHard"
             exception_data = {
                 "message": f"      The tentative time step ({delta_time:.6g}) "
                            f"would lead to a NEGATIVE concentration in the species `{species_id}` "
@@ -1031,10 +1047,18 @@ class ReactionSimulator:
                 #"aborted": True,
                 "rate": rxn_rate,
                 "rxn_index": rxn_index,
+                "species_id": species_id
             }
+
             #if self.adaptive_steps:     # Add more diagnostics data if available
             #    exception_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
 
+
+            if self.diagnostics_enabled:
+                self._save_hard_abort_diagnostics_single_rxn(exception_data)
+
+            # This Exception will get caught by either reaction_step_common_variable_step()
+            # or by reaction_step_common_fixed_step(), leading to different remediation
             raise ExcessiveTimeStepHard(exception_data)
 
 
@@ -1089,7 +1113,7 @@ class ReactionSimulator:
             rxn_rate = rxn.model.rate(conc_dict = conc_init)    # Rate at start of time step
             increment_dict_single_rxn = ReactionSimulator.analytic_solver_single_rxn(rxn=rxn, conc_init=conc_init, delta_time=delta_time)
         else:
-            raise Exception(f"single_step_single_rxn(): Unknown reaction-solver method: '{self.method}'")
+            raise Exception(f"dispatcher_single_rxn(): Unknown reaction-solver method: '{self.method}'")
 
 
         return (increment_dict_single_rxn, rxn_rate)

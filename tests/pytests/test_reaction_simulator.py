@@ -295,7 +295,7 @@ def test__single_compartment_react_main_loop_2_b():
     sim.system_time = 666
 
     new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.8, variable_steps=True,
-                                                                          step_count=13, n_steps=1000, explain_variable_steps=(-1, 1000))
+                                                                          step_count=13, n_steps=1000, explain_variable_steps=(-1, 1000)) #
 
     assert new_count == 14
     assert math.isclose(step_recommended, 0.0186624)   # "Go much smaller" in next round
@@ -307,13 +307,24 @@ def test__single_compartment_react_main_loop_2_b():
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data"
     assert type(sim.diagnostics.diagnostic_rxn_data) is dict
     assert len(sim.diagnostics.diagnostic_rxn_data) == 1
-    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]   # For reaction 0 (the only reaction we have)
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
-    print(df)
-    row_expected = {"START_TIME": 666, "time_step": 0.0186624, "aborted": False, "Delta A": 1.4, "Delta B": -1.4, "rate": -70., "caption": ""}
-    df_expected = pd.DataFrame(row_expected, index=[0])
-    #assert_frame_equal(df, df_expected)
+    with pd.option_context('display.max_columns', None):    # The configuration changes automatically revert after exiting the 'with' block
+        print(df)
+
+    rows_expected = [
+                    {"START_TIME": 666, "time_step": 0.8, "aborted": True, "Delta A": np.nan, "Delta B": np.nan, "rate": -70., "caption": "aborted: neg. conc. in `B`"},
+                    {"START_TIME": 666, "time_step": 0.4, "aborted": True, "Delta A": 28., "Delta B": -28., "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.24, "aborted": True, "Delta A": 16.8, "Delta B": -16.8, "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.144, "aborted": True, "Delta A": 10.08, "Delta B": -10.08, "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.0864, "aborted": True, "Delta A": 6.048, "Delta B": -6.048, "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.05184, "aborted": True, "Delta A": 3.6288, "Delta B": -3.6288, "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.031104, "aborted": True, "Delta A": 2.17728, "Delta B": -2.17728, "rate": -70., "caption": "aborted: excessive norm value(s)"},
+                    {"START_TIME": 666, "time_step": 0.0186624, "aborted": False, "Delta A": 1.306368, "Delta B": -1.306368, "rate": -70., "caption": ""}
+                    ]
+    df_expected = pd.DataFrame(rows_expected)
+    assert_frame_equal(df, df_expected)
 
 
 
