@@ -136,6 +136,8 @@ class ReactionSimulator:
             self.adaptive_steps.use_adaptive_preset(preset)
 
 
+
+
     #########  MISC. UTILITIES  #########
 
     def number_of_system_species(self) -> int:

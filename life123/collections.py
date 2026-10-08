@@ -66,8 +66,8 @@ class CollectionTabular:
                 store(par=8., data_snapshot={"A": 1., "B": 2.}, caption="State immediately before injection of 2nd reactant")
 
         :param par:             Typically, the System Time - but could be any value that parametrizes the snapshots
-        :param data_snapshot:   A dict of data to preserve for later use;
-                                    it's acceptable to contain new fields not used in previous calls
+        :param data_snapshot:   A dict of data to preserve for later use; it does NOT get modified.
+                                    It's acceptable for it to contain new fields not used in previous calls
                                     (in that case, the dataframe will add new columns automatically - and NaN values
                                      will appear in earlier rows)
         :param caption:         [OPTIONAL] String to describe the snapshot.

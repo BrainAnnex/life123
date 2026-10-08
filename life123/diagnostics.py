@@ -6,7 +6,10 @@ from life123.collections import CollectionTabular
 
 class Diagnostics:
     """
-    For the management of reaction diagnostic data
+    For the management of :
+        1) diagnostic conc data
+        2) diagnostic reaction data
+        3) diagnostic decisions data
     """
 
     def __init__(self, reactions, species_to_index=None, species_index_map=None):
@@ -388,7 +391,7 @@ class Diagnostics:
 
 
 
-    #############  EXPLAIN THINGS  #############
+    ##################  EXPLAIN THINGS  ##################
 
 
     def explain_reactions(self) -> bool:
@@ -504,7 +507,8 @@ class Diagnostics:
 
     def explain_time_advance(self, return_times=False, silent=False, sys_history=None) -> None|tuple:
         """
-        Use the saved-up diagnostic data, to print out details of the varying steps of the reaction run.
+        Use the saved-up diagnostic concentration data,
+        to print out details of the varying steps of the reaction run.
 
         If diagnostics weren't enabled prior to calling this function, an Exception is raised.
 

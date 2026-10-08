@@ -90,6 +90,7 @@ def test_single_compartment_react():
 
     assert np.allclose(sim.system_time, 0.0035)
     assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
+    print(sim.diagnostics.get_diagnostic_conc_data())
     #assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
     #           ([0.0, 0.0035], [0.0005])       TODO: fix
 
