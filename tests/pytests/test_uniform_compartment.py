@@ -260,7 +260,7 @@ def test_single_compartment_react():
     rxns.add_reaction(reactants="B", products="C",
                       reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
 
-    # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow
+    # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow.
     # HYPOTHETICALLY treated as a mass-action reaction
     rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
                       reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})

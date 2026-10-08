@@ -70,36 +70,36 @@ def test_get_reverse_rate():
 
 
 
-def test_get_species_in_reaction():
+def test_get_species_in_single_reaction():
     species_registry = SpeciesRegistry(ids=["A", "B"])
     rxns = ReactionRegistry(species_registry)
 
     with pytest.raises(Exception):
-        rxns.get_species_in_reaction(0)   # There are no reactions defined yet
+        rxns.get_species_in_single_reaction(0)   # There are no reactions defined yet
 
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action")  # Reaction 0 : A <-> B
-    assert rxns.get_species_in_reaction(0) == {"A", "B"}
+    assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
 
     with pytest.raises(Exception):
-        rxns.get_species_in_reaction(1)   # There is no reaction 1
+        rxns.get_species_in_single_reaction(1)   # There is no reaction 1
 
     species_registry.add_species("C")
 
     rxns.add_reaction(reactants=["B"], products=[(2, "C")], reaction_model="mass action")  # Reaction 1 : B <-> 2C
-    assert rxns.get_species_in_reaction(0) == {"A", "B"}
-    assert rxns.get_species_in_reaction(1) == {"B", "C"}
+    assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
+    assert rxns.get_species_in_single_reaction(1) == {"B", "C"}
 
     rxns.add_reaction(reactants=["A"], products=["C"], reaction_model="mass action")      # Reaction 2 : A <-> C
-    assert rxns.get_species_in_reaction(0) == {"A", "B"}
-    assert rxns.get_species_in_reaction(1) == {"B", "C"}
-    assert rxns.get_species_in_reaction(2) == {"A", "C"}
+    assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
+    assert rxns.get_species_in_single_reaction(1) == {"B", "C"}
+    assert rxns.get_species_in_single_reaction(2) == {"A", "C"}
 
     species_registry.add_species("D")
     rxns.add_reaction(reactants=["A", "B"], products="D", reaction_model="mass action")    # Reaction 3 : A + B <-> D
-    assert rxns.get_species_in_reaction(0) == {"A", "B"}
-    assert rxns.get_species_in_reaction(1) == {"B", "C"}
-    assert rxns.get_species_in_reaction(2) == {"A", "C"}
-    assert rxns.get_species_in_reaction(3) == {"A", "B", "D"}
+    assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
+    assert rxns.get_species_in_single_reaction(1) == {"B", "C"}
+    assert rxns.get_species_in_single_reaction(2) == {"A", "C"}
+    assert rxns.get_species_in_single_reaction(3) == {"A", "B", "D"}
 
 
 
@@ -413,23 +413,23 @@ def test_labels_of_active_chemicals():
     chem_data = SpeciesRegistry(ids=['A', 'B', 'C', 'X', 'Y'])
     rxns = ReactionRegistry(chem_data)
 
-    assert rxns.labels_of_active_chemicals() == []   # No reactions yet
+    assert rxns.get_species_in_any_reaction() == []   # No reactions yet
 
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action")
-    assert set(rxns.labels_of_active_chemicals()) == {"A", "B"}
-    assert rxns.labels_of_active_chemicals(sort=True) == ["A", "B"]
+    assert set(rxns.get_species_in_any_reaction()) == {"A", "B"}
+    assert rxns.get_species_in_any_reaction(sort=True) == ["A", "B"]
 
     rxns.add_reaction(reactants=["B", "X"], products=["C", "X"], reaction_model="mass action")
-    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C", "X"}
-    assert rxns.labels_of_active_chemicals(sort=True) == ["A", "B", "C", "X"]
+    assert set(rxns.get_species_in_any_reaction()) == {"A", "B", "C", "X"}
+    assert rxns.get_species_in_any_reaction(sort=True) == ["A", "B", "C", "X"]
 
     rxns.add_reaction(reactants="X", products="Y", reaction_model="mass action")
-    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C", "X", "Y"}
-    assert rxns.labels_of_active_chemicals(sort=True) == ["A", "B", "C", "X", "Y"]
+    assert set(rxns.get_species_in_any_reaction()) == {"A", "B", "C", "X", "Y"}
+    assert rxns.get_species_in_any_reaction(sort=True) == ["A", "B", "C", "X", "Y"]
 
     rxns.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"], reaction_model="mass action")
-    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C", "X", "Y", "Z"}
-    assert rxns.labels_of_active_chemicals(sort=True) == ["A", "B", "C", "X", "Y", "Z"]
+    assert set(rxns.get_species_in_any_reaction()) == {"A", "B", "C", "X", "Y", "Z"}
+    assert rxns.get_species_in_any_reaction(sort=True) == ["A", "B", "C", "X", "Y", "Z"]
 
 
 

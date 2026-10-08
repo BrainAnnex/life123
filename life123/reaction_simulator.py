@@ -93,6 +93,8 @@ class ReactionSimulator:
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid"):
 
+        self.uniform_compartment = None
+
         self.system :np.ndarray = system
 
         self.species_index_map :SpeciesIndexMap = species_index_map
@@ -1096,7 +1098,7 @@ class ReactionSimulator:
 
             if len(self.reaction_registry.active_chemicals) < self.number_of_system_species():
                 print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
-                f"species only: {self.reaction_registry.labels_of_active_chemicals()} , with indexes: {self.indexes_of_active_chemicals()}")
+                f"species only: {self.reaction_registry.get_species_in_any_reaction()} , with indexes: {self.indexes_of_active_chemicals()}")
 
             self.adaptive_steps.display_overview(action=action, operation=operation, step_factor=step_factor, all_norms=all_norms)
 

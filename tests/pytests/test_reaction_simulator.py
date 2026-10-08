@@ -3,6 +3,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
 import numpy as np
+from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import ReactionKinetics
 from life123.reaction_simulator import ReactionSimulator, AnalyticReactionSolver, VariableTimeSteps
 from life123.species_registry import SpeciesRegistry
@@ -39,7 +40,63 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 def test_single_compartment_react():
-    pass    # TODO
+    return
+    # Test based on experiment "cycles_1"
+    species_registry = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Unimolecular reaction A <-> B, mostly in forward direction (favored energetically)
+    rxns.add_reaction(reactants="A", products="B",
+                      reaction_model="mass action", kinetic_parameters={"kF": 9., "kR": 3.})
+
+    # Unimolecular reaction B <-> C, also favored energetically
+    rxns.add_reaction(reactants="B", products="C",
+                      reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
+
+    # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow.
+    # HYPOTHETICALLY treated as a mass-action reaction
+    rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
+                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+
+
+    # Assign an array index to all the species we're dealing with
+    all_species = rxns.get_species_in_any_reaction(sort=True)
+
+    ind = SpeciesIndexMap(all_species)
+    assert ind.index_to_species == ['A', 'B', 'C', 'E_high', 'E_low']
+
+    uc = UniformCompartment(species_data=species_registry, index_species=ind)
+    print("\nuc.system array id: ", id(uc.system))
+
+    sim = ReactionSimulator(system=uc.system, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True)
+    print("sim.system array id: ", id(sim.system))
+    sim.uniform_compartment = uc
+
+    uc.diagnostics = sim.diagnostics
+
+    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+    uc.set_conc(conc=initial_conc, snapshot=True)
+
+    print(sim.system)
+    print(uc.system)
+    print("\nuc.system array id: ", id(uc.system))
+    print("sim.system array id: ", id(sim.system))
+
+    return
+
+    #uc = UniformCompartment(reactions=rxns, enable_diagnostics=True)
+
+
+    sim.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
+
+    run1 = uc.get_system_conc()
+
+    assert np.allclose(uc.system_time, 0.0035)
+    assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
+    assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.0035], [0.0005])
 
 
 

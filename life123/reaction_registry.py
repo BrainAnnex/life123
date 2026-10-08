@@ -39,13 +39,13 @@ class ReactionRegistry:
             chem_data = SpeciesRegistry(labels=labels)
         """
 
-        #assert chem_data is not None, \
-            #"ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
+        #assert species_data is not None, \
+            #"ReactionRegistry() instantiation: the arguments `species_data` must be provided, and cannot be None"
 
         self.version = 0        # A mutation counter used for "lazy synchronization" with higher-level modules using this class.
                                 #   Whenever this registry is modified (for example, by adding a reaction),
                                 #   its `version` number gets increased;
-                                #   clients can inspect changes when they need to interact with this registry
+                                #   clients of this module can inspect changes when they need to interact with this registry
 
         if species_data is None:
             self.species_data = SpeciesRegistry()
@@ -205,7 +205,7 @@ class ReactionRegistry:
         :return:    A string with a user-friendly form of the right (products) side of the chemical reaction
         """
         rxn = self.get_reaction(i)
-        return rxn.extract_products_formula()
+        return rxn.extract_products_formula()       # TODO: fix
 
 
 
@@ -234,7 +234,7 @@ class ReactionRegistry:
 
 
 
-    def get_species_in_reaction(self, rxn_index :int) -> set[str]:
+    def get_species_in_single_reaction(self, rxn_index :int) -> set[str]:
         """
         Return the SET of the id's
         of all the species participating in the reaction with the specified index
@@ -244,6 +244,27 @@ class ReactionRegistry:
                                 Note: being a set, it's NOT in any particular order
         """
         return self.get_reaction(rxn_index).stoichiometry.get_all_species_ids()
+
+
+    def get_species_in_any_reaction(self, sort=False) -> list[str]:
+        """
+        Return a list of the id's of all the species
+        involved in ANY of the registered reactions,
+        but NOT counting species that always appear
+        in a catalytic role in all the reactions they participate in
+        (if a species participates in a non-catalytic role in ANY reaction, it'll appear here)
+
+        The list is not in any particular order, unless sort is True.
+
+        :param sort:    If True, the list is sorted by species id
+        :return:        A list of species id's
+        """
+        if not sort:
+            return list(self.active_chemicals)
+
+        return sorted(self.active_chemicals)
+        #return sorted(self.active_chemicals, key=self.species_data.get_species_index)
+
 
 
 
@@ -275,34 +296,13 @@ class ReactionRegistry:
 
     def number_of_active_chemicals(self) -> int:
         """
-        Return the number of all the chemicals
+        Return the number of all the species
         involved in ANY of the registered reactions,
         but NOT counting chemicals that always appear
         in a catalytic role in all the reactions they participate in
         (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
         """
         return len(self.active_chemicals)
-
-
-
-    def labels_of_active_chemicals(self, sort=False) -> list[str]:
-        """
-        Return a list of the id's of all the species
-        involved in ANY of the registered reactions,
-        but NOT counting species that always appear
-        in a catalytic role in all the reactions they participate in
-        (if a species participates in a non-catalytic role in ANY reaction, it'll appear here)
-
-        The list is not in any particular order, unless sort is True.
-
-        :param sort:    If True, the list is sorted
-        :return:        A list of species id's
-        """
-        if not sort:
-            return list(self.active_chemicals)
-
-        return sorted(self.active_chemicals)
-        #return sorted(self.active_chemicals, key=self.species_data.get_species_index)
 
 
 
@@ -509,7 +509,7 @@ class ReactionRegistry:
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
-        chem_labels = self.labels_of_active_chemicals(sort=True)   # Set of chem labels, sorted by species id
+        chem_labels = self.get_species_in_any_reaction(sort=True)   # Set of chem labels, sorted by species id
 
         # If plot colors were registered, show them alongside the chem labels
         chem_labels_with_colors = []

@@ -126,7 +126,7 @@ class Diagnostics:
         # Sorted list of the indexes of all the chemicals participating in this reaction
         # Note: self.reactions is an object of type "ReactionRegistry"
         #indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)
-        set_of_species = self.reactions.get_species_in_reaction(rxn_index)
+        set_of_species = self.reactions.get_species_in_single_reaction(rxn_index)
         sorted_species_ids = sorted(list(set_of_species))
 
         # Validate increment_dict_single_rxn
