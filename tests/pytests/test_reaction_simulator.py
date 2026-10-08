@@ -110,7 +110,34 @@ def test_single_compartment_react():
                ([0.0, 0.0035], [0.0005])
 
 
-    #TODO: CONTINUE THE TESTS  ***************
+
+
+    # Now repeat the process, step-by-step
+
+    uc2 = UniformCompartment(species_data=species_registry, index_species=ind)
+    sim2 = ReactionSimulator(uniform_compartment=uc2, species_index_map=ind,
+                            reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True)
+    uc2.reaction_simulator = sim2
+    uc2.diagnostics = sim2.diagnostics
+    uc2.diagnostics_enabled = sim2.diagnostics_enabled
+
+
+    uc2.set_conc(conc=initial_conc, snapshot=True)
+
+    assert np.allclose(uc2.system, [ 100.,    0.,    0., 1000. ,   0.])
+    assert np.allclose(sim2.system, [ 100.,    0.,    0., 1000. ,   0.])
+
+    for _ in range(7):
+        sim2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
+
+    run2 = uc2.get_system_conc()
+    assert np.allclose(run2, run1)      # Same result as before
+    assert np.allclose(sim2.system_time, 0.0035)
+
+    print(uc2.diagnostics.explain_time_advance(return_times=True))
+    assert uc2.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.0035], [0.0005])
 
 
 
