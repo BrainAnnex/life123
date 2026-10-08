@@ -8,11 +8,12 @@ from life123.species_registry import SpeciesRegistry
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
-from life123.reaction_simulator import VariableTimeSteps
 from life123.species_index_map import SpeciesIndexMap
 from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
+
+from life123.reaction_simulator import VariableTimeSteps
 from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
 
 
@@ -69,6 +70,7 @@ class UniformCompartment:
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
         :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
+        self.reaction_simulator = None  # Object of type "ReactionSimulator"
 
         self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
 
@@ -215,6 +217,9 @@ class UniformCompartment:
             else:
                 self.system = np.pad(self.system, (0, number_added))
 
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
 
 
 
@@ -270,6 +275,9 @@ class UniformCompartment:
 
             # This sets (or resets) the entire system state
             self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
 
         elif type(conc) == dict:
             for name, conc_value in conc.items():
@@ -345,6 +353,9 @@ class UniformCompartment:
         if self.system is None:
             # Initialize the system state with all zero, if previously unset
             self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
 
         self.system[species_index] = conc
 
@@ -1011,6 +1022,9 @@ class UniformCompartment:
         if conc_array is not None:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
                                         # TODO: maybe it ought to be kept separate in separate instances of the UC object
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
 
         # Validate arguments
         assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
@@ -1089,6 +1103,9 @@ class UniformCompartment:
         if conc_array is not None:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
                                         # TODO: maybe it ought to be kept separate in separate instances of the UC object
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
 
         # Validate arguments
         assert self.system is not None, "UniformCompartment.reaction_step_common(): " \

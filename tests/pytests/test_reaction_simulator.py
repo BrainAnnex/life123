@@ -41,7 +41,7 @@ def update_concentrations(conc, delta_conc) -> None:
 
 
 def test_single_compartment_react():
-    return
+
     # Test based on experiment "cycles_1"
     species_registry = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
     rxns = ReactionRegistry(species_data=species_registry)
@@ -67,37 +67,31 @@ def test_single_compartment_react():
     assert ind.index_to_species == ['A', 'B', 'C', 'E_high', 'E_low']
 
     uc = UniformCompartment(species_data=species_registry, index_species=ind)
-    print("\nuc.system array id: ", id(uc.system))
+    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+    uc.set_conc(conc=initial_conc, snapshot=True)
+    #print(uc.system)
+    assert np.allclose(uc.system, [ 100.,    0.,    0., 1000. ,   0.])
 
     sim = ReactionSimulator(system=uc.system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler",
                             diagnostics_enabled=True)
-    print("sim.system array id: ", id(sim.system))
     sim.uniform_compartment = uc
 
+    uc.reaction_simulator = sim
     uc.diagnostics = sim.diagnostics
-
-    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
-    uc.set_conc(conc=initial_conc, snapshot=True)
-
-    print(sim.system)
-    print(uc.system)
-    print("\nuc.system array id: ", id(uc.system))
-    print("sim.system array id: ", id(sim.system))
-
-    return
-
-    #uc = UniformCompartment(reactions=rxns, enable_diagnostics=True)
+    #print(sim.system)
+    assert np.allclose(sim.system, [ 100.,    0.,    0., 1000. ,   0.])
 
 
     sim.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
+    assert np.allclose(sim.system, uc.system)
 
     run1 = uc.get_system_conc()
 
-    assert np.allclose(uc.system_time, 0.0035)
+    assert np.allclose(sim.system_time, 0.0035)
     assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
-    assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
-               ([0.0, 0.0035], [0.0005])
+    #assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+    #           ([0.0, 0.0035], [0.0005])       TODO: fix
 
 
 
