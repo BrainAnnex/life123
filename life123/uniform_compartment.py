@@ -8,12 +8,12 @@ from life123.species_registry import SpeciesRegistry
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
-#from life123.reaction_simulator import VariableTimeSteps
+from life123.reaction_simulator import VariableTimeSteps
 from life123.species_index_map import SpeciesIndexMap
-#from life123.reactions import SimulationReaction
+from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
-#from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
+from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
 
 
 
@@ -27,7 +27,7 @@ class UniformCompartment:
     that are expected to get separated in the future:
 
         1. reaction-system/model holder (utilizing class "ReactionRegistry")
-        2. holder of state space; builds up indexing between species id and system array position
+        2. holder of state space
         3. scratch workspace for one reaction calculation -> BEING RELOCATED TO class "ReactionSimulator"
         4. time integrator (simulator for the kinetics of the reactions) -> BEING RELOCATED TO class "ReactionSimulator"
 
@@ -111,12 +111,13 @@ class UniformCompartment:
 
         # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the species
         #       actually involved in this dynamic simulation
-        self.system = np.zeros(0, dtype='d') # float64      TODO: allow users to specify the type Concentration data in the single compartment we're simulating, for all the chemicals
+        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
                             # the array size is the total number of chemical species.
                             # Each entry is the concentration of a species whose id is indexed by the IndexSpecies module
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
+                            # TODO: consider switching to:  self.system = np.zeros(0, dtype='d')   # float64 
 
         self.previous_system = None # Concentration data of all the species at the previous simulation step
 
@@ -209,10 +210,10 @@ class UniformCompartment:
 
         if number_added > 0:
             # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
-            #if self.system is None:
-                #self.system = np.zeros(number_added, dtype='d') # float64      TODO: allow users to specify the type
-            #else:
-            self.system = np.pad(self.system, (0, number_added))
+            if self.system is None:
+                self.system = np.zeros(number_added, dtype='d') # float64      TODO: allow users to specify the type
+            else:
+                self.system = np.pad(self.system, (0, number_added))
 
 
 
@@ -230,7 +231,7 @@ class UniformCompartment:
     def get_species_data(self) -> SpeciesRegistry:
         """
         Return the "SpeciesRegistry" object being used
-        
+
         :return:    Object of type "SpeciesRegistry"
         """
         return self.species_data
@@ -341,14 +342,9 @@ class UniformCompartment:
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
-        #if self.system is None:
-        #if len(self.system) == 0:
+        if self.system is None:
             # Initialize the system state with all zero, if previously unset
-            #self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
-
-        if species_index >= len(self.system):
-            #self.system.resize((species_index+1,))
-            self.system = np.resize(self.system, (species_index+1,))
+            self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
 
         self.system[species_index] = conc
 
@@ -1429,7 +1425,7 @@ class UniformCompartment:
 
 
 
-    def _fetch_concs_for_rnx(self, rxn, conc_array :np.ndarray):
+    def _fetch_concs_for_rnx(self, rxn :SimulationReaction, conc_array :np.ndarray):
         """
         Extract, out of the Numpy array of the given system concentrations,
         just the concentrations of relevance for the specified reaction
@@ -1769,7 +1765,7 @@ class UniformCompartment:
         #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
         print(f"Species involved in reactions: {self.reaction_data.get_species_in_any_reaction()}")
         #else:
-            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
+            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.get_species_in_any_reaction()}")
             #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
 
 

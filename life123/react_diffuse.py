@@ -1,6 +1,7 @@
 import numpy as np
 from life123.species_index_map import SpeciesIndexMap
 from life123.uniform_compartment import UniformCompartment
+from life123.reaction_simulator import ReactionSimulator
 from life123 import BioSim1D, BioSim2D, BioSim3D
 from life123 import SpeciesRegistry
 
@@ -60,7 +61,7 @@ class ReactDiffuse:
                 uc = UniformCompartment(index_species=self.index_species)
                 self.module = uc
                 self.sim = ReactionSimulator(system=uc.system, species_index_map=self.index_species,
-                            reaction_registry=rxns, method="forward_euler",
+                            reaction_registry=uc.reaction_data, method="forward_euler",
                             diagnostics_enabled=False)
 
 

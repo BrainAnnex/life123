@@ -6,7 +6,6 @@
 import math
 import cmath
 import numpy as np
-import time
 from dataclasses import dataclass, field
 from typing import Any
 from life123.species_index_map import SpeciesIndexMap
@@ -98,7 +97,7 @@ class ReactionSimulator:
         self.system :np.ndarray = system
 
         self.species_index_map :SpeciesIndexMap = species_index_map
-        self.reaction_registry = reaction_registry
+        self.reaction_registry  = reaction_registry
         self.exact :bool = exact
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
@@ -136,8 +135,7 @@ class ReactionSimulator:
             self.adaptive_steps.use_adaptive_preset(preset)
 
 
-
-    ############  MISC. UTILITIES  ############
+    #########  MISC. UTILITIES  #########
 
     def number_of_system_species(self) -> int:
         """
@@ -245,19 +243,6 @@ class ReactionSimulator:
                                         data_snapshot=data_snapshot,
                                         caption=caption)
 
-
-
-    def get_species_conc(self, label :str) -> float:
-        """
-        Return the current system concentration of the given species, specified by its id.
-        If no species by that name exists, an Exception is raised
-
-        :param label:   The label of a chemical species
-        :return:        The current system concentration of the above chemical
-        """
-        # TODO: this ought to be returned to UniformCompartment
-        species_index = self.species_index_map.index_of(label)
-        return self.system[species_index]
 
 
     def get_conc_dict(self, chem_labels=None, system_data=None) -> dict|None:
@@ -383,278 +368,6 @@ class ReactionSimulator:
             self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
     
-
-
-
-    def specify_steps(self, duration=None, initial_step=None, n_steps=None) -> (float, int):
-        """
-        If either the `initial_step` or `n_steps` is not provided (but at least 1 of them must be present),
-        determine the other one from `duration`
-
-        Their desired relationship is: total_duration = time_step * n_steps
-
-        :param duration:    Float with the overall time advance (i.e. time_step * n_steps)
-        :param initial_step:Float with the size of each time step
-        :param n_steps:     Integer with the desired number of steps
-        :return:            The pair (time_step, n_steps)
-        """
-        DEFAULT_N_STEPS = 10
-
-        assert (not duration or not initial_step or not n_steps), \
-            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: " \
-            "`duration`, `initial_step`, `n_steps` (specify at most 2 of them)"
-
-        assert (duration or initial_step), \
-            "UniformCompartment.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
-
-        if (not initial_step) and (not n_steps):    # If only `duration` is provided
-            n_steps = DEFAULT_N_STEPS
-            initial_step = duration
-            return (initial_step, n_steps)
-
-        if (not duration) and (not n_steps):        # If only `initial_step` is provided
-            n_steps = DEFAULT_N_STEPS
-            return (initial_step, n_steps)
-
-        # If we get this far, both `duration` and `initial_step` must be present
-
-        if not initial_step:
-            initial_step = duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(duration / initial_step)
-
-        return (initial_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
-
-
-
-
-    ###########   THE MAIN SIMULATION SEQUENCE STARTS HERE   ###########
-
-    def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
-                                 initial_step=None, n_steps=None, max_steps=None,
-                                 variable_steps=True, explain_variable_steps=None,
-                                 silent=False, report_interval=0.5) -> dict:
-        """
-        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.system
-
-        Update the system state and the system time accordingly
-        (object attributes self.system and self.system_time)
-
-        :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
-        :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
-                                    If both `target_end_time` and `duration` are specified, an error will result
-
-        :param initial_step:    [OPTIONAL] The suggested size of the first step (it might be reduced automatically,
-                                    in case of "hard" errors resulting from overly-large steps)
-
-        :param stop:            [OPTIONAL] Pair of the form (termination_keyword, termination_parameter), to indicate
-                                    the criterion to use to stop the reaction
-                                    EXAMPLES:
-                                        ("conc_below", (chem_name, conc))  Stop when conc first dips below
-                                        ("conc_above", (chem_name, conc))  Stop when conc first rises above
-
-                                        TODO: add more options, such as
-                                        ("before_time", t)                  Stop just before the given target time
-                                        ("after_time", t)                   Stop just after the given target time
-                                        ("equilibrium", tolerance)          Stop when equilibrium reached
-
-        :param n_steps:         [OPTIONAL] The desired number of steps
-
-        :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
-
-        :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
-                                            when the System time inside that range;
-                                            only applicable if variable_steps is True
-
-        :param silent:                  [OPTIONAL] If True, less output is generated
-        :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
-                                            to inform the user of the current status
-
-        :return:                        A dictionary containing the key "recommended_next_step"
-                                        Note: the object attributes self.system and self.system_time get updated
-        """
-
-        # Default values
-        initial_step_caption = "1st reaction step"
-        final_step_caption = "last reaction step"
-
-        # Validation
-        assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
-                                        "the concentration values of the various chemicals must be set first"
-
-        if variable_steps and (n_steps is not None):
-            raise Exception("UniformCompartment.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
-
-        if stop is not None:
-            assert type(stop) == tuple and len(stop) == 2, \
-                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, " \
-                f"must be a pair of values, of the form (termination_keyword, termination_parameter)"
-
-        assert self.reaction_registry.number_of_reactions() > 0, \
-            f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
-
-
-        self.conc_history.initial_caption = initial_step_caption     # TODO: turn into method
-
-
-        """
-        Determine all the various time parameters that were not explicitly provided
-        """
-
-        if stop is not None:
-            assert initial_step > 0, \
-                "single_compartment_react(): when using the `stop` argument, an `initial_step` argument must be provided"
-            assert max_steps is not None, \
-                "single_compartment_react(): when using the `stop` argument, a `max_steps` argument must be provided"
-            time_step = initial_step
-
-        else:
-            if target_end_time is not None:
-                if duration is not None:
-                    raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
-                else:
-                    assert target_end_time > self.system_time, \
-                        f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
-                    duration = target_end_time - self.system_time
-
-            # Determine the time step,
-            # as well as the required number of such steps
-            # TODO: if the following call results in an Exception, the reported arguments are confusing because
-            #       the names don't match
-            time_step, n_steps = self.specify_steps(duration=duration,
-                                                    initial_step=initial_step,
-                                                    n_steps=n_steps)
-            #print(f"time_step: {time_step} , n_steps: {n_steps}")
-            # Note: if variable steps are requested then `n_steps` stops being particularly meaningful; it becomes a
-            #       hypothetical value, in the (unlikely) event that the step sizes were never changed - and is only
-            #       used to detect a very excessive number of actual attempted steps
-
-            if target_end_time is None:
-                if variable_steps:
-                    target_end_time = self.system_time + duration
-                else:
-                    target_end_time = self.system_time + time_step * n_steps
-
-
-        step_count = 0
-
-        # Reset some diagnostic variables
-        self.reaction_step_diagnostics.number_neg_concs = 0
-        self.reaction_step_diagnostics.number_soft_aborts = 0
-        self.adaptive_steps.reset_norm_usage_stats()
-
-        # Time-related
-        t_start = time.perf_counter()
-        t_report = t_start
-        report_interval *= 60.      # Convert to seconds
-
-
-        try:
-            while True:     # Loop until one of various criteria becomes applicable
-
-                # Check various criteria for termination
-                if (max_steps is not None) and (step_count >= max_steps):
-                    print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
-                    break       # We have reached the max allowable number of steps
-
-                if (target_end_time is not None) and (self.system_time >= target_end_time):
-                    break       # The system time has reached the target endtime
-
-                if (stop is not None):
-                    (termination_keyword, termination_parameter) = stop
-                    if termination_keyword == "conc_below":
-                        chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) < conc_threshold:
-                            break   # The concentration of the specified chemical has dropped the requested threshold
-                    elif termination_keyword == "conc_above":
-                        chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) > conc_threshold:
-                            break   # The concentration of the specified chemical has risen above the requested threshold
-
-                if (not variable_steps) and (step_count == n_steps)\
-                        and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
-                    break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                                #   the System Time is below the target_end_time because of roundoff error
-
-
-                # ---  CORE OPERATION OF MAIN LOOP  ---
-                step_count, recommended_next_step = self._single_compartment_react_main_loop(step_count=step_count, n_steps=n_steps,
-                                                                    variable_steps=variable_steps, time_step=time_step,
-                                                                    explain_variable_steps=explain_variable_steps)
-
-
-                if self.diagnostics_enabled:
-                    # Save up the current time and System State as "diagnostic 'concentration' data"
-                    system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                    self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
-
-                t_now = time.perf_counter()
-                t_elapsed = t_now - t_report    # Time elapsed since the last report
-                if (not silent) and (t_elapsed > report_interval):
-                    if variable_steps:
-                        info_on_step = f"(doing step size {time_step:,.2g})"
-                    else:
-                        info_on_step = ""
-                    print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
-                    t_report = t_now            # Reset
-
-                if variable_steps:
-                    time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
-
-        # --- END while ---
-
-        except KeyboardInterrupt:
-            print("\n*** KeyboardInterrupt exception caught")
-
-
-
-        # We're now at the end of the computation
-        # Report whether extra steps were automatically added
-        n_steps_taken = step_count
-
-
-        if (not variable_steps) and (n_steps is not None):
-            extra_steps = n_steps_taken - n_steps
-            if extra_steps > 0:
-                print(f"The computation took {extra_steps} extra step(s) - "
-                      f"automatically added to prevent negative concentrations")
-
-
-        if not silent:
-            # Print out a summary, at the termination of the run
-            t_now = time.perf_counter()
-            step_type_str = "variable " if variable_steps else "fixed "
-            time_taken = t_now - t_start
-            if time_taken < 60:
-                display_time_taken = f"{time_taken:.3f} sec"
-            else:
-                display_time_taken = f"{time_taken/60.:.2f} min"
-            print(f"{n_steps_taken} total {step_type_str}step(s) taken in {display_time_taken}")
-            if variable_steps:
-                if self.reaction_step_diagnostics.number_neg_concs:
-                    print(f"Number of step re-do's because of negative concentrations: {self.reaction_step_diagnostics.number_neg_concs}")
-                if self.reaction_step_diagnostics.number_soft_aborts:
-                    print(f"Number of step re-do's because of elective soft aborts: {self.reaction_step_diagnostics.number_soft_aborts}")
-
-                print("Norm usage:", self.adaptive_steps.norm_usage)
-                print(f"System Time is now: {self.system_time:,.5g}")
-
-
-        # One final snapshot, unless already taken for the last step done
-        self.capture_conc_snapshot(step_count=step_count, caption=final_step_caption, extra=True)
-
-        # Add a caption to the very last entry in the system history
-        self.conc_history.set_caption_last_snapshot(final_step_caption)
-
-        return {"recommended_next_step": recommended_next_step}
-
-
-
-
 
 
     def _single_compartment_react_main_loop(self, time_step, variable_steps :bool,
