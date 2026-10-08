@@ -66,20 +66,24 @@ def test_single_compartment_react():
     ind = SpeciesIndexMap(all_species)
     assert ind.index_to_species == ['A', 'B', 'C', 'E_high', 'E_low']
 
-    uc = UniformCompartment(species_data=species_registry, index_species=ind)
-    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
-    uc.set_conc(conc=initial_conc, snapshot=True)
-    #print(uc.system)
-    assert np.allclose(uc.system, [ 100.,    0.,    0., 1000. ,   0.])
 
-    sim = ReactionSimulator(system=uc.system, species_index_map=ind,
+    # START of special bundling of "UniformCompartment" and "ReactionSimulator"
+    uc = UniformCompartment(species_data=species_registry, index_species=ind)
+
+    sim = ReactionSimulator(uniform_compartment=uc, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler",
                             diagnostics_enabled=True)
-    sim.uniform_compartment = uc
 
     uc.reaction_simulator = sim
     uc.diagnostics = sim.diagnostics
-    #print(sim.system)
+    uc.diagnostics_enabled = sim.diagnostics_enabled
+    # END of special bundling
+
+
+    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+    uc.set_conc(conc=initial_conc, snapshot=True)
+
+    assert np.allclose(uc.system, [ 100.,    0.,    0., 1000. ,   0.])
     assert np.allclose(sim.system, [ 100.,    0.,    0., 1000. ,   0.])
 
 
@@ -90,9 +94,23 @@ def test_single_compartment_react():
 
     assert np.allclose(sim.system_time, 0.0035)
     assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
-    print(sim.diagnostics.get_diagnostic_conc_data())
-    #assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
-    #           ([0.0, 0.0035], [0.0005])       TODO: fix
+    #print(uc.diagnostics.get_diagnostic_conc_data())
+    """
+         TIME           A         B  ...       E_high     E_low            caption
+    0  0.0000  100.000000  0.000000  ...  1000.000000  0.000000  Set concentration
+    1  0.0005   99.550000  0.450000  ...  1000.000000  0.000000                   
+    2  0.0010   99.102700  0.895500  ...  1000.000000  0.000000                   
+    3  0.0015   98.658981  1.336540  ...   999.999100  0.000900                   
+    4  0.0020   98.219251  1.773164  ...   999.996870  0.003130                   
+    5  0.0025   97.783686  2.205413  ...   999.993108  0.006892                   
+    6  0.0030   97.352350  2.633332  ...   999.987725  0.012275                   
+    7  0.0035   96.925254  3.056963  ...   999.980686  0.019314
+    """
+    assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.0035], [0.0005])
+
+
+    #TODO: CONTINUE THE TESTS  ***************
 
 
 
@@ -346,14 +364,15 @@ def test__single_compartment_react_main_loop_2_b():
     ind = SpeciesIndexMap({"A", "B"})
     assert ind.index_to_species == ["A", "B"]
 
-    ### Repeat the simulation from previous test, this time with diagnostics enabled (excessive large time step; so large as to cause a backtracking)
+    ### Repeat the simulation from previous test, this time with diagnostics enabled (excessive large time step;
+    # so large as to cause a backtracking)
     initial_system = np.array([10., 50.])
     sim = ReactionSimulator(system=initial_system, species_index_map=ind, diagnostics_enabled=True,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 666
 
     new_count, step_recommended = sim._single_compartment_react_main_loop(time_step=0.8, variable_steps=True,
-                                                                          step_count=13, n_steps=1000, explain_variable_steps=(-1, 1000)) #
+                                                                          step_count=13, n_steps=1000) #, explain_variable_steps=(-1, 1000)
 
     assert new_count == 14
     assert math.isclose(step_recommended, 0.0186624)   # "Go much smaller" in next round

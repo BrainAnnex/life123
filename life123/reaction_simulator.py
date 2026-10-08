@@ -91,9 +91,10 @@ class ReactionSimulator:
     """
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
-                 diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid"):
+                 diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
+                 uniform_compartment=None):
 
-        self.uniform_compartment = None
+        self.uniform_compartment = uniform_compartment
 
         self.system :np.ndarray = system
 
