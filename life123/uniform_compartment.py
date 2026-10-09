@@ -15,6 +15,7 @@ from life123.visualization.plotly_helper import PlotlyHelper
 
 from life123.reaction_simulator import VariableTimeSteps
 from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
+from life123.reaction_simulator import ReactionSimulator
 
 
 
@@ -37,7 +38,8 @@ class UniformCompartment:
     """
 
     def __init__(self, reactions=None, species_data=None, names=None,
-                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None, index_species=None):
+                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None,
+                 index_species=None):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
@@ -70,7 +72,10 @@ class UniformCompartment:
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
         :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
-        self.reaction_simulator = None  # Object of type "ReactionSimulator"
+        #self.reaction_simulator = None
+        self.reaction_simulator =  ReactionSimulator(uniform_compartment=self, species_index_map=index_species,
+                            reaction_registry=reactions, method="forward_euler",
+                            diagnostics_enabled=False)       # Object of type "ReactionSimulator"
 
         self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
 

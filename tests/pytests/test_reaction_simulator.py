@@ -70,13 +70,21 @@ def test_single_compartment_react():
     # START of special bundling of "UniformCompartment" and "ReactionSimulator"
     uc = UniformCompartment(species_data=species_registry, index_species=ind)
 
+    """
     sim = ReactionSimulator(uniform_compartment=uc, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler",
                             diagnostics_enabled=True)
 
     uc.reaction_simulator = sim
+    """
+    sim = uc.reaction_simulator
+    sim.reaction_registry=rxns
+    sim.enable_diagnostics()
     uc.diagnostics = sim.diagnostics
     uc.diagnostics_enabled = sim.diagnostics_enabled
+
+    #uc.diagnostics = sim.diagnostics
+    #uc.diagnostics_enabled = sim.diagnostics_enabled
     # END of special bundling
 
 
@@ -108,7 +116,6 @@ def test_single_compartment_react():
     """
     assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.0035], [0.0005])
-
 
 
 

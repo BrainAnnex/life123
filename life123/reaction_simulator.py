@@ -1559,6 +1559,55 @@ class ReactionSimulator:
 
 
 
+    ############  DIAGNOSTICS  ############
+
+    def enable_diagnostics(self):
+        """
+        Turn on the diagnostics mode.
+
+        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
+                 You might consider using the argument  enable_diagnostics=True
+                 when first instantiating UniformCompartment.
+
+        :return: None
+        """
+        #TODO: maybe automatically capture a snapshot of the current data
+        if self.diagnostics_enabled:
+            print("*** INFO: enable_diagnostics() - diagnostics were ALREADY enabled")
+
+        self.diagnostics_enabled = True
+        if not self.diagnostics:
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry,
+                                           species_to_index=self.species_index_map.species_to_index)
+
+
+
+    def pause_diagnostics(self):
+        """
+        Turn off the overall diagnostics mode; existing diagnostics data, if any, is left untouched
+
+        :return:    None
+        """
+        if not self.diagnostics_enabled:
+            print("*** INFO: pause_diagnostics() - diagnostics were ALREADY off")
+
+        self.diagnostics_enabled = False
+
+
+
+    def get_diagnostics(self):
+        """
+
+        :return:    Object of type life123.diagnostics.Diagnostics
+        """
+        assert self.diagnostics is not None, \
+            "get_diagnostics(): no diagnostics data is available.  " \
+            "Did you call enable_diagnostics() prior to running the simulation?"
+
+        return self.diagnostics
+
+
+
 
 
 ####################################################################################################
