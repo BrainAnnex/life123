@@ -68,7 +68,8 @@ def test_single_compartment_react():
 
 
     # START of special bundling of "UniformCompartment" and "ReactionSimulator"
-    uc = UniformCompartment(species_data=species_registry, index_species=ind)
+    uc = UniformCompartment(reactions=rxns, index_species=ind,
+                           enable_diagnostics=True)  # species_data=species_registry
 
     """
     sim = ReactionSimulator(uniform_compartment=uc, species_index_map=ind,
@@ -78,10 +79,10 @@ def test_single_compartment_react():
     uc.reaction_simulator = sim
     """
     sim = uc.reaction_simulator
-    sim.reaction_registry=rxns
-    sim.enable_diagnostics()
-    uc.diagnostics = sim.diagnostics
-    uc.diagnostics_enabled = sim.diagnostics_enabled
+    #sim.reaction_registry=rxns
+    #sim.enable_diagnostics()
+    #uc.diagnostics = sim.diagnostics
+    #uc.diagnostics_enabled = sim.diagnostics_enabled
 
     #uc.diagnostics = sim.diagnostics
     #uc.diagnostics_enabled = sim.diagnostics_enabled
@@ -121,6 +122,9 @@ def test_single_compartment_react():
 
     # Now repeat the process, step-by-step
 
+    uc2 = UniformCompartment(reactions=rxns, index_species=ind, enable_diagnostics=True)
+    sim2 = uc2.reaction_simulator
+    """
     uc2 = UniformCompartment(species_data=species_registry, index_species=ind)
     sim2 = ReactionSimulator(uniform_compartment=uc2, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler",
@@ -128,7 +132,7 @@ def test_single_compartment_react():
     uc2.reaction_simulator = sim2
     uc2.diagnostics = sim2.diagnostics
     uc2.diagnostics_enabled = sim2.diagnostics_enabled
-
+    """
 
     uc2.set_conc(conc=initial_conc, snapshot=True)
 

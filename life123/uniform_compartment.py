@@ -72,20 +72,9 @@ class UniformCompartment:
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
         :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
-        #self.reaction_simulator = None
-        self.reaction_simulator =  ReactionSimulator(uniform_compartment=self, species_index_map=index_species,
-                            reaction_registry=reactions, method="forward_euler",
-                            diagnostics_enabled=False)       # Object of type "ReactionSimulator"
-
         self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
 
         self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
-
-        self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
-                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
-
-        self.exact = exact          # If True, use exact analytical solutions whenever possible;
-                                    # if False, always use the "Forward Euler" approximation method
 
 
         if species_data and reactions:
@@ -112,6 +101,48 @@ class UniformCompartment:
 
         self._reaction_registry_version = self.reaction_data.version    # Used for "lazy synchronization",
                                                                         # i.e. to check for changes externally made to the registry
+
+
+
+
+        self.index_species = None   # Indexes to reconcile the species id's to their index position in the system state array
+
+        if index_species is not None:
+            # Index was passed by the calling module (which will be initiating it)
+            self.index_species = index_species
+        else:
+            # Index was NOT passed by the calling module
+            if reactions is not None:
+                # Assign an array index to all the species we're dealing with
+                all_species = reactions.get_species_in_any_reaction(sort=True)
+                self.index_species = SpeciesIndexMap(all_species)
+            else:
+                # We'll proceed independently, as a top-level module
+                self.index_species = SpeciesIndexMap()
+
+            # Build the needed indexes, based on the reactions, and on macromolecules
+            self._synchronize_species()
+
+
+
+        """
+        if (index_species is None) and (reactions is not None):
+            # Assign an array index to all the species we're dealing with
+            all_species = reactions.get_species_in_any_reaction(sort=True)
+            index_species = SpeciesIndexMap(all_species)
+        """
+
+        self.reaction_simulator = ReactionSimulator(uniform_compartment=self, species_index_map=self.index_species,
+                            reaction_registry=reactions, method="forward_euler",
+                            diagnostics_enabled=enable_diagnostics)       # Object of type "ReactionSimulator"
+
+
+        self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
+                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+
+        self.exact = exact          # If True, use exact analytical solutions whenever possible;
+                                    # if False, always use the "Forward Euler" approximation method
+
 
         self.system_time = 0.       # Global time of the system, from initialization
                                     # TODO: being transferred to ReactionSimulator
@@ -145,6 +176,10 @@ class UniformCompartment:
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
 
+        if macromolecules:
+            ligands = macromolecules.get_ligands()     # Set of species id's
+            self._add_species_set(ligands)
+
         self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
                                                                         # of (some of) the species concentrations:
                                                                         # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
@@ -158,25 +193,6 @@ class UniformCompartment:
                                                                     # of (some of) the chemical reaction rates:
                                                                     # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
-
-        self.index_species = None   # Indexes to reconcile the species id's to their index position in the system state array
-
-        if index_species is not None:
-            # Index was passed by the calling module (which will be initiating it)
-            self.index_species = index_species
-        else:
-             # We'll proceed independently, as a top-level module
-            self.index_species = SpeciesIndexMap()
-
-            # Build the needed indexes, based on the reactions, and on macromolecules
-            self._synchronize_species()
-
-            if self.macromolecules:
-                ligands = self.macromolecules.get_ligands()     # Set of species id's
-                self._add_species_set(ligands)
-
-
-
         # The following 2 diagnostic values get reset at every run
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
@@ -189,13 +205,18 @@ class UniformCompartment:
                                         #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
 
 
+
+        self.diagnostics = self.reaction_simulator.diagnostics
+        self.diagnostics_enabled = self.reaction_simulator.diagnostics_enabled
+        """
         self.diagnostics_enabled = False  # Flag indicating whether using diagnostics
+
 
         self.diagnostics = None         # Object of class "Diagnostics"
 
         if enable_diagnostics:
             self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
-
+        """
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
@@ -253,8 +274,8 @@ class UniformCompartment:
         Set the concentrations of some or all the chemicals
 
         :param conc:    EITHER
-                            (1) a list or tuple of concentration values for ALL the registered chemicals,
-                                in their index order
+                            (1) a list or tuple of concentration values for ALL the registered species,
+                                in their array index order
                             OR
                             (2) a dict indexed by the species id, for some or all of the species of interest.
                                 Anything not specified will be set to zero.
@@ -286,6 +307,10 @@ class UniformCompartment:
 
         elif type(conc) == dict:
             for name, conc_value in conc.items():
+                #print(f"******** species_name=`{name}` | conc={conc_value}")
+                #print(self.index_species)
+                #print(self.system)
+
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
@@ -358,6 +383,15 @@ class UniformCompartment:
         if self.system is None:
             # Initialize the system state with all zero, if previously unset
             self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
+            if self.reaction_simulator:
+                self.reaction_simulator.system = self.system    # Re-align
+
+
+        # If no array position already exists for the species whose concentration we're setting
+        if species_index >= len(self.system):
+            number_of_entries_to_add = species_index - len(self.system) + 1
+            self.system = np.pad(self.system, (0, number_of_entries_to_add))
+
             if self.reaction_simulator:
                 self.reaction_simulator.system = self.system    # Re-align
 

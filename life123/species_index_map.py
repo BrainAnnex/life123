@@ -24,6 +24,16 @@ class SpeciesIndexMap:
             self.add_species(species_ids)
 
 
+
+
+    def __str__(self):
+        return f"""Object with the following 2 mappings:
+            species_to_index: {self.species_to_index}
+            index_to_species: {self.index_to_species}
+               """
+
+
+
     def number_of_system_species(self) -> int:
         """
         Number of species being simulated (and kept in the system state)
