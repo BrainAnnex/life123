@@ -124,15 +124,6 @@ def test_single_compartment_react():
 
     uc2 = UniformCompartment(reactions=rxns, species_index_map=ind, enable_diagnostics=True)
     sim2 = uc2.reaction_simulator
-    """
-    uc2 = UniformCompartment(species_data=species_registry, index_species=ind)
-    sim2 = ReactionSimulator(uniform_compartment=uc2, species_index_map=ind,
-                            reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)
-    uc2.reaction_simulator = sim2
-    uc2.diagnostics = sim2.diagnostics
-    uc2.diagnostics_enabled = sim2.diagnostics_enabled
-    """
 
     uc2.set_conc(conc=initial_conc, snapshot=True)
 
@@ -961,7 +952,62 @@ def test_single_step_all_rxns_3():
 
 def test_single_step_all_rxns_4():
     species_registry = SpeciesRegistry()
-    #TODO: continue
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Reaction 2A + 5B <-> 4C + 3D , HYPOTHETICALLY with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction6"
+    rxns.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+
+    sim = ReactionSimulator(system=[4., 7., 5., 2.], reaction_registry=rxns, method="forward_euler")
+
+    result = sim.single_step_all_rxns(delta_time=0.001)
+    assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
+    assert  np.allclose(result[0] /2 , result[1] /5)    # From the stoichiometry
+    assert  np.allclose(result[1] /5 , -result[2] /4)   # From the stoichiometry
+    assert  np.allclose(result[2] /4 , result[3] /3)    # From the stoichiometry
+
+
+def test_single_step_all_rxns_5():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Reaction  2A <-> B , with mass-action kinetics
+    # Based on experiment "1D/reactions/reaction7"
+    rxns.add_reaction(reactants=[(2, "A")], products="B",
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+
+    sim = ReactionSimulator(system=[3., 5.], reaction_registry=rxns, method="forward_euler")
+
+    result = sim.single_step_all_rxns(delta_time=0.02)
+    assert np.allclose(result, [-1.4 , 0.7])
+    assert np.allclose(result[0] /2 , -result[1])      # From the stoichiometry
+
+
+def test_single_step_all_rxns_6():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Coupled reactions A + B <-> C  and  C + D <-> E , each with mass-action kinetics
+    # Based on experiment "1D/reactions/reaction8"
+    rxns.add_reaction(reactants=["A", "B"], products="C",
+                      reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+
+    rxns.add_reaction(reactants=["C", "D"], products="E",
+                      reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
+
+    assert rxns.number_of_reactions() == 2
+
+    sim = ReactionSimulator(system=[3., 5., 1., 0.4, 0.1], reaction_registry=rxns, method="forward_euler")
+
+    result = sim.single_step_all_rxns(delta_time=0.02)
+    assert np.allclose(result, [-1.46 , -1.46  , 1.404 , -0.056 ,  0.056])
+    assert np.allclose(result[0] , result[1])                   # From the stoichiometry
+    assert np.allclose(result[3] , -result[4])                  # From the stoichiometry
+    assert np.allclose(result[0] + result[4], -result[2])       # From the stoichiometry
+                                                                # The increase in [A] and [E] combined
+                                                                # must match the decrease in [C]
 
 
 

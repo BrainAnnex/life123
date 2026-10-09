@@ -246,63 +246,6 @@ def test_specify_steps():
 
 
 
-def test_single_compartment_react():
-
-    # Test based on experiment "cycles_1"
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
-    rxns = ReactionRegistry(species_data=chem_data)
-
-    # Unimolecular reaction A <-> B, mostly in forward direction (favored energetically)
-    rxns.add_reaction(reactants="A", products="B",
-                      reaction_model="mass action", kinetic_parameters={"kF": 9., "kR": 3.})
-
-    # Unimolecular reaction B <-> C, also favored energetically
-    rxns.add_reaction(reactants="B", products="C",
-                      reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
-
-    # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow.
-    # HYPOTHETICALLY treated as a mass-action reaction
-    rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-
-
-    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
-
-    uc = UniformCompartment(reactions=rxns, enable_diagnostics=True)
-
-    uc.set_conc(conc=initial_conc, snapshot=True)
-
-
-    uc.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
-
-    run1 = uc.get_system_conc()
-
-    assert np.allclose(uc.sim_system_time(), 0.0035)
-    assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
-    #print(uc.diagnostics.get_diagnostic_conc_data())
-    assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
-               ([0.0, 0.0035], [0.0005])
-
-
-    # Now repeat the process, step-by-step
-
-    uc2 = UniformCompartment(reactions=rxns, enable_diagnostics=True)
-
-    uc2.set_conc(conc=initial_conc, snapshot=True)
-
-    for _ in range(7):
-        uc2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
-
-    run2 = uc2.get_system_conc()
-    assert np.allclose(run2, run1)      # Same result as before
-    assert np.allclose(uc2.sim_system_time(), 0.0035)
-
-    print(uc2.diagnostics.explain_time_advance(return_times=True))
-    assert uc2.diagnostics.explain_time_advance(return_times=True, silent=True) == \
-               ([0.0, 0.0035], [0.0005])
-
-
-
 def test_reaction_step_common_fixed_step_1():
     uc = UniformCompartment(names=["A", "B"])
 
@@ -392,65 +335,6 @@ def test_reaction_step_common_fixed_step_2():
     with pytest.raises(Exception):
         uc.reaction_step_common_fixed_step(delta_time=0.002)
 
-
-
-def test__reaction_elemental_step_4():      # TODO: migrate
-    uc = UniformCompartment(names=["A", "B", "C", "D"])
-
-    # Reaction 2A + 5B <-> 4C + 3D , HYPOTHETICALLY with 1st-order kinetics for each species.
-    # Based on experiment "1D/reactions/reaction6"
-    uc.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
-                    reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
-
-    uc.set_conc(conc=[4., 7., 5., 2.], snapshot=False)
-
-    result = uc._reaction_elemental_step(delta_time=0.001)
-    assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
-    assert  np.allclose(result[0] /2 , result[1] /5)    # From the stoichiometry
-    assert  np.allclose(result[1] /5 , -result[2] /4)   # From the stoichiometry
-    assert  np.allclose(result[2] /4 , result[3] /3)    # From the stoichiometry
-
-
-
-def test__reaction_elemental_step_5():      # TODO: migrate
-    uc = UniformCompartment(names=["A", "B"])
-
-    # Reaction  2A <-> B , with mass-action kinetics
-    # Based on experiment "1D/reactions/reaction7"
-    uc.add_reaction(reactants=[(2, "A")], products="B",
-                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-
-    uc.set_conc(conc=[3., 5.], snapshot=False)
-
-    result = uc._reaction_elemental_step(delta_time=0.02)
-    assert np.allclose(result, [-1.4 , 0.7])
-    assert np.allclose(result[0] /2 , -result[1])      # From the stoichiometry
-
-
-
-def test__reaction_elemental_step_6():      # TODO: migrate
-    uc = UniformCompartment(names=["A", "B", "C", "D", "E"])
-
-    # Coupled reactions A + B <-> C  and  C + D <-> E , each with mass-action kinetics
-    # Based on experiment "1D/reactions/reaction8"
-    uc.add_reaction(reactants=["A", "B"], products="C",
-                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-
-    uc.add_reaction(reactants=["C", "D"], products="E",
-                    reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 4.})
-
-    assert uc.number_of_reactions() == 2
-
-    uc.set_conc(conc=[3., 5., 1., 0.4, 0.1], snapshot=False)
-
-    result = uc._reaction_elemental_step(delta_time=0.02)
-    assert np.allclose(result, [-1.46 , -1.46  , 1.404 , -0.056 ,  0.056])
-    assert np.allclose(result[0] , result[1])                   # From the stoichiometry
-    assert np.allclose(result[3] , -result[4])                  # From the stoichiometry
-    assert np.allclose(result[0] + result[4], -result[2])       # From the stoichiometry
-                                                                # The increase in [A] and [E] combined
-                                                                # must match the decrease in [C]
 
 
 def test_single_compartment_react_variable_steps_1():

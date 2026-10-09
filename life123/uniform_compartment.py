@@ -13,7 +13,7 @@ from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
 from life123.reaction_simulator import VariableTimeSteps
-from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
+from life123.reaction_simulator import ExcessiveTimeStepHard
 from life123.reaction_simulator import ReactionSimulator
 
 
@@ -715,58 +715,6 @@ class UniformCompartment:
         :return:
         """
         return self.reaction_simulator.system_time
-
-
-
-    def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
-                                 initial_step=None, n_steps=None, max_steps=None,
-                                 variable_steps=True, explain_variable_steps=None,
-                                 silent=False, report_interval=0.5) -> dict:
-        """
-        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.system
-
-        Update the system state and the system time accordingly
-        (object attributes self.system and self.system_time)
-
-        :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
-        :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
-                                    If both `target_end_time` and `duration` are specified, an error will result
-
-        :param initial_step:    [OPTIONAL] The suggested size of the first step (it might be reduced automatically,
-                                    in case of "hard" errors resulting from overly-large steps)
-
-        :param stop:            [OPTIONAL] Pair of the form (termination_keyword, termination_parameter), to indicate
-                                    the criterion to use to stop the reaction
-                                    EXAMPLES:
-                                        ("conc_below", (chem_name, conc))  Stop when conc first dips below
-                                        ("conc_above", (chem_name, conc))  Stop when conc first rises above
-
-                                        TODO: add more options, such as
-                                        ("before_time", t)                  Stop just before the given target time
-                                        ("after_time", t)                   Stop just after the given target time
-                                        ("equilibrium", tolerance)          Stop when equilibrium reached
-
-        :param n_steps:         [OPTIONAL] The desired number of steps
-
-        :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
-
-        :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
-                                            when the System time inside that range;
-                                            only applicable if variable_steps is True
-
-        :param silent:                  [OPTIONAL] If True, less output is generated
-        :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
-                                            to inform the user of the current status
-
-        :return:                        A dictionary containing the key "recommended_next_step"
-                                        Note: the object attributes self.system and self.system_time get updated
-        """
-        return self.reaction_simulator.single_compartment_react(duration=duration, target_end_time=target_end_time, stop=stop,
-                                 initial_step=initial_step, n_steps=n_steps, max_steps=max_steps,
-                                 variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                 silent=silent, report_interval=report_interval)
 
 
 
