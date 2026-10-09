@@ -394,61 +394,7 @@ def test_reaction_step_common_fixed_step_2():
 
 
 
-def test__reaction_elemental_step_2():  # TODO: migrate
-    uc = UniformCompartment(names=["A", "B", "C"])
-
-    # Unimolecular elementary reaction A <-> B , with 1st-order kinetics in both directions.
-    # Based on experiment "reactions_single_compartment/react_1"
-    uc.add_reaction(reactants="A", products="B",
-                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
-
-    uc.set_conc(conc=[10., 50.], snapshot=False)
-    assert np.allclose(uc.get_system_conc() , [10., 50.])
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [ 7. , -7.])     # Species "C" not participating in this reaction; not present in system state
-    assert result[0] == - result[1]             # From the stoichiometry
-
-
-    uc.reaction_data.clear_reactions_data()   # Re-start with a blank slate of reactions
-    # Synthesis reaction A + B <-> C , with 1st-order kinetics for each species.
-    # Based on experiment "1D/reactions/reaction4"
-    uc.add_reaction(reactants=["A" , "B"], products="C",
-                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-
-    assert np.allclose(uc.get_system_conc() , [10., 50., 0])    # The system state variable got expanded, to accommodate `C`
-
-    uc.set_conc(conc={"C": 20.})
-    assert np.allclose(uc.get_system_conc() , [10., 50., 20.])
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2}
-
-    result = uc._reaction_elemental_step(delta_time=0.002)
-    assert np.allclose(result, [-4.92, -4.92, 4.92])
-    assert result[0] == result[1]           # From the stoichiometry
-    assert result[1] == - result[2]         # From the stoichiometry
-
-
-
-def test__reaction_elemental_step_3():
-    uc = UniformCompartment(names=["A", "C", "D"])
-
-    # Reaction A <-> 2C + D , HYPOTHETICALLY with 1st-order kinetics for each species.
-    # Based on experiment "1D/reactions/reaction5"
-    uc.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
-                    reaction_model="custom",
-                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
-
-    uc.set_conc(conc=[4., 7., 2.], snapshot=False)
-
-    result = uc._reaction_elemental_step(delta_time=0.05)
-    assert np.allclose(result, [0.4 , -0.8 , -0.4])
-    assert result[0] == - result[1] /2    # From the stoichiometry
-    assert result[0] == - result[2]       # From the stoichiometry
-
-
-
-def test__reaction_elemental_step_4():
+def test__reaction_elemental_step_4():      # TODO: migrate
     uc = UniformCompartment(names=["A", "B", "C", "D"])
 
     # Reaction 2A + 5B <-> 4C + 3D , HYPOTHETICALLY with 1st-order kinetics for each species.
@@ -467,7 +413,7 @@ def test__reaction_elemental_step_4():
 
 
 
-def test__reaction_elemental_step_5():
+def test__reaction_elemental_step_5():      # TODO: migrate
     uc = UniformCompartment(names=["A", "B"])
 
     # Reaction  2A <-> B , with mass-action kinetics
@@ -483,7 +429,7 @@ def test__reaction_elemental_step_5():
 
 
 
-def test__reaction_elemental_step_6():
+def test__reaction_elemental_step_6():      # TODO: migrate
     uc = UniformCompartment(names=["A", "B", "C", "D", "E"])
 
     # Coupled reactions A + B <-> C  and  C + D <-> E , each with mass-action kinetics

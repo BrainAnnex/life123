@@ -861,6 +861,10 @@ def test_single_step_all_rxns_1():
                       kinetic_parameters={"kF": 3., "kR": 2.})
 
     sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns)
+    assert np.allclose(sim.system , [10., 50.])
+    assert sim.species_index_map.index_to_species == ["A", "B"]
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1}
+
     result = sim.single_step_all_rxns(delta_time=0.1)
     assert np.allclose(result, [7, -7])
     assert result[0] == - result[1]         # From the stoichiometry
@@ -901,8 +905,9 @@ def test_single_step_all_rxns_1():
     assert result[0]/2 == - result[1] /3   # From the stoichiometry
 
 
+
 def test_single_step_all_rxns_2():
-    species_registry = SpeciesRegistry()
+    species_registry = SpeciesRegistry(["A", "B", "C"])
     rxns = ReactionRegistry(species_data=species_registry)
 
     # Unimolecular elementary reaction A <-> B , with 1st-order kinetics in both directions.
@@ -910,8 +915,52 @@ def test_single_step_all_rxns_2():
     rxns.add_reaction(reactants="A", products="B",
                       reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
-    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns)
-    print(sim.species_index_map)
+    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns, method="forward_euler")
+    assert sim.species_index_map.index_to_species == ["A", "B"]         # Species "C" not participating in this reaction
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1}
+
+    result = sim.single_step_all_rxns(delta_time=0.1)
+    assert np.allclose(result, [ 7. , -7.])     # Species "C" not participating in this reaction; not present in system state
+    assert result[0] == - result[1]             # From the stoichiometry
+
+
+    rxns.clear_reactions_data()       # Re-start with a blank slate of reactions
+    # Synthesis reaction A + B <-> C , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction4"
+    rxns.add_reaction(reactants=["A" , "B"], products="C",
+                      reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+
+    sim.set_system_conc(np.array([10., 50., 20.]))
+    # The species indexing got expanded, to accommodate `C`
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C']                     # Notice the reaction-wise sorting
+    assert sim.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2}
+
+    result = sim.single_step_all_rxns(delta_time=0.002)
+    assert np.allclose(result, [-4.92, -4.92, 4.92])
+    assert result[0] == result[1]           # From the stoichiometry
+    assert result[1] == - result[2]         # From the stoichiometry
+
+
+def test_single_step_all_rxns_3():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Reaction A <-> 2C + D , HYPOTHETICALLY with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction5"
+    rxns.add_reaction(reactants=["A"], products=[(2, "C") , ("D")],
+                    reaction_model="custom",
+                    kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+
+    sim = ReactionSimulator(system=[4., 7., 2.], reaction_registry=rxns, method="forward_euler")
+
+    result = sim.single_step_all_rxns(delta_time=0.05)
+    assert np.allclose(result, [0.4 , -0.8 , -0.4])
+    assert result[0] == - result[1] /2    # From the stoichiometry
+    assert result[0] == - result[2]       # From the stoichiometry
+
+
+def test_single_step_all_rxns_4():
+    species_registry = SpeciesRegistry()
     #TODO: continue
 
 

@@ -140,7 +140,7 @@ class ReactionSimulator:
                                                                         # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         if (species_index_map is None) and (uniform_compartment is None) and (reaction_registry is not None):
-            # Assign an array index to all the species we're dealing with
+            # Assign an array index to all the species we're dealing with    TODO: use set_system_conc()
             all_species = reaction_registry.get_species_in_any_reaction(sort=True)
             self.species_index_map = SpeciesIndexMap(all_species)
 
@@ -268,13 +268,26 @@ class ReactionSimulator:
                                         caption=caption)
 
 
+    def set_system_conc(self, conc_array :np.ndarray):
+        """
+
+        :param conc_array:
+        :return:
+        """
+        self.system = conc_array
+        if (self.uniform_compartment == self) and (self.reaction_registry is not None):
+            # Assign an array index to all the species we're dealing with
+            all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
+            self.species_index_map = SpeciesIndexMap(all_species)
+
+
 
     def get_species_conc(self, label :str) -> float:
         """
         Return the current system concentration of the given species, specified by its id.
         If no species by that name exists, an Exception is raised
 
-        :param label:   The label of a chemical species
+        :param label:   The id of a species
         :return:        The current system concentration of the above chemical
         """
         # TODO: this ought to be returned to UniformCompartment
