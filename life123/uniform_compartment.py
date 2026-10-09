@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import pandas as pd
-import time
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.species_registry import SpeciesRegistry
@@ -39,7 +38,7 @@ class UniformCompartment:
 
     def __init__(self, reactions=None, species_data=None, names=None,
                  preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None,
-                 index_species=None):
+                 species_index_map=None):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
@@ -70,7 +69,7 @@ class UniformCompartment:
                                         if False (default), no action taken
         :param temp:            [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
-        :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
+        :param species_index_map:   [OPTIONAL] Object of type "IndexSpecies"
         """
         self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
 
@@ -104,25 +103,23 @@ class UniformCompartment:
 
 
 
+        self.species_index_map = None   # Indexes to reconcile the species id's to their index position in the system state array
 
-        self.index_species = None   # Indexes to reconcile the species id's to their index position in the system state array
-
-        if index_species is not None:
+        if species_index_map is not None:
             # Index was passed by the calling module (which will be initiating it)
-            self.index_species = index_species
+            self.species_index_map = species_index_map
         else:
             # Index was NOT passed by the calling module
             if reactions is not None:
                 # Assign an array index to all the species we're dealing with
                 all_species = reactions.get_species_in_any_reaction(sort=True)
-                self.index_species = SpeciesIndexMap(all_species)
+                self.species_index_map = SpeciesIndexMap(all_species)
             else:
                 # We'll proceed independently, as a top-level module
-                self.index_species = SpeciesIndexMap()
+                self.species_index_map = SpeciesIndexMap()
 
             # Build the needed indexes, based on the reactions, and on macromolecules
             self._synchronize_species()
-
 
 
         """
@@ -132,9 +129,9 @@ class UniformCompartment:
             index_species = SpeciesIndexMap(all_species)
         """
 
-        self.reaction_simulator = ReactionSimulator(uniform_compartment=self, species_index_map=self.index_species,
-                            reaction_registry=reactions, method="forward_euler",
-                            diagnostics_enabled=enable_diagnostics)       # Object of type "ReactionSimulator"
+        self.reaction_simulator = ReactionSimulator(uniform_compartment=self, species_index_map=self.species_index_map,
+                                                    reaction_registry=self.reaction_data, method="forward_euler",
+                                                    diagnostics_enabled=enable_diagnostics)       # Object of type "ReactionSimulator"
 
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
@@ -233,7 +230,7 @@ class UniformCompartment:
         :param species_id_set:  Set of ID's of species participating in a reaction being added
         :return:                None
         """
-        number_added = self.index_species.add_species(species_id_set)
+        number_added = self.species_index_map.add_species(species_id_set)
         #print("number_added: ", number_added)
 
         if number_added > 0:
@@ -326,7 +323,7 @@ class UniformCompartment:
 
     def _synchronize_species(self) -> None:
         """
-        Index (start managing) all the species that participate in any of the reactions
+        Index all the species that participate in any of the reactions
         in the reaction registry
 
         :return:
@@ -371,7 +368,7 @@ class UniformCompartment:
 
         if species_name is not None:
             self._ensure_synchronized_with_reaction_registry()
-            species_index = self.index_species.index_of(species_name)
+            species_index = self.species_index_map.index_of(species_name)
 
         elif species_index is not None:
             self.species_data.assert_valid_species_index(species_index)
@@ -400,7 +397,7 @@ class UniformCompartment:
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            self.capture_conc_snapshot(caption=f"Set concentration of `{self.index_species.species_at(species_index)}`")
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.species_index_map.species_at(species_index)}`")
 
 
 
@@ -425,7 +422,7 @@ class UniformCompartment:
         :param label:   The label of a chemical species
         :return:        The current system concentration of the above chemical
         """
-        species_index = self.index_species.index_of(label)
+        species_index = self.species_index_map.index_of(label)
         return self.system[species_index]
 
 
@@ -435,7 +432,7 @@ class UniformCompartment:
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
 
-        :param chem_labels: [OPTIONAL] List or tuple of the id's of the species;
+        :param chem_labels: [OPTIONAL] List, tuple or set of the id's of the species;
                                 by default, return all
         :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
@@ -457,16 +454,16 @@ class UniformCompartment:
             if system_data is None:
                 return {}
             else:
-                return {self.index_species.species_at(index): system_data[index]
+                return {self.species_index_map.species_at(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
-            assert type(chem_labels) == list or type(chem_labels) == tuple, \
+            assert isinstance(chem_labels, (list, tuple, set)), \
                 f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
                 f" (it was of type {type(chem_labels)})"
 
             conc_dict = {}
             for name in chem_labels:
-                species_index = self.index_species.index_of(name)
+                species_index = self.species_index_map.index_of(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -558,7 +555,7 @@ class UniformCompartment:
         # TODO: provide support for "inactivating" reactions
 
         self.reaction_data.clear_reactions_data()
-        self.index_species.clear_index()
+        self.species_index_map.clear_index()
 
 
 
@@ -590,7 +587,7 @@ class UniformCompartment:
         Number of species being simulated (and kept in the system state)
         :return:
         """
-        return self.index_species.number_of_system_species()
+        return self.species_index_map.number_of_system_species()
 
 
 
@@ -644,7 +641,7 @@ class UniformCompartment:
         set_active_species = self.get_reactions().active_chemicals
 
         index_list = list(
-                            map(lambda species_id: self.index_species.index_of(species_id), set_active_species)
+                            map(lambda species_id: self.species_index_map.index_of(species_id), set_active_species)
                          )
         return sorted(index_list)
 
@@ -737,6 +734,15 @@ class UniformCompartment:
 
 
 
+    def sim_system_time(self):
+        """
+        For compatibility
+
+        :return:
+        """
+        return self.reaction_simulator.system_time
+
+
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  variable_steps=True, explain_variable_steps=None,
@@ -782,245 +788,10 @@ class UniformCompartment:
         :return:                        A dictionary containing the key "recommended_next_step"
                                         Note: the object attributes self.system and self.system_time get updated
         """
-
-        # Default values
-        initial_step_caption = "1st reaction step"
-        final_step_caption = "last reaction step"
-
-        # Validation
-        assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
-                                        "the concentration values of the various chemicals must be set first"
-
-        if variable_steps and (n_steps is not None):
-            raise Exception("UniformCompartment.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
-
-        if stop is not None:
-            assert type(stop) == tuple and len(stop) == 2, \
-                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, " \
-                f"must be a pair of values, of the form (termination_keyword, termination_parameter)"
-
-        assert self.reaction_data.number_of_reactions() > 0, \
-            f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
-
-
-        self.conc_history.initial_caption = initial_step_caption     # TODO: turn into method
-
-
-        """
-        Determine all the various time parameters that were not explicitly provided
-        """
-
-        if stop is not None:
-            assert initial_step > 0, \
-                "single_compartment_react(): when using the `stop` argument, an `initial_step` argument must be provided"
-            assert max_steps is not None, \
-                "single_compartment_react(): when using the `stop` argument, a `max_steps` argument must be provided"
-            time_step = initial_step
-
-        else:
-            if target_end_time is not None:
-                if duration is not None:
-                    raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
-                else:
-                    assert target_end_time > self.system_time, \
-                        f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
-                    duration = target_end_time - self.system_time
-
-            # Determine the time step,
-            # as well as the required number of such steps
-            # TODO: if the following call results in an Exception, the reported arguments are confusing because
-            #       the names don't match
-            time_step, n_steps = self.specify_steps(duration=duration,
-                                                    initial_step=initial_step,
-                                                    n_steps=n_steps)
-            #print(f"time_step: {time_step} , n_steps: {n_steps}")
-            # Note: if variable steps are requested then `n_steps` stops being particularly meaningful; it becomes a
-            #       hypothetical value, in the (unlikely) event that the step sizes were never changed - and is only
-            #       used to detect a very excessive number of actual attempted steps
-
-            if target_end_time is None:
-                if variable_steps:
-                    target_end_time = self.system_time + duration
-                else:
-                    target_end_time = self.system_time + time_step * n_steps
-
-
-        step_count = 0
-
-        # Reset some diagnostic variables
-        self.number_neg_concs = 0
-        self.number_soft_aborts = 0
-        self.adaptive_steps.reset_norm_usage_stats()
-
-        # Time-related
-        t_start = time.perf_counter()
-        t_report = t_start
-        report_interval *= 60.      # Convert to seconds
-
-
-        try:
-            while True:     # Loop until one of various criteria becomes applicable
-
-                # Check various criteria for termination
-                if (max_steps is not None) and (step_count >= max_steps):
-                    print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
-                    break       # We have reached the max allowable number of steps
-
-                if (target_end_time is not None) and (self.system_time >= target_end_time):
-                    break       # The system time has reached the target endtime
-
-                if (stop is not None):
-                    (termination_keyword, termination_parameter) = stop
-                    if termination_keyword == "conc_below":
-                        chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) < conc_threshold:
-                            break   # The concentration of the specified chemical has dropped the requested threshold
-                    elif termination_keyword == "conc_above":
-                        chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) > conc_threshold:
-                            break   # The concentration of the specified chemical has risen above the requested threshold
-
-                if (not variable_steps) and (step_count == n_steps)\
-                        and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
-                    break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                                #   the System Time is below the target_end_time because of roundoff error
-
-
-                # ---  CORE OPERATION OF MAIN LOOP  ---
-                step_count, recommended_next_step = self._single_compartment_react_main_loop(step_count=step_count, n_steps=n_steps,
-                                                                    variable_steps=variable_steps, time_step=time_step,
-                                                                    explain_variable_steps=explain_variable_steps)
-
-
-                if self.diagnostics_enabled:
-                    # Save up the current time and System State as "diagnostic 'concentration' data"
-                    system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                    self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
-
-                t_now = time.perf_counter()
-                t_elapsed = t_now - t_report    # Time elapsed since the last report
-                if (not silent) and (t_elapsed > report_interval):
-                    if variable_steps:
-                        info_on_step = f"(doing step size {time_step:,.2g})"
-                    else:
-                        info_on_step = ""
-                    print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
-                    t_report = t_now            # Reset
-
-                if variable_steps:
-                    time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
-
-        # --- END while ---
-
-        except KeyboardInterrupt:
-            print("\n*** KeyboardInterrupt exception caught")
-
-
-
-        # We're now at the end of the computation
-        # Report whether extra steps were automatically added
-        n_steps_taken = step_count
-
-
-        if (not variable_steps) and (n_steps is not None):
-            extra_steps = n_steps_taken - n_steps
-            if extra_steps > 0:
-                print(f"The computation took {extra_steps} extra step(s) - "
-                      f"automatically added to prevent negative concentrations")
-
-
-        if not silent:
-            # Print out a summary, at the termination of the run
-            t_now = time.perf_counter()
-            step_type_str = "variable " if variable_steps else "fixed "
-            time_taken = t_now - t_start
-            if time_taken < 60:
-                display_time_taken = f"{time_taken:.3f} sec"
-            else:
-                display_time_taken = f"{time_taken/60.:.2f} min"
-            print(f"{n_steps_taken} total {step_type_str}step(s) taken in {display_time_taken}")
-            if variable_steps:
-                if self.number_neg_concs:
-                    print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
-                if self.number_soft_aborts:
-                    print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
-
-                print("Norm usage:", self.adaptive_steps.norm_usage)
-                print(f"System Time is now: {self.system_time:,.5g}")
-
-
-        # One final snapshot, unless already taken for the last step done
-        self.capture_conc_snapshot(step_count=step_count, caption=final_step_caption, extra=True)
-
-        # Add a caption to the very last entry in the system history
-        self.conc_history.set_caption_last_snapshot(final_step_caption)
-
-        return {"recommended_next_step": recommended_next_step}
-
-
-
-    def _single_compartment_react_main_loop(self, step_count, n_steps, variable_steps,
-                                            time_step, explain_variable_steps) -> (int, float):
-        """
-        Helper function to single_compartment_react(), for its main loop.
-        Perform the reaction step (either fixed or variable step, as appropriate),
-        then update the System State, and preserve the RATES data.
-        If the number of steps taken so far is getting excessive, raise an Exception
-
-        :param step_count:
-        :param n_steps:
-        :param variable_steps:
-        :param time_step:
-        :param explain_variable_steps:
-        :return:                        The pair (step_count, recommended_next_step)
-        """
-        # ----------  CORE OPERATION OF MAIN LOOP  ----------
-        if variable_steps:
-            delta_concentrations, step_actually_taken, recommended_next_step = \
-                self.reaction_step_common(delta_time=time_step,
-                                          variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                          step_counter=step_count)
-        else:
-            # Fixed steps
-            delta_concentrations = \
-                self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
-            step_actually_taken = time_step
-            recommended_next_step = time_step
-
-
-        # Update the System State
-        self.previous_system = self.system.copy()
-        self.system += delta_concentrations
-        if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-            print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
-                  f"upon advancing reactions from system time t={self.system_time:,.5g}")
-
-
-        # Preserve the RATES data, as requested ("part1", BEFORE updating the System Time, because reaction rates are
-        # based on the *start* time of the simulation step)
-        if step_count == 0:
-            self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
-        else:
-            self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
-
-        # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
-        self.system_time += step_actually_taken
-
-
-        # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
-        # refer to the System Time, just updated at the end of the simulation step)
-        self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
-                                                            # It's +1 because we save the conc. values at the END of the step
-
-        step_count += 1
-
-        if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
-            raise Exception("single_compartment_react(): "
-                            "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                            " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
-
-        return step_count, recommended_next_step
+        return self.reaction_simulator.single_compartment_react(duration=duration, target_end_time=target_end_time, stop=stop,
+                                 initial_step=initial_step, n_steps=n_steps, max_steps=max_steps,
+                                 variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
+                                 silent=silent, report_interval=report_interval)
 
 
 
@@ -1054,6 +825,10 @@ class UniformCompartment:
                                     in their index order, as a Numpy array
                                     EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
                                         array([7. , -21.])
+        """
+        """
+        return self.reaction_simulator.reaction_step_common_fixed_step(delta_time=delta_time, conc_array=conc_array,
+                                                                       step_counter=step_counter)
         """
         # TODO: no longer pass conc_array .  Use the object variable self.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
@@ -1136,6 +911,10 @@ class UniformCompartment:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
+        return self.reaction_simulator.reaction_step_common_variable_step(delta_time=delta_time, conc_array=conc_array,
+                                                            explain_variable_steps=explain_variable_steps, step_counter=step_counter)
+
+
         # TODO: no longer pass conc_array .  Use the object variable self.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
 
@@ -1382,7 +1161,7 @@ class UniformCompartment:
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
-            chem_name = self.index_species.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            chem_name = self.species_index_map.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the chemicals (for instance `{chem_name}`, of index {first_neg_index}), from the combined reactions."
@@ -1455,7 +1234,7 @@ class UniformCompartment:
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-                chem_index = self.index_species.index_of(chem_label)
+                chem_index = self.species_index_map.index_of(chem_label)
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # for any of the proposed concentration changes for this reaction.
                 # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1497,7 +1276,7 @@ class UniformCompartment:
 
         conc_dict = {}
         for label in chem_labels:
-            chem_index = self.index_species.index_of(label)    # The integer index this chemical
+            chem_index = self.species_index_map.index_of(label)    # The integer index this chemical
             conc_dict[label] = conc_array[chem_index]
 
         return conc_dict
@@ -1540,15 +1319,15 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.index_species.species_at(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.species_index_map.species_at(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.index_species.species_at(species_index)}`")
+                                               caption=f"aborted: neg. conc. in `{self.species_index_map.species_at(species_index)}`")
 
-            chem_name = self.index_species.species_at(species_index)
+            chem_name = self.species_index_map.species_at(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
                                     f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
@@ -1745,7 +1524,7 @@ class UniformCompartment:
 
         self.diagnostics_enabled = True
         if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.index_species.species_to_index)
+            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_index_map.species_to_index)
 
 
 

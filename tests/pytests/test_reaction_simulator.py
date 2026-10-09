@@ -68,8 +68,8 @@ def test_single_compartment_react():
 
 
     # START of special bundling of "UniformCompartment" and "ReactionSimulator"
-    uc = UniformCompartment(reactions=rxns, index_species=ind,
-                           enable_diagnostics=True)  # species_data=species_registry
+    uc = UniformCompartment(reactions=rxns, species_index_map=ind,
+                            enable_diagnostics=True)  # species_data=species_registry
 
     """
     sim = ReactionSimulator(uniform_compartment=uc, species_index_map=ind,
@@ -122,7 +122,7 @@ def test_single_compartment_react():
 
     # Now repeat the process, step-by-step
 
-    uc2 = UniformCompartment(reactions=rxns, index_species=ind, enable_diagnostics=True)
+    uc2 = UniformCompartment(reactions=rxns, species_index_map=ind, enable_diagnostics=True)
     sim2 = uc2.reaction_simulator
     """
     uc2 = UniformCompartment(species_data=species_registry, index_species=ind)

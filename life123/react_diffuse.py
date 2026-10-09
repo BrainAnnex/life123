@@ -58,7 +58,7 @@ class ReactDiffuse:
 
         match type:
             case "uniform":
-                uc = UniformCompartment(index_species=self.index_species)
+                uc = UniformCompartment(species_index_map=self.index_species)
                 self.module = uc
                 self.sim = ReactionSimulator(system=uc.system, species_index_map=self.index_species,
                             reaction_registry=uc.reaction_data, method="forward_euler",

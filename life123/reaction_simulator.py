@@ -12,9 +12,7 @@ from typing import Any
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
-#from life123.uniform_compartment import UniformCompartment
-#from life123.reactions import SimulationReaction
-#from life123.reaction_registry import ReactionRegistry
+
 
 
 
@@ -93,13 +91,28 @@ class ReactionSimulator:
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
                  uniform_compartment=None):
+        """
 
-        self.uniform_compartment = uniform_compartment
+        :param system:
+        :param species_index_map:
+        :param reaction_registry:
+        :param exact:
+        :param diagnostics:
+        :param diagnostics_enabled:
+        :param method:
+        :param preset:
+        :param uniform_compartment:
+        """
+
+        if uniform_compartment is not None:
+            self.uniform_compartment = uniform_compartment
+        else:
+            self.uniform_compartment = self
 
         self.system :np.ndarray = system
 
-        self.species_index_map :SpeciesIndexMap = species_index_map
-        self.reaction_registry  = reaction_registry
+        self.species_index_map :SpeciesIndexMap = species_index_map 
+        self.reaction_registry = reaction_registry
         self.exact :bool = exact
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
@@ -130,8 +143,8 @@ class ReactionSimulator:
         self.adaptive_steps = VariableTimeSteps()
 
         if (self.diagnostics_enabled) and (not self.diagnostics):
-            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index,
-                                           species_index_map=self.species_index_map)
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.uniform_compartment.species_index_map.species_to_index,
+                                           species_index_map=self.uniform_compartment.species_index_map)
 
         if preset:
             self.adaptive_steps.use_adaptive_preset(preset)
@@ -148,7 +161,7 @@ class ReactionSimulator:
         :return:
         """
         # TODO: alternatively, use the size of self.system
-        return self.species_index_map.number_of_system_species()
+        return self.uniform_compartment.species_index_map.number_of_system_species()
  
  
     def get_reactions(self):
@@ -158,7 +171,8 @@ class ReactionSimulator:
         :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
         """
         return self.reaction_registry   
-            
+
+
 
     def indexes_of_active_chemicals(self) -> list[int]:
         """
@@ -177,7 +191,7 @@ class ReactionSimulator:
         set_active_species = self.get_reactions().active_chemicals
 
         index_list = list(
-                            map(lambda species_id: self.species_index_map.index_of(species_id), set_active_species)
+                            map(lambda species_id: self.uniform_compartment.species_index_map.index_of(species_id), set_active_species)
                          )
         return sorted(index_list)        
 
@@ -258,7 +272,7 @@ class ReactionSimulator:
         :return:        The current system concentration of the above chemical
         """
         # TODO: this ought to be returned to UniformCompartment
-        species_index = self.species_index_map.index_of(label)
+        species_index = self.uniform_compartment.species_index_map.index_of(label)
         return self.system[species_index]
 
 
@@ -268,7 +282,7 @@ class ReactionSimulator:
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
 
-        :param chem_labels: [OPTIONAL] List or tuple of the id's of the species;
+        :param chem_labels: [OPTIONAL] List, tuple or set of the id's of the species;
                                 by default, return all
         :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
@@ -291,16 +305,16 @@ class ReactionSimulator:
             if system_data is None:
                 return {}
             else:
-                return {self.species_index_map.species_at(index): system_data[index]
+                return {self.uniform_compartment.species_index_map.species_at(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
-            assert type(chem_labels) == list or type(chem_labels) == tuple, \
+            assert isinstance(chem_labels, (list, tuple, set)), \
                 f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
                 f" (it was of type {type(chem_labels)})"
 
             conc_dict = {}
             for name in chem_labels:
-                species_index = self.species_index_map.index_of(name)
+                species_index = self.uniform_compartment.species_index_map.index_of(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -1049,7 +1063,7 @@ class ReactionSimulator:
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
-            chem_name = self.species_index_map.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            chem_name = self.uniform_compartment.species_index_map.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
             exception_data = {
                 "message": f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
@@ -1213,10 +1227,14 @@ class ReactionSimulator:
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
                                 array([7. , -21.])
         """
+        assert self.reaction_registry is not None, \
+            "ReactionSimulator.single_step_all_rxns(): Cannot perform simulations because the 'ReactionRegistry' object isn't available;\n" \
+            "    did you pass the argument `reaction_registry` at instantiation time, or set it later?"
+
         self.reaction_step_diagnostics = ReactionStep(delta_time=delta_time)     # RESET, ahead of this reaction step
 
         # The increment vector is cumulative for ALL the requested reactions.  Initialize it to all zeros
-        number_species = self.species_index_map.number_of_system_species()
+        number_species = self.uniform_compartment.species_index_map.number_of_system_species()
         increment_vector = np.zeros(number_species, dtype=float)       # One element per species
 
 
@@ -1268,7 +1286,7 @@ class ReactionSimulator:
 
 
         for (species_id, delta_conc) in increment_dict_single_rxn.items():
-            species_index = self.species_index_map.index_of(species_id)
+            species_index = self.uniform_compartment.species_index_map.index_of(species_id)
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
             # for any of the proposed concentration changes for this reaction.
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1366,11 +1384,22 @@ class ReactionSimulator:
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
 
+        conc_dict = self.uniform_compartment.get_conc_dict(chem_labels=species_ids)
+
+        """
         conc_dict = {}
         for label in species_ids:
-            species_index = self.species_index_map.index_of(label)    # The integer index this species in the system state
-            conc_dict[label] = self.system[species_index]
+            try:
+                species_index = self.uniform_compartment.species_index_map.index_of(label)    # The integer index this species in the system state
+            except AssertionError:
+                print("*********** NABBED THE EXCEPTION :)")
+                self.uniform_compartment._synchronize_species()
+                print("*********** ", self.uniform_compartment.species_index_map)
+                species_index = self.uniform_compartment.species_index_map.index_of(label)    # The integer index this species in the system state
 
+
+            conc_dict[label] = self.system[species_index]
+        """
         return conc_dict
         
 
@@ -1578,7 +1607,7 @@ class ReactionSimulator:
         self.diagnostics_enabled = True
         if not self.diagnostics:
             self.diagnostics = Diagnostics(reactions=self.reaction_registry,
-                                           species_to_index=self.species_index_map.species_to_index)
+                                           species_to_index=self.uniform_compartment.species_index_map.species_to_index)
 
 
 

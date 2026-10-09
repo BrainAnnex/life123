@@ -41,7 +41,7 @@ class BioSim2D:
 
         self.species_data = None   # Object of type "SpeciesRegistry", with info on the individual chemicals and their reactions
 
-        self.reactions = None   # Object of type "Reactions", with info on all the reactions
+        self.reactions = None   # Object of type "ReactionRegistry", with info on all the reactions
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
 
@@ -116,7 +116,7 @@ class BioSim2D:
         else:
             self.reaction_dynamics = UniformCompartment(species_data=self.species_data)
 
-        self.reactions = self.reaction_dynamics.get_reactions()     # TODO: Maybe use self.get_reactions()
+        self.reactions = self.reaction_dynamics.get_reactions()
 
         self.index_species = None   # Indexes to reconcile the species id's to their position in the system state array
 
@@ -137,7 +137,7 @@ class BioSim2D:
             self.index_species.add_species(all_registry_species)
 
 
-        self.reaction_dynamics.index_species = self.index_species
+        self.reaction_dynamics.species_index_map = self.index_species
 
         #self.n_species = self.species_data.number_of_species()
         self.n_species = self.index_species.number_of_system_species()
@@ -197,7 +197,7 @@ class BioSim2D:
         """
         Return all the associated reactions
 
-        :return:    Object ot type "Reactions" (with data about all the reactions)
+        :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
         """
         return self.reactions
 
@@ -871,7 +871,7 @@ class BioSim2D:
 
 
 
-    def reaction_step(self, delta_time: float) -> None:
+    def reaction_step(self, delta_time :float) -> None:
         """
         Compute and store the incremental concentration changes in all bins,
         from all reactions,
@@ -908,9 +908,10 @@ class BioSim2D:
                     print(f"\nconc_dict in bin ({bin_n_x}, {bin_n_y}): ", conc_array)
 
 
-                # Obtain the Delta-conc for each species, for the current bin
-                increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
-                                                                                     variable_steps=False)
+                # Obtain the Delta-conc for each species, for the the reactions in the current bin
+                increment_vector = \
+                    self.reaction_dynamics.reaction_simulator.reaction_step_common_fixed_step(delta_time=delta_time,
+                                                                                              conc_array=conc_array)
 
                 # Replace the appropriate column of the self.delta_reactions matrix
                 # with the contents of the vector increment_vector

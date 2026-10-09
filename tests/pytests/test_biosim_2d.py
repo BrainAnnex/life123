@@ -218,18 +218,26 @@ def test_react():
 
 
 def test_reaction_step():
-    chem_data = SpeciesRegistry(ids=["A", "B"])
+    species_registry = SpeciesRegistry(ids=["A", "B"])
 
-    bio = BioSim2D(x_bins=3, y_bins=4, species_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=4, species_data=species_registry)
+
+    assert type(bio.get_reactions()) is ReactionRegistry
+    assert bio.get_reactions().number_of_reactions() == 0
 
     # Reaction A <-> B , with mass-action kinetics
-    bio.reactions.add_reaction(reactants=["A"], products=["B"],
-                               reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    bio.reactions.add_reaction(reactants="A", products="B",
+                               reaction_model="mass action",
+                               kinetic_parameters={"kF": 3., "kR": 2.})
+    assert bio.get_reactions().number_of_reactions() == 1
+    #print("ReactionRegistry version: ", bio.reactions.version)
+    #print(bio.reaction_dynamics.reaction_simulator.reaction_registry)
+    print(bio.reaction_dynamics.reaction_simulator.species_index_map)
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_address=(2,3), conc_list=[5.,100.])
-    #bio.describe_state()
+
 
     bio.reaction_step(delta_time=0.1)
     #print("bio.delta_reactions:\n", bio.delta_reactions)

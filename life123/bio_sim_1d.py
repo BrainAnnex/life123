@@ -1531,7 +1531,7 @@ class BioSim1D(System1D):
         super().__init__(n_bins, species_data=species_data, index_species=index_species)    # Invoke the constructor of its parent class
 
 
-        self.reaction_dynamics.index_species = self.index_species
+        self.reaction_dynamics.species_index_map = self.index_species
 
         self.diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)
 
@@ -1875,7 +1875,7 @@ class BioSim1D(System1D):
 
 
 
-    def reaction_step(self, delta_time: float) -> None:
+    def reaction_step(self, delta_time :float) -> None:
         """
         Compute and store the incremental concentration changes in all bins,
         from all reactions,
@@ -1911,7 +1911,7 @@ class BioSim1D(System1D):
             conc_array = self.bin_snapshot_array(bin_address=bin_n)
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
-            # Obtain the Delta-conc for each chemical, for the reactions in bin number bin_n (a NumPy array)
+            # Obtain the Delta-conc for each species, for the reactions in bin number bin_n (a NumPy array)
             # A fixed time step is being used for now
             increment_vector = self.reaction_dynamics.reaction_step_common_fixed_step(delta_time=delta_time, conc_array=conc_array)
 

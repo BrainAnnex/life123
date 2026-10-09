@@ -75,6 +75,15 @@ class ReactionRegistry:
     #####################################################################################################
 
 
+    def __str__(self):
+        """
+
+        :return:
+        """
+        return f'Object "ReactionRegistry", with {self.number_of_reactions()} reactions'
+
+
+
     def number_of_reactions(self) -> int:
         """
         Return the number of registered chemical reactions
@@ -401,7 +410,9 @@ class ReactionRegistry:
                                 in class ReactionModelRegistry.
                                 If not provided, it default to "mass action" if the reaction
                                 seems to be elementary from its stoichiometry and kinetic_parameters.
-
+        :param autoregister_species:
+        :param thermodynamic_parameters:
+        :param kinetic_parameters:
         :param temp:            [OPTIONAL] Temperature in Kelvins
 
         :return:                Integer index of the newly-added reaction
@@ -457,7 +468,8 @@ class ReactionRegistry:
             # Update the set of "active chemicals"
             self.active_chemicals |= involved_chemicals     # Union of sets
 
-        self.version += 1       # Update the "mutation counter" of this ReactionRegistry object
+        self.version += 1       # Update the "mutation counter" of this ReactionRegistry object,
+                                # to indicate to client module that this object has been modified
 
         return reaction_id
 
