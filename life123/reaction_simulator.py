@@ -105,9 +105,9 @@ class ReactionSimulator:
         """
 
         if uniform_compartment is not None:
-            self.uniform_compartment = uniform_compartment
+            self.uniform_compartment = uniform_compartment  # Use "UniformCompartment" object to manage the species index
         else:
-            self.uniform_compartment = self
+            self.uniform_compartment = self         # Self-manage the species index
 
         self.system :np.ndarray = system
 
@@ -138,6 +138,12 @@ class ReactionSimulator:
         self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
                                                                         # of (some of) the species concentrations:
                                                                         # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
+
+        if (species_index_map is None) and (uniform_compartment is None) and (reaction_registry is not None):
+            # Assign an array index to all the species we're dealing with
+            all_species = reaction_registry.get_species_in_any_reaction(sort=True)
+            self.species_index_map = SpeciesIndexMap(all_species)
+
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
@@ -1190,7 +1196,6 @@ class ReactionSimulator:
             self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                             delta_conc_arr=delta_concentrations,
                                                             data=self.diagnostic_data_snapshot)
-
 
 
 

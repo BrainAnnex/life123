@@ -852,7 +852,7 @@ def test_attempt_reaction_step_2_b():
 
 
 
-def test_single_step_all_rxns():
+def test_single_step_all_rxns_1():
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -860,12 +860,10 @@ def test_single_step_all_rxns():
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
                       kinetic_parameters={"kF": 3., "kR": 2.})
 
-    ind = SpeciesIndexMap({"A", "B"})
-
-    system = np.array([10, 50])
-    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns)
+    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns)
     result = sim.single_step_all_rxns(delta_time=0.1)
     assert np.allclose(result, [7, -7])
+    assert result[0] == - result[1]         # From the stoichiometry
     assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
@@ -877,7 +875,44 @@ def test_single_step_all_rxns():
     assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
-    #print(result)   #TODO: in progress
+    rxns.clear_reactions_data()       # Re-start with a blank slate of reactions
+    # Reaction A <-> 3B , hypothetically with 1st-order kinetics for each species
+    # Based on experiment "1D/reactions/reaction2"
+    #rxns = ReactionRegistry(species_data=species_registry)
+    #sim.reaction_registry = rxns
+    rxns.add_reaction(reactants="A", products=[(3,"B")],
+                      reaction_model="custom",
+                      kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+    sim.method = "forward_euler"
+    result = sim.single_step_all_rxns(delta_time=0.1)
+    assert np.allclose(result, [5. , -15.])
+    assert -3 * result[0] == result[1]      # From the stoichiometry
+
+
+    rxns.clear_reactions_data()       # Re-start with a blank slate of reactions
+    # Reaction 2A <-> 3B ,hypothetically with 1st-order kinetics for each species
+    # Based on experiment "1D/reactions/reaction3"
+    rxns.add_reaction(reactants=[(2,"A")], products=[(3,"B")],
+                      reaction_model="custom",
+                      kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+    sim.method = "forward_euler"
+    result = sim.single_step_all_rxns(delta_time=0.1)
+    assert np.allclose(result, [10., -15.])
+    assert result[0]/2 == - result[1] /3   # From the stoichiometry
+
+
+def test_single_step_all_rxns_2():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # Unimolecular elementary reaction A <-> B , with 1st-order kinetics in both directions.
+    # Based on experiment "reactions_single_compartment/react_1"
+    rxns.add_reaction(reactants="A", products="B",
+                      reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+
+    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns)
+    print(sim.species_index_map)
+    #TODO: continue
 
 
 
