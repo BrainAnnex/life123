@@ -745,8 +745,6 @@ class ReactionSimulator:
 
 
 
-
-
     def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None,
                                         step_counter=1) -> np.array:
         """
@@ -821,7 +819,6 @@ class ReactionSimulator:
 
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
-
 
 
 
@@ -1384,25 +1381,9 @@ class ReactionSimulator:
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
 
-        conc_dict = self.uniform_compartment.get_conc_dict(chem_labels=species_ids)
+        return self.uniform_compartment.get_conc_dict(chem_labels=species_ids)
 
-        """
-        conc_dict = {}
-        for label in species_ids:
-            try:
-                species_index = self.uniform_compartment.species_index_map.index_of(label)    # The integer index this species in the system state
-            except AssertionError:
-                print("*********** NABBED THE EXCEPTION :)")
-                self.uniform_compartment._synchronize_species()
-                print("*********** ", self.uniform_compartment.species_index_map)
-                species_index = self.uniform_compartment.species_index_map.index_of(label)    # The integer index this species in the system state
-
-
-            conc_dict[label] = self.system[species_index]
-        """
-        return conc_dict
         
-
 
     def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float):
         """

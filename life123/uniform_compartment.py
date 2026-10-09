@@ -670,33 +670,7 @@ class UniformCompartment:
         :param n_steps:     Integer with the desired number of steps
         :return:            The pair (time_step, n_steps)
         """
-        DEFAULT_N_STEPS = 10
-
-        assert (not duration or not initial_step or not n_steps), \
-            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: " \
-            "`duration`, `initial_step`, `n_steps` (specify at most 2 of them)"
-
-        assert (duration or initial_step), \
-            "UniformCompartment.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
-
-        if (not initial_step) and (not n_steps):    # If only `duration` is provided
-            n_steps = DEFAULT_N_STEPS
-            initial_step = duration
-            return (initial_step, n_steps)
-
-        if (not duration) and (not n_steps):        # If only `initial_step` is provided
-            n_steps = DEFAULT_N_STEPS
-            return (initial_step, n_steps)
-
-        # If we get this far, both `duration` and `initial_step` must be present
-
-        if not initial_step:
-            initial_step = duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(duration / initial_step)
-
-        return (initial_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+        return self.reaction_simulator.specify_steps(duration=duration, initial_step=initial_step, n_steps=n_steps)
 
 
 
@@ -741,6 +715,7 @@ class UniformCompartment:
         :return:
         """
         return self.reaction_simulator.system_time
+
 
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
@@ -826,187 +801,9 @@ class UniformCompartment:
                                     EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
                                         array([7. , -21.])
         """
-        """
+
         return self.reaction_simulator.reaction_step_common_fixed_step(delta_time=delta_time, conc_array=conc_array,
                                                                        step_counter=step_counter)
-        """
-        # TODO: no longer pass conc_array .  Use the object variable self.system instead
-        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
-
-        if conc_array is not None:
-            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
-                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
-
-
-        # Validate arguments
-        assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
-                                        "the concentration values of the various chemicals must be set first"
-
-        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
-        #print(f"             delta_time={delta_time}, system={self.system}, ")
-
-        try:
-            (delta_concentrations, _) = \
-                self._attempt_reaction_step(delta_time, variable_steps=False,
-                                            explain_variable_steps=None, step_counter=step_counter)
-
-        # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT),
-        # in order to re-raise an Exception with a more detailed error message
-        except ExcessiveTimeStepHard as ex:
-            # Single reactions steps can fail with this error condition if the attempted time step was too large,
-            # under the following scenarios:
-            #       1. negative concentrations from any one reaction
-            #       2. negative concentration from the combined effect of multiple reactions
-            #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
-            raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
-                            f"Try REDUCING the time step. \n{ex}")
-
-
-        return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
-
-
-
-
-    def reaction_step_common(self, delta_time: float, conc_array=None,
-                             variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
-        """
-        This is the common entry point for both variable-step single-compartment reactions,
-        and the reaction component of variable-step reaction-diffusions in 1D, 2D and 3D.
-
-        "Compartments" may or may not correspond to the "bins" of the higher layers;
-        the calling code might have opted to merge some bins into a single "compartment".
-
-        Using the given concentration data for all the applicable species in a single compartment,
-        do a single reaction time step for ALL the reactions -
-        based on the INITIAL concentrations (prior to this reaction step),
-        which are used as the basis for all the reactions.
-
-        Return the increment vector for all the chemical species concentrations in the compartment
-
-        NOTES:  * the actual system concentrations are NOT changed
-                * this method doesn't decide on step sizes - except in case of ("hard" or "soft") aborts, which are
-                    followed by repeats with a smaller step.  Also, it makes suggestions
-                    to the calling module about the next step to best take (whether as a result of an abort,
-                    or for other considerations)
-
-        :param delta_time:      The requested time duration of the reaction step
-        :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
-                                    as a Numpy array for ALL the chemical species, in their index order.
-                                    If not provided, self.system is used instead
-        :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
-                                            when the System time inside that range;
-                                            only applicable if variable_steps is True
-        :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
-
-        :return:                The triplet:
-                                    1) increment vector for the concentrations of ALL the chemical species,
-                                        in their index order, as a Numpy array
-                                        EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
-                                            array([7. , -21.])
-                                    2) time step size actually taken - which might be smaller than the requested one
-                                        because of reducing the step to avoid negative-concentration errors
-                                    3) recommended_next_step : a suggestions to the calling module
-                                       about the next step to best take
-        """
-        return self.reaction_simulator.reaction_step_common_variable_step(delta_time=delta_time, conc_array=conc_array,
-                                                            explain_variable_steps=explain_variable_steps, step_counter=step_counter)
-
-
-        # TODO: no longer pass conc_array .  Use the object variable self.system instead
-        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
-
-        if conc_array is not None:
-            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
-                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
-
-
-        # Validate arguments
-        assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
-                                        "the concentration values of the various chemicals must be set first"
-
-
-        if explain_variable_steps:
-            assert (type(explain_variable_steps) == list) and (len(explain_variable_steps) == 2), \
-                "reaction_step_common(): the argument `explain_variable_steps`, if provided, must be a pair of numbers [t_start, t_end]"
-
-
-        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
-        #print(f"             delta_time={delta_time}, system={self.system}, ")
-
-
-        recommended_next_step = delta_time     # Baseline value; no reason yet to suggest a change in step size
-
-
-        delta_concentrations = None
-
-        SMALLEST_VALUE_TO_TRY = delta_time / 2000.       # Used to prevent infinite loops (only applicable in case of variable steps)
-
-        normal_exit = False
-
-        while delta_time > SMALLEST_VALUE_TO_TRY:       # TODO: consider moving the inside of the WHILE loop into a separate function
-            try:    # We want to catch Exceptions that can arise from excessively large time steps
-                    #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
-                (delta_concentrations, recommended_next_step) = \
-                        self._attempt_reaction_step(delta_time, variable_steps, explain_variable_steps, step_counter)
-                normal_exit = True
-
-                break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
-
-
-            # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT)
-            except ExcessiveTimeStepHard as ex:
-                # Single reactions steps can fail with this error condition if the attempted time step was too large,
-                # under the following scenarios:
-                #       1. negative concentrations from any one reaction - caught by  validate_increment()
-                #       2. negative concentration from the combined effect of multiple reactions - caught in this function
-                #print("*** CAUGHT a HARD ABORT")
-                self.number_neg_concs += 1
-                if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    explanation = ex
-                    explanation += f"\n      -> will backtrack, and re-do step with a SMALLER delta time, " \
-                                    f"multiplied by {self.adaptive_steps.step_factors['error']} " \
-                                    f"(set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) " \
-                                    f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]"
-                    print(explanation)
-
-                delta_time *= self.adaptive_steps.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
-                recommended_next_step = delta_time
-                # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
-
-
-            # CATCH any 'ExcessiveTimeStepSoft' exception raised in the loop  (i.e. a SOFT ABORT)
-            except ExcessiveTimeStepSoft as ex:
-                # Single reactions steps can fail with this error condition if the attempted time step was too large,
-                # under the following scenario:
-                #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
-                #print("*** CAUGHT a soft ABORT")
-                self.number_soft_aborts += 1
-                if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    print(f"       {ex}")
-                delta_time *= self.adaptive_steps.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
-                recommended_next_step = delta_time
-                # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
-
-        # END while
-
-
-        if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above
-            raise Exception(f"reaction_step_common(): unable to complete the reaction step.  "
-                            f"In spite of numerous automated reductions of the time step, "
-                            f"it continues to lead to concentration changes that are considered excessive; "
-                            f"try reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). "
-                            f"Current values: {self.adaptive_steps.thresholds}")
-
-        # If we get thus far, it's the normal exit of the reaction step
-
-
-        return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
-
 
 
 
