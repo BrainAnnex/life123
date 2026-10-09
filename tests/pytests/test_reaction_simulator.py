@@ -434,7 +434,7 @@ def test__single_compartment_react_main_loop_2_b():
 
 
 
-def test_reaction_step_common_fixed_step():
+def test_reaction_step_common_fixed_step_1():
     species_registry = SpeciesRegistry()
 
     # Reaction : A <-> B  (created thu the ReactionRegistry object)
@@ -445,13 +445,33 @@ def test_reaction_step_common_fixed_step():
     ind = SpeciesIndexMap({"A", "B"})
     assert ind.index_to_species == ["A", "B"]
 
-    system = np.array([10, 50])
+    system = np.array([10, 50])      # 10. goes to "A" and 50. to "B"
     sim = ReactionSimulator(system=system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler")
+    assert sim.get_conc_dict() == {"A": 10, "B": 50}
 
     result = sim.reaction_step_common_fixed_step(delta_time=0.1)
-    assert np.allclose(result, [7, -7])
+    assert np.allclose(result, [7, -7])     # The increment vector
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    sim.system = np.array([10, 50])     # Reset the system state, and repeat identically
+    result = sim.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [7, -7])     # The increment vector
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.1)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    sim.system = np.array([10, 50])     # Reset the system state, and repeat with double time interval
+    result = sim.reaction_step_common_fixed_step(delta_time=0.2)
+    assert np.allclose(result, [14, -14])     # The increment vector has doubled
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.2)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
+
+    sim.system = np.array([10, 50])     # Reset the system state,
+                                        # and repeat with large time interval just short of triggering error
+    result = sim.reaction_step_common_fixed_step(delta_time=0.7142857)
+    assert np.allclose(result, [49.999999, -49.999999])     # The increment vector is a hair away from making [B] negative
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.7142857)
     assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: -70.0})
 
 
@@ -485,8 +505,117 @@ DETAILS:
 DETAILS: 
 heun_single_rxn(): excessive time step (0.8), leading to negative concentrations"""
 
-    #for k, v in details.items():
-    #    print(k, " : ", v)
+
+def test_reaction_step_common_fixed_step_2():
+    species_registry = SpeciesRegistry()
+
+    # Reaction A + B <-> C , with mass-action kinetics
+    # Based on experiment "1D/reactions/reaction4"
+    rxns = ReactionRegistry(species_data=species_registry)
+    rxns.add_reaction(reactants=["A" , "B"], products="C",
+                      reaction_model="mass action",
+                      kinetic_parameters={"kF": 5., "kR": 2.})
+
+    #ind = SpeciesIndexMap({"A", "B", "C"})     # Now automatically created
+
+    system = np.array([10, 50, 20])
+    sim = ReactionSimulator(system=system,
+                            reaction_registry=rxns, method="forward_euler")
+    assert sim.get_conc_dict() == {"A": 10, "B": 50, "C": 20}
+
+    # The species index was automatically created
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2}
+
+
+    result = sim.reaction_step_common_fixed_step(delta_time=0.002)
+    assert np.allclose(result, [-4.92, -4.92, 4.92])     # The increment vector
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.002)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: 2460}) # 5. * 10 * 50 - 2. * 20
+
+    result = sim.reaction_step_common_fixed_step(delta_time=0.00406504)
+    assert np.allclose(result, [-9.9999984, -9.9999984,  9.9999984])   # A hair from making [A] negative
+    assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.00406504)
+    assert compare_dicts(sim.reaction_step_diagnostics.system_rxn_rates, {0: 2460})
+
+    with pytest.raises(ExcessiveTimeStepHard) as ex:
+        sim.reaction_step_common_fixed_step(delta_time=0.0040651)    # A step so large that it would make [A] negative
+    details = ex.value.details
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert math.isclose(details["delta_time"], 0.0040651)
+    assert details["system_time"] == 0
+    assert details["rate"] == 2460
+    assert details["rxn_index"] == 0
+    assert details["previous_function"] == "_validate_increment"
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+      The tentative time step (0.0040651) would lead to a NEGATIVE concentration in the species `A` from the reaction `A + B <-> C` (rxn # 0)
+      Baseline concentration value of `A` : 10 at system time 0; requested change (NOT carried out): -10.0001"""
+
+
+
+    rxns.clear_reactions_data()       # Re-start with a blank slate of reactions
+    # No change to index
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2}
+
+    # A <-> B and X <-> Y, both with mass-action kinetics
+    rxns.add_reaction(reactants="A", products="B",
+                    reaction_model="mass action", kinetic_parameters={"kF": 300., "kR": 2.})
+    rxns.add_reaction(reactants="X", products="Y",
+                    reaction_model="mass action")       # Extraneous reaction that doesn't participate,
+                                                        # because the initial concentrations of X and Y are 0
+
+    with pytest.raises(Exception):
+        sim.set_system_conc([10., 50., 0, 0])       # Trying to set 4 values, but the updated index is 5 value
+
+     # Check the expanded index
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2, "X": 3, "Y": 4}
+
+    sim.set_system_conc([10., 50., 0, 0, 0])
+
+    # No change
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2, "X": 3, "Y": 4}
+
+    assert sim.get_conc_dict() == {"A": 10, "B": 50, "C": 0, "X": 0, "Y": 0}
+
+
+    result = sim.reaction_step_common_fixed_step(delta_time=0.002)
+    # 10 * 300 * .002 - 50 * 2 * .002 = 5.8
+    assert np.allclose(result, [-5.8,  5.8, 0,  0, 0])   # X and Y aren't affected by this reaction; hence, 0 change
+
+
+    # Add the reaction we saw earlier, A + B <-> C, and use different initial concentrations
+    rxns.add_reaction(reactants=["A" , "B"], products="C",
+                    reaction_model="mass action",
+                    kinetic_parameters={"kF": 5., "kR": 2.})
+    assert rxns.number_of_reactions() == 3
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2, "X": 3, "Y": 4}
+
+
+    sim.set_system_conc([10, 50, 20, 0, 0])
+    assert sim.get_conc_dict() == {"A": 10, "B": 50, "C": 20, "X": 0, "Y": 0}    # The reaction X <-> Y will continue to remain irrelevant
+
+    # We saw in earlier runs, with our initial concentrations, that
+    # over a delta_time=0.02, one reaction causes a change in [A] of -4.92,
+    # and the other a change of -5.8
+    # Individually, neither is problematic, given that [A] is initially 10,
+    # but combined (-10.72) they would make [A] negative!
+    with pytest.raises(ExcessiveTimeStepHard) as ex:
+        sim.reaction_step_common_fixed_step(delta_time=0.002)
+    details = ex.value.details
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert details["previous_function"] == "attempt_reaction_step"
+    assert math.isclose(details["delta_time"], 0.002)
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+      The tentative time step (0.002) would lead to a NEGATIVE concentration 
+      in one or more of the species (for instance `A`, of index 0), from the COMBINED reactions.
+      Baseline concentration values: [10 50 20  0  0] at system time 0; requested changes (NOT carried out): [-10.72   0.88   4.92   0.     0.  ]"""
+
 
 
 
@@ -1151,6 +1280,11 @@ def test_single_step_single_rxn_2():
     df_expected = pd.DataFrame(row, index=[0])
     assert compare_pandas(df_expected, df)
     """
+
+
+
+def test__fetch_concs_for_rnx():
+    pass    # TODO
 
 
 
