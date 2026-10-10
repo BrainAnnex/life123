@@ -81,7 +81,7 @@ class System1D:
         self.species_data = species_data      # Object of type "SpeciesRegistry", with info on the individual species
 
         #self.n_species = self.species_data.number_of_species()   # The number of (non-water) chemical species   TODO: turn into a method?
-        self.n_species = self.index_species.number_of_system_species()
+        self.n_species = self.index_species.number_of_mapped_species()
 
         assert self.n_species >= 1, \
             "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
@@ -1517,12 +1517,12 @@ class BioSim1D(System1D):
             # TODO: maybe drop this requirement?  And then set it later on?
 
         if not species_data:
-            species_data = reaction_handler.species_data
+            species_data = reaction_handler.species_registry
 
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(species_data=species_data, reactions=reactions)
+            self.reaction_dynamics = UniformCompartment(species_registry=species_data, reactions=reactions)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 

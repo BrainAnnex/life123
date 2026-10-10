@@ -435,11 +435,12 @@ class SpeciesRegistry:
 
     def assert_valid_species_index(self, index :int) -> None:
         """
-        Raise an Exception if the specified index (meant to identify a  species) isn't valid
+        Raise an Exception if the specified index (meant to identify a species) isn't valid
 
         :param index:  An integer that indexes the species of interest (numbering starts at 0)
         :return:       None
         """
+        # TODO: PHASE OUT - this belongs in species_index_map.py
         #TODO: this replaces assert_valid_chem_index()
         #TODO: pytest
         n_species = self.number_of_species()

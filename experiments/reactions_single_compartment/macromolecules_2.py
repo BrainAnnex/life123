@@ -58,7 +58,7 @@ chem1.describe_reactions()
 
 # %%
 # Set the initial concentrations of all the chemicals
-dynamics1 = UniformCompartment(species_data=chem1, preset="fast")
+dynamics1 = UniformCompartment(species_registry=chem1, preset="fast")
 
 dynamics1.set_conc(conc={"A": 100., "B": 20.},
                   snapshot=True)
@@ -135,7 +135,7 @@ chem2.describe_reactions()
 # %%
 # Set the initial concentrations of all the chemicals, including the macromolecule
 
-dynamics2 = UniformCompartment(species_data=chem2, preset="fast")
+dynamics2 = UniformCompartment(species_registry=chem2, preset="fast")
 dynamics2.set_conc(conc={"A": 100., "B": 20.},
                   snapshot=True)      # The macromolecule ligand L is absent
 

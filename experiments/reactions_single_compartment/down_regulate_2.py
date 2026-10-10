@@ -63,7 +63,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data, preset="fast")
+dynamics = UniformCompartment(species_registry=chem_data, preset="fast")
 dynamics.set_conc(conc={"A": 5., "B": 100.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
@@ -110,7 +110,7 @@ dynamics.is_in_equilibrium()
 # # 2. Now, let's suddenly increase [A]
 
 # %%
-dynamics.set_single_conc(species_name="A", conc=40., snapshot=True)
+dynamics.set_single_conc(species_id="A", conc=40., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -146,7 +146,7 @@ dynamics.is_in_equilibrium()
 # # 3. Let's again suddenly increase [A]
 
 # %%
-dynamics.set_single_conc(species_name="A", conc=30., snapshot=True)
+dynamics.set_single_conc(species_id="A", conc=30., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -183,7 +183,7 @@ dynamics.is_in_equilibrium(tolerance=2)
 # Let's try it:
 
 # %%
-dynamics.set_single_conc(species_name="A", conc=0., snapshot=True)   # Completely eliminate A
+dynamics.set_single_conc(species_id="A", conc=0., snapshot=True)   # Completely eliminate A
 dynamics.describe_state()
 
 # %%

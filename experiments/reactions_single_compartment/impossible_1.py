@@ -93,7 +93,7 @@ initial_conc = {"A": 100.}
 initial_conc
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data)
+dynamics = UniformCompartment(species_registry=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 

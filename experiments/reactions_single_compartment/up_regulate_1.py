@@ -57,7 +57,7 @@ GraphicLog.config(filename=log_file,
 chem_data = SpeciesRegistry(ids=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
 
 # %%
-uc = UniformCompartment(species_data=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
+uc = UniformCompartment(species_registry=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
 
 # %%
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
@@ -110,7 +110,7 @@ uc.is_in_equilibrium()
 # # STEP 2. Now, let's suddenly increase [A]
 
 # %%
-uc.set_single_conc(species_name="A", conc=50.)
+uc.set_single_conc(species_id="A", conc=50.)
 uc.describe_state()
 
 # %%
@@ -150,7 +150,7 @@ uc.is_in_equilibrium()
 # # STEP 3.  Let's again suddenly increase [A]
 
 # %%
-uc.set_single_conc(species_name="A", conc=30.)
+uc.set_single_conc(species_id="A", conc=30.)
 uc.describe_state()
 
 # %%

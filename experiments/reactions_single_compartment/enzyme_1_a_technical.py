@@ -93,7 +93,7 @@ chem_data.all_chemicals()
 
 # %%
 # Here we use the "slower" preset for the variable steps, a very conservative option prioritizing accuracy over speed
-uc = UniformCompartment(species_data=chem_data, preset="slower")
+uc = UniformCompartment(species_registry=chem_data, preset="slower")
 
 # %% [markdown]
 # ### Here's where we start to diverge from experiment `enzyme_1_a` ...

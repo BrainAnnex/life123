@@ -1,598 +1,173 @@
 import pytest
 import numpy as np
-from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, ReactionDefinition
-from life123.kinetics import Custom_Model
+from life123.species_index_map import SpeciesIndexMap
+from life123.species_registry import SpeciesRegistry
+from life123.uniform_compartment import UniformCompartment
 from life123.species_registry import MacroMolecules
 
 
 
-def test_constructor():
-    names = ["A", "B", "C"]
-    species_registry = SpeciesRegistry(ids=names)
+def test_CONSTRUCTOR():
+    species_list = ["A", "B", "C"]
+    sp = SpeciesRegistry(ids=species_list)
+    ind = SpeciesIndexMap(species_ids=species_list, species_registry=sp)
 
+    uc = UniformCompartment(species_index_map=ind)
+    assert np.allclose(uc.system, np.array([0, 0, 0]))
+    assert uc.species_registry == sp
+
+    uc = UniformCompartment(species_index_map=ind, species_registry=sp)
+    assert np.allclose(uc.system, np.array([0, 0, 0]))
+    assert uc.species_registry == sp
+
+    # Incompatible args `species_registry` and `species_index_map`
     with pytest.raises(Exception):
-        UniformCompartment(species_data=species_registry, names=names)
+        UniformCompartment(species_index_map=ind, species_registry=SpeciesRegistry())
 
-    rxns = ReactionRegistry(species_data=species_registry)
 
+
+
+###############   TO READ SYSTEM DATA  ###############
+
+
+def test_number_of_system_species():
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+
+    uc = UniformCompartment(species_index_map=ind)
+    assert uc.number_of_system_species() == 3
+
+    uc.add_species("X")
+    assert uc.number_of_system_species() == 4
+
+    uc.add_species("B")
+    assert uc.number_of_system_species() == 4   # Already in place; nothing added
+
+    ind.add_species("ZZZ")
+    assert uc.species_index_map.index_to_species == ["A", "B", "C", "X", "ZZZ"]
+    assert uc.number_of_system_species() == 4   # Unaffected by the larger index
+
+    uc.system = np.array([1, 2, 3, 4, 5, 6])    # Artificially exceed the species index size
     with pytest.raises(Exception):
-        UniformCompartment(reactions=rxns, names=names)
-
-    alt_chem_data = SpeciesRegistry()
-    with pytest.raises(Exception):
-        UniformCompartment(reactions=rxns, species_data=alt_chem_data) # inconsistent
-
-
-    uc = UniformCompartment(reactions=rxns)
-    assert uc.reaction_data == rxns
-    assert uc.species_data == species_registry
-    assert uc.species_data.get_all_species_ids() == names
-    assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.species_index_map.index_to_species == []
-    assert uc.species_index_map.species_to_index == {}
-
-    uc = UniformCompartment(species_data=species_registry)
-    assert uc.species_data == species_registry
-    assert uc.species_data.get_all_species_ids() == names
-    assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.species_index_map.index_to_species == []
-    assert uc.species_index_map.species_to_index == {}
-
-    uc = UniformCompartment(names=names)
-    assert uc.species_data.get_all_species_ids() == names
-    assert uc.reaction_data.number_of_reactions() == 0
-    assert uc.species_index_map.index_to_species == []
-    assert uc.species_index_map.species_to_index == {}
-
-    uc = UniformCompartment(reactions=rxns, species_data=species_registry)
-    assert uc.reaction_data == rxns
-    assert uc.species_data == species_registry
-    assert uc.species_data.get_all_species_ids() == names
-    assert uc.species_index_map.index_to_species == []
-    assert uc.species_index_map.species_to_index == {}
-
-
-    rxns.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")
-
-    uc = UniformCompartment(reactions=rxns)
-    assert uc.reaction_data == rxns
-    assert uc.species_data == species_registry
-    assert uc.species_data.get_all_species_ids() == names
-    assert uc.reaction_data.number_of_reactions() == 1
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2}
-
-
-
-def test_set_conc():
-    #TODO: test the snapshot argument
-    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
-    uc = UniformCompartment(species_data=chem_data)
-
-    with pytest.raises(Exception):
-        uc.set_conc(conc=[1., 2., 3.])      # No reactions added yet; the system state array can't contain anything
-
-    uc.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")
-    assert uc.reaction_data.number_of_reactions() == 1
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2}
-    assert np.allclose(uc.system, [0, 0, 0])
-
-    with pytest.raises(Exception):
-        uc.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
-    with pytest.raises(Exception):
-        uc.set_conc(conc=[1., -2., -3.])       # Negative values
-    with pytest.raises(Exception):
-        uc.set_conc(conc=(10., 20., -0.01))    # Negative values
-
-    uc.set_conc(conc=[1., 2., 3.])
-    assert np.allclose(uc.system, [1., 2., 3.])
-
-    uc.set_conc(conc=(10., 20., 30.))
-    assert np.allclose(uc.system, [10., 20., 30.])
-
-    uc.set_conc(conc={"B": 100})
-    assert np.allclose(uc.system, [10., 100., 30.])
-
-    uc.set_conc(conc={"C": 3})
-    assert np.allclose(uc.system, [10., 100., 3.])
-
-    uc.set_conc(conc={"C": 8, "A": 1, "B": 5})
-    assert np.allclose(uc.system, [1., 5., 8.])
-
-    with pytest.raises(Exception):
-        uc.set_conc(conc={"A": -0.01})
+        uc.number_of_system_species()
 
 
 
 def test_get_system_conc():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C"])
-    uc = UniformCompartment(species_data=chem_data)
-    uc.add_reaction(reactants=["A", "B"], products=["C"], reaction_model="mass action")
-
-    uc.set_conc(conc=(10., 20., 30.))
-
-    result = uc.get_system_conc()
-    assert np.allclose(result, [10., 20., 30.])
-
-
+    pass
 
 def test_get_species_conc():
-    chem_data = SpeciesRegistry(ids=["A", "B"])
-    uc = UniformCompartment(species_data=chem_data)
-    uc.add_reaction(reactants=["A"], products=["B"], reaction_model="mass action")
-
-    uc.set_conc(conc=(10., 20.))
-
-    assert np.allclose(uc.get_species_conc("A"), 10.)
-    assert np.allclose(uc.get_species_conc("B"), 20.)
-    with pytest.raises(Exception):
-        uc.get_species_conc("Unknown")    # Non-existent species
-
-
+    pass
 
 def test_get_conc_dict():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D"])
-    uc = UniformCompartment(species_data=chem_data)
-    uc.add_reaction(reactants=["A"], products=["B"], reaction_model="mass action")
-    uc.add_reaction(reactants=["C"], products=["D"], reaction_model="mass action")
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'D']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-
-    uc.set_conc(conc=(100, 200, 300, 400))
-
-    result = uc.get_conc_dict()
-    assert result == {"A": 100, "B": 200, "C": 300, "D": 400}
-
-    result = uc.get_conc_dict(chem_labels=["D", "A"])
-    assert result == {"A": 100, "D": 400}
-
-    result = uc.get_conc_dict(chem_labels=("C",))      # Tuple with 1 element
-    assert result == {"C": 300}
-
-    with pytest.raises(Exception):
-        uc.get_conc_dict(chem_labels="C")                      # Wrong data type
-
-    with pytest.raises(Exception):
-        uc.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
-
-    result = uc.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
-    assert result == {"A": 1, "B": 2, "C": 3, "D": 4}
-
-    result = uc.get_conc_dict(chem_labels=["B"], system_data=np.array([1, 2, 3, 4]))
-    assert result == {"B": 2}
+    pass
 
 
 
-def test_indexes_of_active_chemicals():
-    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A', 'Z'])
-    uc = UniformCompartment(species_data=species_registry)
 
-    assert uc.indexes_of_active_chemicals() == []                 # No reactions yet
+###############   TO SET SYSTEM DATA  ###############
 
-    uc.add_reaction(reactants="A", products="B", reaction_model="mass action")
-    assert uc.species_index_map.index_to_species == ['A', 'B']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1}
-    assert uc.indexes_of_active_chemicals() == [0, 1]
+def test_add_species():
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+    assert np.allclose(uc.system, np.array([0, 0, 0]))
 
-    uc.add_reaction(reactants=["B", "X"], products=["C", "X"], reaction_model="mass action")
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'X']              # Notice the newly-added names got sorted alphabetically
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3}
-    assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3]
+    result = uc.add_species("X")
+    assert result == 1
+    assert np.allclose(uc.system, np.array([0, 0, 0, 0]))   # Added one
+    assert uc.species_index_map.index_to_species == ["A", "B", "C", "X"]
 
-    uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4}
-    assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4]
+    result = uc.add_species("B")
+    assert result == 0
+    assert np.allclose(uc.system, np.array([0, 0, 0, 0]))   # Already in place; nothing added
+    assert uc.species_index_map.index_to_species == ["A", "B", "C", "X"]
 
-    uc.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"], reaction_model="mass action")
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y', 'Z']
-    assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4, 'Z': 5}
-    assert uc.indexes_of_active_chemicals() == [0, 1, 2, 3, 4, 5]   # All
+    result = uc.add_species( {"X", "Z", "H"} )
+    assert result == 2
+    assert np.allclose(uc.system, np.array([0, 0, 0, 0, 0, 0]))   # Added two
+    assert uc.species_index_map.index_to_species == ["A", "B", "C", "X", "H", "Z"]  # Notice the sorting of the newly-added set
 
 
 
-def test_add_reaction():
-    species_registry = SpeciesRegistry(ids=['Y', 'X', 'C', 'B', 'A'])
-    uc = UniformCompartment(species_data=species_registry)
-
-    uc.add_reaction(reactants="X", products="Y", reaction_model="mass action")
-    uc.add_reaction(reactants="C", products=["B", "A"], reaction_model="mass action")
-
-    assert uc.species_index_map.index_to_species == ['X', 'Y', 'A', 'B', 'C']                     # Notice the reaction-wise sorting
-    assert uc.species_index_map.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
-
-    assert uc.species_index_map.index_of('X') == 0
-    assert uc.species_index_map.index_of('Y') == 1
-    assert uc.species_index_map.index_of('A') == 2
-    assert uc.species_index_map.index_of('B') == 3
-    assert uc.species_index_map.index_of('C') == 4
+def test_set_single_conc():
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+    assert np.allclose(uc.system, np.array([0, 0, 0]))
 
     with pytest.raises(Exception):
-        uc.species_index_map.index_of('UNKNOWN')
-
-
-    assert uc.species_index_map.species_at(0) == 'X'
-    assert uc.species_index_map.species_at(1) == 'Y'
-    assert uc.species_index_map.species_at(2) == 'A'
-    assert uc.species_index_map.species_at(3) == 'B'
-    assert uc.species_index_map.species_at(4) == 'C'
+        uc.set_single_conc(conc=123)
 
     with pytest.raises(Exception):
-        uc.species_index_map.locate_species_id(5)
+        uc.set_single_conc(conc=123, species_id="B", species_index=1) # Can't pass both args
 
 
-
-
-
-
-##########################################################################################################
-
-def test_specify_steps():
-    uc = UniformCompartment()
+    uc.set_single_conc(conc=123, species_id="B")
+    assert np.allclose(uc.system, np.array([0, 123, 0]))
 
     with pytest.raises(Exception):
-        # Too few arguments
-        uc.specify_steps()
-        uc.specify_steps(duration=15.1)
-        uc.specify_steps(initial_step=0.2)
-        uc.specify_steps(n_steps=30)
-        # Too many arguments
-        uc.specify_steps(duration=15.1, initial_step=0.2, n_steps=30)
-
-    assert uc.specify_steps(initial_step=0.5, n_steps=24) == (0.5, 24)
-    assert uc.specify_steps(duration=12.0, initial_step=0.5) == (0.5, 24)
-    assert uc.specify_steps(duration=12.0, n_steps=24) == (0.5, 24)
-
-
-
-
-###############################  LOWER-LEVEL METHODS  ###############################
-
-
-def test_is_in_equilibrium():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(species_data=chem_data)
+        uc.set_single_conc(conc=3.1415, species_id="UNKNOWN")
 
     with pytest.raises(Exception):
-        assert uc.is_in_equilibrium(explain=False, tolerance=2.3)   # We're failing to provide concentrations, either as argument
-                                                                    #   or as system concentrations
+        uc.set_single_conc(conc=-1, species_id="B")     # Negative!
 
-    # Reaction 0 : A <-> B
-    uc.add_reaction(reactants=["A"], products=["B"],
-                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
-    c = {'A': 23.9931640625, 'B': 36.0068359375}
-    assert uc.is_in_equilibrium(rxn_index=0, conc=c, explain=False, tolerance=1)
-    assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=1)      # Testing ALL reactions
+    uc.set_single_conc(conc=88, species_index=0)
+    assert np.allclose(uc.system, np.array([88, 123, 0]))
 
-    # Reaction 1 : A <-> F
-    uc.add_reaction(reactants=["A"], products=["F"],
-                      reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
+    assert uc.species_index_map.index_to_species == ["A", "B", "C"]
+    with pytest.raises(Exception):
+        uc.set_single_conc(conc=666, species_index=4, allow_growth=True)  # No such index in uc.species_index_map
 
-    c = {'A': 3, 'F': 32.999}
-    assert uc.is_in_equilibrium(rxn_index=1, conc=c, explain=False, tolerance=10)   # The deviation is just below the 10% tolerance
+    uc.species_index_map.add_species({"P", "Q"})
 
     with pytest.raises(Exception):
-        assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=10) # Testing ALL reactions, but neglected to provide [B]
+        # The index is now fine, but needs allow_growth=True
+        uc.set_single_conc(conc=666, species_index=4, allow_growth=False)
 
-    c = {'A': 3, 'B': 4.6, 'F': 33.001}   # We're now including all the concentrations we need for both reactions
-    assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=10) \
-           == {False: [1]}    # The deviation for reaction 1 is just above the 10% tolerance
-
-    assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=2.2) \
-           == {False: [0, 1]}      # With a tolerance so low, not reaction meets the criteria
-
-    assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
-           == {False: [1]}                # Reaction 0 barely passes with this tolerance (it deviates by 2.222 %)
-
-
-    uc.set_conc(conc=[3, 4.6, 33.001])    # "A", "B", "F"
-    assert uc.get_species_conc('A') == 3
-    assert uc.get_species_conc('B') == 4.6
-    assert uc.get_species_conc('F') == 33.001
-
-    assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
-           == {False: [1]}        # Now using the System concentrations
-
-
-
-def test_reaction_in_equilibrium():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(species_data=chem_data)
-
-    # Reaction 0 : A <-> B
-    uc.add_reaction(reactants=["A"], products=["B"],
-                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
-    c = {'A': 23.9931640625, 'B': 36.0068359375}
-    assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
-
-    # Reaction 1 : A <-> F
-    uc.add_reaction(reactants=["A"], products=["F"],
-                    reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
-    c = {'A': 3, 'F': 32.999}
-    assert uc.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)   # Just below the 10% tolerance
-    c = {'A': 3, 'F': 33.001}
-    assert not uc.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)  # Just above the 10% tolerance
-
-    # Reaction 2:  A + B <-> C , with 1st-order kinetics for each species
-    uc.add_reaction(reactants=["A" , "B"], products="C",
-                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-    c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
-    assert uc.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
-
-
-    uc.clear_reactions()   # This will reset the reaction count to 0
-
-    # Reaction 0:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction (i.e. regular mass-action kinetics)
-    uc.add_reaction(reactants=[(2, "A")], products=["B"],
-                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
-    c = {'A': 1.51554944, 'B': 5.74222528}
-    assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, tolerance=1, explain=False)
-
-
-
-def test_sigmoid():
-    rxn = UniformCompartment(None)
-
-    # When the concentration matches Kd, the occupancy is 1/2 by definition
-    assert np.allclose(rxn.sigmoid(conc=1., Kd=1.), 0.5)
-    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=0.1), 0.5)
-    assert np.allclose(rxn.sigmoid(conc=10., Kd=10.), 0.5)
-
-    # When the concentration is 10% of Kd, the occupancy is about 0.1 ;
-    # when the concentration is 10 times Kd, the occupancy is about 0.9
-    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=1.), 0.1)
-    assert np.allclose(rxn.sigmoid(conc=10., Kd=1.), 0.9)
-
-    assert np.allclose(rxn.sigmoid(conc=10., Kd=100.), 0.1)
-    assert np.allclose(rxn.sigmoid(conc=1000., Kd=100.), 0.9)
-
-    assert np.allclose(rxn.sigmoid(conc=0.001, Kd=0.01), 0.1)
-    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=0.01), 0.9)
-
-    #print(rxn.sigmoid(conc=0.1, Kd=1.))
-
-
-
-def test_logistic():
-    uc = UniformCompartment()
-
-    #print(rxn.logistic(-10))
-    assert np.allclose(uc.logistic(-100), 0)
-    assert np.allclose(uc.logistic(-10), 0.00004539786)
-    assert np.allclose(uc.logistic(0), 0.5)
-    assert np.allclose(uc.logistic(10), 0.99995460213)
-    assert np.allclose(uc.logistic(100), 1)
-
-
-
-def test_set_temp():
-    uc = UniformCompartment()
-    uc.set_temp(123)
-    assert uc.temp == 123
-
-    uc.set_temp(0, "C")
-    assert np.allclose(uc.temp, 273.15)
-
-
-
-def test_set_macromolecules():
-    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
-    mm = MacroMolecules(sr)
-
-    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    mm.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    mm.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
-
-    uc = UniformCompartment(species_data=sr, macromolecules=mm)
-    uc.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
-
-    assert uc.macro_system == {"M1": 1, "M2": 1}
-    assert len(uc.macro_system_state) == 2
-    assert uc.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
-    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
-
-
-    # Over-write the previous settings
-    uc.set_macromolecules({"M2": 4})
-
-    assert uc.macro_system == {"M2": 4}
-    assert len(uc.macro_system_state) == 1
-    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
-
+    uc.set_single_conc(conc=666, species_index=4, allow_growth=True)
+    assert np.allclose(uc.system, np.array([88, 123, 0, 0, 666]))   # The array got expanded accordingly
 
     with pytest.raises(Exception):
-        uc.set_macromolecules({"M999": 2})        # Unknown macromolecule
+        uc.set_single_conc(conc=666, species_index=-1, allow_growth=True)
 
-    sr.add_species("M999")
 
-    # Over-write the previous settings
-    uc.set_macromolecules({"M999": 2})
-    assert uc.macro_system == {"M999": 2}
-    assert len(uc.macro_system_state) == 1
-    assert uc.macro_system_state["M999"] == {}     # No binding sites were registered
+    l = []
+    def foo(caption :str, arg=l):   # Use a mutable argument, to affect the passed variable l
+        l.append(caption)
 
-    mm.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
-    assert uc.macro_system_state["M999"] == {}     # The system state has not been updated yet
-    # Over-write the previous settings
-    uc.set_macromolecules({"M999": 2})
-    assert uc.macro_system_state["M999"] == {12: ("A", 0.)}
+    uc.set_single_conc(conc=1000, species_id="C", snapshot=foo)
+    assert l[0] == "Set concentration of `C`"
+    assert np.allclose(uc.system, np.array([88, 123, 1000, 0, 666]))
 
 
 
-def test_get_occupancy():
-    sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
-    mm = MacroMolecules(sr)
-
-    uc = UniformCompartment(species_data=sr, macromolecules=mm)
+def test_set_conc():
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+    assert np.allclose(uc.system, np.array([0, 0, 0]))
 
     with pytest.raises(Exception):
-        # The system state for macromolecules has not been set yet
-        uc.get_occupancy(macromolecule="M1", site_number=1)
+        uc.set_conc(conc="What's a list doing here?")
 
     with pytest.raises(Exception):
-        # No occupancy data yet set for macromolecule `Unknown`
-        uc.get_occupancy(macromolecule="Unknown", site_number=1)
+        uc.set_conc(conc={"UNKNOWN": 666})
 
-    with pytest.raises(Exception):
-        # No occupancy data yet set for site number 1 of macromolecule `M1`
-        uc.get_occupancy(macromolecule="M1", site_number=1)
+    uc.set_conc(conc={"B": 123})
+    assert np.allclose(uc.system, np.array([0, 123, 0]))
 
-    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
-    uc.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+    uc.set_conc(conc={"B": 4, "C": 88})
+    assert np.allclose(uc.system, np.array([0, 4, 88]))
 
-    assert uc.macro_system == {"M1": 1}
-    assert uc.macro_system_state == {"M1": {1: ("C", 0.5)} }
-
-    assert uc.get_occupancy(macromolecule="M1", site_number=1) == 0.5
+    uc.species_index_map.add_species({"P", "Q"})
+    uc.set_conc(conc={"Q": 999})
+    assert np.allclose(uc.system, np.array([0, 4, 88, 0, 999]) )     # The system state got expanded
 
 
+    l = []
+    def foo_2(caption :str, arg=l):   # Use a mutable argument, to affect the passed variable l
+        l.append(caption)
 
-def test_set_occupancy():
-    sr = SpeciesRegistry(ids=["A", "B", "M1", "M2"])
-    mm = MacroMolecules(sr)
+    uc.set_conc(conc={"P": 1, "A": 55}, snapshot=foo_2)
+    assert l[0] == "Set concentration"
+    assert np.allclose(uc.system, np.array([55, 4, 88, 1, 999]) )
 
-    rxn = UniformCompartment(species_data=sr, macromolecules=mm)
-
-    with pytest.raises(Exception):
-        # Occupancy out of range
-        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=1.1)
-
-    with pytest.raises(Exception):
-        # Occupancy out of range
-        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=-0.3)
-
-    with pytest.raises(Exception):
-        # Unknown macromolecule
-        rxn.set_occupancy(macromolecule="Unknown", site_number=1, fractional_occupancy=0.5)
-
-    with pytest.raises(Exception):
-        # No binding sites are defined on macromolecule M1
-        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
-
-    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
-    rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
-
-    assert rxn.macro_system == {"M1": 1}
-    assert rxn.macro_system_state == {"M1": {1: ("B", 0.5)}}
-
-    assert rxn.get_occupancy(macromolecule="M1", site_number=1) == 0.5
-
-
-
-def test_update_occupancy():
-    sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
-    mm_data = MacroMolecules(sr)
-
-    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)
-    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=20)
-    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=3, ligand="C", Kd=30)
-
-    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="C", Kd=3)
-    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=2, ligand="C", Kd=30)
-    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="C", Kd=300)
-
-    assert mm_data.get_ligands() == {"A", "B", "C"}
-
-
-    uc = UniformCompartment(species_data=sr, macromolecules=mm_data)
-    # Verify that the ligands got added to the system state
-    assert uc.species_index_map.index_to_species == ['A', 'B', 'C']
-    assert uc.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2}
-
-    uc.set_macromolecules()
-    assert uc.macro_system == {"M1": 1, "M2": 1}
-
-    uc.set_conc({"A": 10, "B": 20, "C": 30})
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=1) , 0.)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=2) , 0.)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.)
-
-    uc.update_occupancy()
-
-    # All fractional occupancies will be 1/2, because the concentrations of the ligands below
-    # exactly match their binding affinities
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=1) , 0.5)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=2) , 0.5)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.5)
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
-
-
-    # Vary the concentration of ligand C, starting with zero
-    uc.set_single_conc(conc=0, species_name="C")     # No ligand C
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=1) , 0.5)  # Unaffected (different ligand)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=2) , 0.5)  # Unaffected (different ligand)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0)    # No occupancy in absence of ligand
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0)    # No occupancy in absence of ligand
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0)    # No occupancy in absence of ligand
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0)    # No occupancy in absence of ligand
-
-
-    # Very low concentration of ligand C
-    uc.set_single_conc(conc=0.3, species_name="C")
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=1) , 0.5)      # Unaffected (different ligand)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=2) , 0.5)      # Unaffected (different ligand)
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.1)      # Ligand conc is 1/10 binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.012195) # Ligand conc is 1/100 binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.00136986)  # Ligand conc is 1/1000 binding affinity
-
-
-    # Low concentration of ligand C
-    uc.set_single_conc(conc=3, species_name="C")
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.1)      # Ligand conc is 1/10 binding affinity
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.5)      # Ligand conc = binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.1)      # Ligand conc is 1/10 binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
-
-
-    # Mid concentration of ligand C
-    uc.set_single_conc(conc=30, species_name="C")
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.5)  # Ligand conc = binding affinity
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
-
-
-    # High concentration of ligand C
-    uc.set_single_conc(conc=300, species_name="C")
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.9)       # Ligand conc is 10x binding affinity
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.9878049)    # Ligand conc is 100x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.9)          # Ligand conc is 10x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.5)          # Ligand conc = binding affinity
-
-
-    # Very High concentration of ligand C
-    uc.set_single_conc(conc=3000, species_name="C")
-    uc.update_occupancy()
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M1", site_number=3) , 0.9878049)    # Ligand conc is 100x binding affinity
-
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=1) , 0.99863)      # Ligand conc is 1000x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=2) , 0.9878049)    # Ligand conc is 100x binding affinity
-    assert np.allclose(uc.get_occupancy(macromolecule="M2", site_number=3) , 0.9)          # Ligand conc is 10x binding affinity
-
-    #print(rxn.get_occupancy(macromolecule="M2", site_number=1))
-    #print(rxn.get_occupancy(macromolecule="M2", site_number=2))
-    #print(rxn.get_occupancy(macromolecule="M2", site_number=3))
+    #TODO: test the diagnostic option

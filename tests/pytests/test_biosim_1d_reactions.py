@@ -15,7 +15,7 @@ def test_initialization():
     bio.reactions.add_reaction(reactants=["A", "B"], products="C",
                                reaction_model="mass action", kinetic_parameters={"kF": 8., "kR": 2.})
 
-    assert bio.reaction_dynamics.species_data == chem_data
+    assert bio.reaction_dynamics.species_registry == chem_data
 
 
 

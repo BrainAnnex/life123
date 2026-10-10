@@ -13,7 +13,7 @@ def test_constructor():
     assert type(rd0.index_species) == SpeciesIndexMap
 
     assert rd0.species_registry.get_all_species_ids() == []
-    assert rd0.index_species.number_of_system_species() == 0
+    assert rd0.index_species.number_of_mapped_species() == 0
 
 
     sr = SpeciesRegistry(n_species=3)
@@ -24,4 +24,4 @@ def test_constructor():
     assert type(rd1.index_species) == SpeciesIndexMap
 
     assert rd1.species_registry.get_all_species_ids() == ["A", "B", "C"]
-    assert rd1.index_species.number_of_system_species() == 3
+    assert rd1.index_species.number_of_mapped_species() == 3

@@ -29,7 +29,7 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E"],
                             diffusion_rate=[0.1, 0.2, 0.3, 0.4, 0.5])
 
-dynamics = UniformCompartment(species_data=chem_data)
+dynamics = UniformCompartment(species_registry=chem_data)
 
 
 # Reaction A + 2B <-> C , with 2nd-order kinetics in B

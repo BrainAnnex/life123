@@ -58,7 +58,7 @@ species_data.as_dataframe()
 
 # %%
 # Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
-uc = UniformCompartment(species_data=species_data, preset="mid")
+uc = UniformCompartment(species_registry=species_data, preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
 uc.add_reaction(reactants="A", products="B",

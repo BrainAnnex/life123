@@ -62,7 +62,7 @@ GraphicLog.config(filename=log_file,
 # Initialize the system.  NOTE: Diffusion not applicable (just 1 bin)
 chem_data = SpeciesRegistry(ids=["A", "B", "Y"], plot_color=['red', 'darkorange', 'green'])
 
-uc = UniformCompartment(species_data=chem_data)
+uc = UniformCompartment(species_registry=chem_data)
 
 
 # Reaction A + 2 B <-> Y , with 1st-order kinetics for all chemical species

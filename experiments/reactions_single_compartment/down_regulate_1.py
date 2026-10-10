@@ -206,7 +206,7 @@ species_data.as_dataframe()
 # Notice that the new color that we assigned for the species `S`, in the last plot, got saved with its species data
 
 # %%
-uc_new = UniformCompartment(species_data=species_data, preset="small_rel_change",
+uc_new = UniformCompartment(species_registry=species_data, preset="small_rel_change",
                             enable_diagnostics=True)
 
 # Reaction A <-> B (just as before)

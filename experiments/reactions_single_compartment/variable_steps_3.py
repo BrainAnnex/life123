@@ -73,7 +73,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data, preset=None)
+dynamics = UniformCompartment(species_registry=chem_data, preset=None)
 dynamics.set_conc(conc={"U": 50., "X": 100., "EXTRA 2": 55.,  "EXTRA 3": 100. })  # The EXTRA's are junk for testing
 dynamics.describe_state()
 
@@ -142,7 +142,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data, preset=None)
+dynamics = UniformCompartment(species_registry=chem_data, preset=None)
 dynamics.set_conc(conc={"U": 50., "X": 100., "E": 1. })
 dynamics.describe_state()
 

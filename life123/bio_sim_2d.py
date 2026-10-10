@@ -109,12 +109,12 @@ class BioSim2D:
         if chem_data:
             self.species_data = chem_data
         else:
-            self.species_data = reaction_handler.species_data
+            self.species_data = reaction_handler.species_registry
 
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(species_data=self.species_data)
+            self.reaction_dynamics = UniformCompartment(species_registry=self.species_data)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
@@ -140,7 +140,7 @@ class BioSim2D:
         self.reaction_dynamics.species_index_map = self.index_species
 
         #self.n_species = self.species_data.number_of_species()
-        self.n_species = self.index_species.number_of_system_species()
+        self.n_species = self.index_species.number_of_mapped_species()
 
         assert self.n_species >= 1, \
             "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"

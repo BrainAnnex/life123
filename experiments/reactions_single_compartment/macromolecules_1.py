@@ -98,7 +98,7 @@ aff.Kd
 # ## Start setting up the dynamical system
 
 # %%
-uc = UniformCompartment(species_data=sr, macromolecules=mm)
+uc = UniformCompartment(species_registry=sr, macromolecules=mm)
 
 # %%
 uc.set_macromolecules()      # By default, set counts to 1 for all the species that have binding-site data
@@ -156,7 +156,7 @@ uc.macromolecules.show_binding_affinities()        # Review the values we had gi
 # ### Adjust the concentration of one ligand, [A], and update all the fractional occupancies accordingly
 
 # %%
-uc.set_single_conc(conc=1000., species_name="A", snapshot=False)
+uc.set_single_conc(conc=1000., species_id="A", snapshot=False)
 
 # %%
 uc.update_occupancy()
@@ -192,7 +192,7 @@ print(log_values)
 # %%
 # Set [A] to each of the above values in turn, and determine/store the applicable fractional occupancies (for the sites where A binds)
 for A_conc in log_values:
-    uc.set_single_conc(conc=A_conc, species_name="A", snapshot=False)
+    uc.set_single_conc(conc=A_conc, species_id="A", snapshot=False)
     uc.update_occupancy()
     history.store(A_conc, {"M1 site 3":  uc.get_occupancy(macromolecule="M1", site_number=3), 
                            "M1 site 15": uc.get_occupancy(macromolecule="M1", site_number=15), 

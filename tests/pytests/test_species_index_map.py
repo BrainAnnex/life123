@@ -1,5 +1,6 @@
 import pytest
 from life123.species_index_map import SpeciesIndexMap
+from life123.species_registry import SpeciesRegistry
 
 
 def test_CONSTRUCTOR():
@@ -9,18 +10,28 @@ def test_CONSTRUCTOR():
     assert ind.species_to_index == {}
 
 
+    sp = SpeciesRegistry()
+    with pytest.raises(Exception):
+        SpeciesIndexMap(species_ids={"A"}, species_registry=sp)     # Unknown species id
 
-def test_number_of_system_species():
+    sp.add_species("A")
+    ind = SpeciesIndexMap(species_ids={"A"}, species_registry=sp)
+    assert ind.index_to_species == ["A"]
+    assert ind.species_to_index == {"A": 0}
+
+
+
+def test_number_of_mapped_species():
     ind = SpeciesIndexMap()
 
-    assert ind.number_of_system_species() == 0
+    assert ind.number_of_mapped_species() == 0
 
     ind.add_species({"A"})
-    assert ind.number_of_system_species() == 1
+    assert ind.number_of_mapped_species() == 1
     assert len(ind.species_to_index) == 1
 
     ind.add_species(["X", "Y", "Z"])
-    assert ind.number_of_system_species() == 4
+    assert ind.number_of_mapped_species() == 4
     assert len(ind.species_to_index) == 4
     assert len(ind.species_to_index) == 4
 
@@ -58,7 +69,10 @@ def test_species_at():
     assert ind.species_at(2) == "Y"
 
     with pytest.raises(Exception):
-        assert ind.species_at(3)    # Out of range
+        ind.species_at(3)    # Out of range
+
+    with pytest.raises(Exception):
+        ind.species_at(-1)    # Out of range
 
 
 
@@ -71,13 +85,17 @@ def test_add_species():
     assert ind.index_to_species == ["A"]
     assert ind.species_to_index == {"A": 0}
 
-    ind.add_species(["Z", "H"])
-    assert ind.index_to_species == ["A", "H", "Z"]  # Notice the automatic sorting
+    ind.add_species({"Z", "H"})
+    assert ind.index_to_species == ["A", "H", "Z"]  # Notice the automatic sorting of the added set
     assert ind.species_to_index == {"A": 0, "H": 1, "Z": 2}
 
     ind.add_species( ("F", "E") )
-    assert ind.index_to_species == ["A", "H", "Z", "E", "F"]  # Notice the automatic group-wise sorting
-    assert ind.species_to_index == {"A": 0, "H": 1, "Z": 2, "E": 3, "F": 4}
+    assert ind.index_to_species == ["A", "H", "Z", "F", "E"]  # Notice that the specified tuple order is respected
+    assert ind.species_to_index == {"A": 0, "H": 1, "Z": 2, "F": 3, "E": 4}
+
+    ind.add_species( ("W", "C") )
+    assert ind.index_to_species == ["A", "H", "Z", "F", "E", "W", "C"]  # Notice that the specified tuple order is respected
+    assert ind.species_to_index == {"A": 0, "H": 1, "Z": 2, "F": 3, "E": 4, "W": 5, "C": 6}
 
 
 

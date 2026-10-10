@@ -1,17 +1,6 @@
-import math
 import numpy as np
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as pgo
 from life123.species_registry import SpeciesRegistry
-from life123.diagnostics import Diagnostics
-from life123.numerical import Numerical
-from life123.reaction_registry import ReactionRegistry
 from life123.species_index_map import SpeciesIndexMap
-from life123.history import HistoryUniformConcentration, HistoryReactionRate
-from life123.visualization.plotly_helper import PlotlyHelper
-
-from life123.reaction_simulator import ReactionSimulator
 
 
 
@@ -33,108 +22,54 @@ class UniformCompartment:
     that offer reaction-diffusion (BioSim1D, BioSim2D, BioSim3D)
     """
 
-    def __init__(self, reactions=None, species_data=None, names=None,
-                 enable_diagnostics=False, temp=298.15, macromolecules=None,
-                 species_index_map=None):
+    def __init__(self, species_index_map, species_registry=None, species_list=None, names=None,
+                 macromolecules=None, diagnostics=None):
         """
-        Note: AT MOST 1 of the following 3 arguments can be passed
+        Note: AT MOST 1 of the following 2 arguments can be passed
 
-        :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
-                                If passed, cannot pass either of the args `species_data` nor `names` (those are both part of the "ReactionRegistry" object);
-                                if not passed, the reactions can be added later, with calls to add_reaction()
-
-        :param species_data:[OPTIONAL 2] Object of type "SpeciesRegistry" (with data about the species).
+        :param species_registry:[OPTIONAL 1] Object of type "SpeciesRegistry" (with data about the species).
                                 If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
                                 nor `names` (names are contained in the `species_data` object)
 
-        :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species.
+        :param names:           [OPTIONAL 2] A single name, or list or tuple of names, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order.)
-                                If passed, cannot pass either of the args `reactions` nor `species_data` (both those object contain the chemical names)
+                                If passed, cannot pass `species_data` (both those object contain the chemical names)
 
-        :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
-                                        disabled by a call to pause_diagnostics();
-                                        if False (default), no action taken
-        :param temp:            [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
-        :param macromolecules:  [OPTIONAL] Object of class "Macromolecule"
+        :param macromolecules:      [OPTIONAL] Object of class "Macromolecule"
         :param species_index_map:   [OPTIONAL] Object of type "IndexSpecies"
         """
-        self.species_data = None    # Object of type "SpeciesRegistry" (with data about all the species)
+        self.species_registry = species_registry    # Object of type "SpeciesRegistry" (with data about all the species)
 
-        self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
-
-
-        if species_data and reactions:
-            assert reactions.get_species_data() == species_data, \
-                "UniformCompartment() instantiation: the argument `reactions` is based " \
-                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
-
-        if reactions is not None:
-            #assert species_data is None, \
-                #"UniformCompartment instantiation: Cannot pass both `species_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
-            assert names is None, \
-                "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
-            self.species_data = reactions.get_species_data()
-            self.reaction_data = reactions
-        else:           # reactions is None
-            if species_data is None:
-                self.species_data = SpeciesRegistry(ids=names)      # It's ok if names is None
-            else:
-                assert names is None,\
-                    "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
-                self.species_data = species_data
-
-            self.reaction_data = ReactionRegistry(species_data=self.species_data)
-
-        self._reaction_registry_version = self.reaction_data.version    # Used for "lazy synchronization",
-                                                                        # i.e. to check for changes externally made to the registry
+        self.species_index_map = species_index_map  # Indexes to reconcile the species id's
+                                                    # to their index position in the system state array
 
 
-
-        self.species_index_map = None   # Indexes to reconcile the species id's to their index position in the system state array
-
-        if species_index_map is not None:
-            # Index was passed by the calling module (which will be initiating it)
-            self.species_index_map = species_index_map
+        if self.species_registry is None:
+            self.species_registry = self.species_index_map.species_registry
         else:
-            # Index was NOT passed by the calling module
-            if reactions is not None:
-                # Assign an array index to all the species we're dealing with
-                all_species = reactions.get_species_in_any_reaction(sort=True)
-                self.species_index_map = SpeciesIndexMap(all_species)
-            else:
-                # We'll proceed independently, as a top-level module
-                self.species_index_map = SpeciesIndexMap()
+            # If both `species_registry` and `species_index_map` were passed, check for compatibility
+            if self.species_index_map.species_registry:
+                assert species_registry == self.species_index_map.species_registry,\
+                    "incompatibility between objects passed by arguments `species_registry` and `species_index_map`"
 
-            # Build the needed indexes, based on the reactions, and on macromolecules
-            self._synchronize_species()
+        """
+        if self.species_index_map is None:
+            self.species_index_map = SpeciesIndexMap()
 
+        if (species_list is not None) and (species_registry is None):
+            pass
+        """
 
+        system_state_size = self.species_index_map.number_of_mapped_species()
 
-
-        self.reaction_simulator = ReactionSimulator(uniform_compartment=self, species_index_map=self.species_index_map,
-                                                    reaction_registry=self.reaction_data, method="forward_euler",
-                                                    diagnostics_enabled=enable_diagnostics)       # Object of type "ReactionSimulator"
-
-
-        self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
-                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
-
-
-        self.system_time = 0.       # Global time of the system, from initialization
-                                    # TODO: being transferred to ReactionSimulator
-
-        # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the species
-        #       actually involved in this dynamic simulation
-        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
+        self.system = np.zeros(system_state_size, dtype='d')   # float64    SYSTEM STATE    TODO: maybe rename to "system_state
+                            # TODO: allow users to specify the type
+                            # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
                             # the array size is the total number of chemical species.
                             # Each entry is the concentration of a species whose id is indexed by the IndexSpecies module
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
-                            # TODO: consider switching to:  self.system = np.zeros(0, dtype='d')   # float64 
-
-        self.previous_system = None # Concentration data of all the species at the previous simulation step
-
 
 
         self.macromolecules = macromolecules    # Object of type "MacroMolecules"
@@ -154,53 +89,15 @@ class UniformCompartment:
 
         if macromolecules:
             ligands = macromolecules.get_ligands()     # Set of species id's
-            self._add_species_set(ligands)
-
-        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
-                                                                        # of (some of) the species concentrations:
-                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
-
-        self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
-                                        # Note that reactions natively supported that contain multiple elementary reactions (such as
-                                        #       enzymatic reactions) will have tuples of all the individual rates
-                                        # EXAMPLE: {0: 0.42, 1: (4.26, 6.2), 2: -3.7}
-
-        self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
-                                                                    # of (some of) the chemical reaction rates:
-                                                                    # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
-
-
-        # ***  FOR DIAGNOSTICS  ***
-
-        self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
-                                        #   EXAMPLE: [1, "my_ad_hoc_tag"] to invoke sections of code marked as 1 or "my_ad_hoc_tag"
-                                        #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
-
-
-        self.diagnostics = self.reaction_simulator.diagnostics
-        self.diagnostics_enabled = self.reaction_simulator.diagnostics_enabled
+            self.add_species(ligands)
 
 
 
+        # ***  FOR optional DIAGNOSTICS  ***
 
-    def _add_species_set(self, species_id_set :set[str]) -> None:
-        """
+        self.diagnostics = diagnostics
 
-        :param species_id_set:  Set of ID's of species to be added to the system state
-        :return:                None
-        """
-        number_added = self.species_index_map.add_species(species_id_set)
-        #print("number_added: ", number_added)
 
-        if number_added > 0:
-            # Expand the system state array for concentrations. TODO: do it for all the newly-added species at once
-            if self.system is None:
-                self.system = np.zeros(number_added, dtype='d') # float64      TODO: allow users to specify the type
-            else:
-                self.system = np.pad(self.system, (0, number_added))
-
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
 
 
 
@@ -208,9 +105,9 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                             ~   TO SET/READ SYSTEM DATA   ~                                   '''
+    '''                              ~   TO READ SYSTEM DATA   ~                                      '''
 
-    def ________TO_SET_AND_READ_DATA________(DIVIDER):
+    def ________TO_READ_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -221,139 +118,21 @@ class UniformCompartment:
 
         :return:    Object of type "SpeciesRegistry"
         """
-        return self.species_data
+        return self.species_registry
 
 
 
-    def set_conc(self, conc :list|tuple|dict, snapshot=True) -> None:
+    def number_of_system_species(self) -> int:
         """
-        Set the concentrations of some or all the chemicals
-
-        :param conc:    EITHER
-                            (1) a list or tuple of concentration values for ALL the registered species,
-                                in their array index order
-                            OR
-                            (2) a dict indexed by the species id, for some or all of the species of interest.
-                                Anything not specified will be set to zero.
-                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
-
-                        Note: any previous values will get over-written
-
-        :param snapshot:[OPTIONAL] If True (default), add to the history
-                            a snapshot of this state being set
-        :return:        None
-        """
-        # TODO: more validations, incl. of individual values being wrong data type
-        # TODO: also allow a Numpy array; make sure to do a copy() to it!
-
-        if type(conc) == list or type(conc) == tuple:
-            assert len(conc) == self.number_of_system_species(), \
-                f"UniformCompartment.set_conc(): when a list or tuple is passed as the argument `conc`, " \
-                f"its size must match the number of currently-registered species ({self.number_of_system_species()})"
-
-            assert min(conc) >= 0, \
-                f"UniformCompartment.set_conc(): values meant to be chemical concentrations cannot be negative " \
-                f"(such as the passed value {min(conc)})"
-
-            # This sets (or resets) the entire system state
-            self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
-
-
-        elif type(conc) == dict:
-            for name, conc_value in conc.items():
-                #print(f"******** species_name=`{name}` | conc={conc_value}")
-                self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
-
-        if snapshot:
-            self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
-
-        if self.diagnostics_enabled:
-            # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
-            system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
-                                                       caption="Set concentration")
-
-
-
-    def _synchronize_species(self) -> None:
-        """
-        Index all the species that participate in any of the reactions
-        in the reaction registry
-
+        Number of species being simulated (and kept in the system state)
         :return:
         """
-        for rxn in self.reaction_data.get_all_reactions():
-            # rxn is a "SimulationReaction" object
-            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
-            self._add_species_set(species_id_set)
+        number = len(self.system)
+        assert number <= self.species_index_map.number_of_mapped_species(), \
+            f"number_of_system_species(): the system size ({number}) " \
+            f"exceeds the number of species mapped in the species index ({self.species_index_map.number_of_mapped_species()})"
 
-
-    def _ensure_synchronized_with_reaction_registry(self) -> None:
-        """
-        For lazy synchronization with external mutation in the reaction registry
-
-        :return:
-        """
-        if self._reaction_registry_version != self.reaction_data.version:
-            #print("************OUT OF SYNCH DETECTED!")
-            self._synchronize_species()
-            self._reaction_registry_version = self.reaction_data.version
-
-
-
-    def set_single_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
-        """
-        Set the concentrations of 1 chemical
-        Note: if both species_index and species_name are provided, species_name is used     TODO: generate an error instead; and pytest this part
-
-        :param conc:            A non-negative number with the desired concentration value
-                                    of the chemical specified below.  (Any previous value will get over-written)
-        :param species_index:   [OPTIONAL] An integer that indexes the chemical of interest (numbering starts at 0)
-        :param species_name:    [OPTIONAL] A name for the chemical of interest.
-                                    If both species_index and species_name are provided, species_name is used
-                                    At least one of "species_index" and "species_name" must be specified
-        :param snapshot:        [OPTIONAL] boolean: if True, add to the history
-                                    a snapshot of this state being set.  Default: True
-        :return:                None
-        """
-        # Validate the arguments
-        assert conc >= 0, \
-            f"UniformCompartment.set_single_conc(): species concentrations cannot be negative (value passed: {conc})"
-
-        if species_name is not None:
-            self._ensure_synchronized_with_reaction_registry()
-            species_index = self.species_index_map.index_of(species_name)
-
-        elif species_index is not None:
-            self.species_data.assert_valid_species_index(species_index)
-        else:
-            raise Exception("UniformCompartment.set_single_conc(): at least one "
-                            "of the arguments `species_index` or `species_name` must be provided")
-
-
-        if self.system is None:
-            # Initialize the system state with all zero, if previously unset
-            self.system = np.zeros(self.number_of_system_species(), dtype='d')      # float64      TODO: allow users to specify the type
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
-
-
-        # If no array position already exists for the species whose concentration we're setting
-        if species_index >= len(self.system):
-            number_of_entries_to_add = species_index - len(self.system) + 1
-            self.system = np.pad(self.system, (0, number_of_entries_to_add))
-
-            if self.reaction_simulator:
-                self.reaction_simulator.system = self.system    # Re-align
-
-
-        self.system[species_index] = conc
-
-        if snapshot:
-            # Save this operation in the history (if enabled)
-            self.capture_conc_snapshot(caption=f"Set concentration of `{self.species_index_map.species_at(species_index)}`")
+        return number
 
 
 
@@ -426,229 +205,160 @@ class UniformCompartment:
 
 
 
-    def set_temp(self, temp :float, units="K") -> None:
-        """
-        Specify the temperature of the environment
 
-        :param temp:    Temperature value (or use None to unset)
-        :param units:   Either "K" for Kelvins (default) or "C" for Celsius;
-                            case-insensitive
+
+
+    #####################################################################################################
+
+    '''                             ~   TO SET SYSTEM DATA   ~                                   '''
+
+    def ________TO_SET_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def add_species(self, species_ids : str | set[str] | list[str] | tuple[str, ...]) -> int:
+        """
+        Add the requested species to the system state.
+
+        :param species_ids: String, set, list or tuple of the ID's of species whose indexing needs to be managed;
+                                no harm in also including species that are already managed (they will be ignored).
+                                If a set is passed, it will be sorted in alphabetical order;
+                                if you want a different specific order, pass a list or tuple in the order you want it
+                                (the order has only UX significance, for displays, etc)
+
+        :return:                The number of newly-managed species
+        """
+        number_added = self.species_index_map.add_species(species_ids)
+        #print("number_added: ", number_added)
+
+        if number_added > 0:
+            # Expand the system state array for concentrations
+            self.system = np.pad(self.system, (0, number_added))
+
+            #if self.reaction_simulator:
+            #    self.reaction_simulator.system = self.system    # Re-align
+
+        return number_added
+
+
+
+    def set_single_conc(self, conc, species_id=None, species_index=None,
+                        allow_growth=True, snapshot=None) -> None:
+        """
+        Set the concentrations of 1 species.
+
+        Note: if both `species_index` and `species_name` are provided,an Exception is raised
+
+        :param conc:            A non-negative number with the desired concentration value
+                                    of the chemical specified below.  (Any previous value will get over-written)
+        :param species_id:      [OPTIONAL] The id of the species of interest.
+        :param species_index:   [OPTIONAL] An integer that indexes the species of interest (numbering starts at 0)
+                                    If both `species_name` and `species_index` are provided, an Exception is raised.
+                                    At least one of `species_name` or `species_index` must be specified
+
+        :param allow_growth:    [OPTIONAL] Only applicable if `species_index` is specified.
+                                    If True (default), allow the system state to expand if species_index exceeds the system size
+        :param snapshot:        [OPTIONAL] A function that accepts an argument called "caption"
+        :return:                None
+        """
+        # Validate the arguments
+        assert conc >= 0, \
+            f"UniformCompartment.set_single_conc(): species concentrations cannot be negative (value passed: {conc})"
+
+        if species_id is not None:
+            assert species_index is None, \
+                "set_single_conc(): cannot pass both arguments `species_name` and `species_index`"
+
+            #self._ensure_synchronized_with_reaction_registry()
+            species_index = self.species_index_map.index_of(species_id)
+
+        elif species_index is not None:
+            # Validate the value
+            self.species_index_map.species_at(species_index)    # This will raise an IndexError if invalid
+
+        else:
+            raise Exception("UniformCompartment.set_single_conc(): at least one "
+                            "of the arguments `species_name` or `species_index` must be provided")
+
+
+        # If no array position already exists
+        # for the species whose concentration we're setting
+        if species_index >= len(self.system):
+            assert allow_growth, \
+                f"UniformCompartment.set_single_conc(): the given index ({species_index}) cannot fit in the current " \
+                f"system size ({len(self.system)}); use the argument `allow_growth=True` to automatically grow the system-state array"
+
+            number_of_entries_to_add = species_index - len(self.system) + 1
+            self.system = np.pad(self.system, (0, number_of_entries_to_add))
+
+            #if self.reaction_simulator:
+            #    self.reaction_simulator.system = self.system    # Re-align
+
+
+        self.system[species_index] = conc
+
+        if snapshot is not None:
+            # Invoke a passed external function
+            snapshot(caption=f"Set concentration of `{self.species_index_map.species_at(species_index)}`")
+
+
+
+    def set_conc(self, conc :dict, snapshot=None, system_time=None) -> None:
+        """
+        Set the concentrations of a group of species
+
+        :param conc:   A dict indexed by the species id, for some or all of the species of interest.
+                                Anything not specified will be left undisturbed
+                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
+
+                        Note: any previous values will get over-written
+
+        :param snapshot:[OPTIONAL] A function that accepts an argument called "caption"
+        :param system_time: [OPTIONAL] Only used for inclusion into diagnostic data, if applicable
         :return:        None
         """
-        if units == "C" or units == "c":
-            temp += 273.15
-        else:
-            assert units == "K" or units == "k", \
-                "set_temp(): allowable values for `units` are 'K' and 'C'"
+        assert type(conc) is dict, \
+            "set_conc(): argument `conc` must be a dict"
 
-        self.temp = temp
+        for sp_id, conc_value in conc.items():
+            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot=None)
 
+        if snapshot is not None:
+            # Invoke a passed external function
+            snapshot(caption="Set concentration")
 
-
-
-
-
-    #####################################################################################################
-
-    '''                             ~  MANAGEMENT OF REACTIONS  ~                                     '''
-
-    def ________MANAGE_REACTIONS________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
+        if self.diagnostics:
+            # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
+            system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
+                                                       caption="Set concentration")
 
 
-    def get_reactions(self) -> ReactionRegistry:
+
+    def _synchronize_species(self) -> None:
         """
-        Return all the reactions associated to this Uniform Compartment
-
-        :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
-        """
-        return self.reaction_data
-
-
-
-    def get_single_reaction(self, i :int):
-        """
-        Return a single reaction, specified by its index, associated to this Uniform Compartment
-
-        :param i:   Integer index of the desired reaction
-        :return:    Object of type "ReactionGeneric"
-        """
-        return self.reaction_data.get_reaction(i)
-
-
-
-    def clear_reactions(self) -> None:
-        """
-        Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the species)
-
-        :return:    None
-        """
-        # TODO: maybe offer an option to clear just one reaction, or a list of them
-        # TODO: provide support for "inactivating" reactions
-
-        self.reaction_data.clear_reactions_data()
-        self.species_index_map.clear_index()
-
-
-
-    def add_reaction(self, **kwargs) -> int:
-        """
-        Register a new SINGLE chemical reaction,
-        optionally including its kinetic and/or thermodynamic data.
-
-        For details, see ReactionRegistry.add_reaction()
-
-        :param kwargs:  Any arbitrary named arguments
-        :return:        Integer index of the newly-added reaction
-        """
-        if self.temp:
-            # If a temperature is set for the uniform compartment, pass it to the reaction
-            rxn_index = self.reaction_data.add_reaction(autoregister_species=True, temp=self.temp, **kwargs)
-        else:
-            rxn_index = self.reaction_data.add_reaction(autoregister_species=True, **kwargs)
-
-        species_id_set =  self.reaction_data.get_species_in_single_reaction(rxn_index)
-        self._add_species_set(species_id_set)
-
-        return rxn_index
-
-
-
-    def number_of_system_species(self) -> int:
-        """
-        Number of species being simulated (and kept in the system state)
-        :return:
-        """
-        return self.species_index_map.number_of_system_species()
-
-
-
-    def add_species_TODO(self) -> None:
-        """
-        TODO: maybe not needed -> species needed by new reactions will get processed as those new reactions
-              get added...
-        :return:
-        """
-        # Will need to update all the indexes
-        pass
-
-
-    def describe_reactions(self, **kwargs) -> None:
-        """
-        Print out a user-friendly plain-text form of ALL the reactions.
-
-        For details, see ReactionRegistry.describe_reactions()
-
-        :param kwargs:  Any arbitrary named arguments
-        :return:        None
-        """
-        self.reaction_data.describe_reactions(**kwargs)
-
-
-
-    def number_of_reactions(self) -> int:
-        """
-        Return the number of registered chemical reactions
-
-        :return:    The number of registered chemical reactions
-        """
-        return self.reaction_data.number_of_reactions()
-
-
-
-    def indexes_of_active_chemicals(self) -> list[int]:
-        """
-        Return the ordered list (numerically SORTED) of the INDEX numbers of all the species
-        involved in ANY of the registered reactions,
-        but NOT counting species that always appear in a catalytic role in all the reactions they
-        participate in
-        (if a species participates in a non-catalytic role in ANY reaction, it'll appear here.)
-
-        EXAMPLE: [2, 7, 8]  if only those 3 chemicals (with indexes of, respectively, 2, 7 and 8)
-                            are actively involved in ANY of the registered reactions
-
-        CAUTION: the concept of "active species" might change in future versions, where only SOME of
-                 the reactions are simulated
-        """
-        set_active_species = self.get_reactions().active_chemicals
-
-        index_list = list(
-                            map(lambda species_id: self.species_index_map.index_of(species_id), set_active_species)
-                         )
-        return sorted(index_list)
-
-
-
-
-
-    #####################################################################################################
-
-    '''                            ~  TO PERFORM THE REACTIONS  ~                                     '''
-
-    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
-
-
-    def specify_steps(self, duration=None, initial_step=None, n_steps=None) -> (float, int):
-        """
-        If either the `initial_step` or `n_steps` is not provided (but at least 1 of them must be present),
-        determine the other one from `duration`
-
-        Their desired relationship is: total_duration = time_step * n_steps
-
-        :param duration:    Float with the overall time advance (i.e. time_step * n_steps)
-        :param initial_step:Float with the size of each time step
-        :param n_steps:     Integer with the desired number of steps
-        :return:            The pair (time_step, n_steps)
-        """
-        return self.reaction_simulator.specify_steps(duration=duration, initial_step=initial_step, n_steps=n_steps)
-
-
-
-    def react_to_equilibrium(self, initial_step, silent=True, max_cycles=1000) -> None:
-        """
-        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.system , until equilibrium is reached,
-        or the specified max number of rounds of simulations is reached (in the latter case, an Exception is raised).
-
-        Adaptive variable time steps are automatically picked.
-
-        Update the system state and the system time accordingly
-        (object attributes self.system and self.system_time)
-
-        :param initial_step:The suggested size of the first step (it might be reduced automatically,
-                                in case of "hard" errors resulting from overly-large steps)
-        :param silent:      [OPTIONAL] If True, less output is generated
-        :param max_cycles:  [OPTIONAL] Note that simulation cycles aren't the same as the computation time steps
-        :return:            None
-        """
-        result = self.single_compartment_react(duration=initial_step, silent=silent)    # Variable steps is the default
-        rec_step = result.get("recommended_next_step")
-
-        count = 1
-        while (self.is_in_equilibrium(explain=False) != True):
-            #print(f"react_to_equilibrium(): cycle # {count}")
-            result = self.single_compartment_react(duration=rec_step, silent=silent)    # Take the variable step recommended by the previous run
-            rec_step = result.get("recommended_next_step")
-            if count > max_cycles:
-                raise Exception(f"react_to_equilibrium(): Unable to reach equilibrium within the requested {max_cycles} simulation cycles")
-            count += 1
-
-        if silent:
-            print(f"System Time is now: {self.system_time:,.5g}")       # For silent mode, just give a one-liner final summary
-
-
-
-    def sim_system_time(self):
-        """
-        For compatibility
+        Index all the species that participate in any of the reactions
+        in the reaction registry
 
         :return:
         """
-        return self.reaction_simulator.system_time
+        for rxn in self.reaction_data.get_all_reactions():
+            # rxn is a "SimulationReaction" object
+            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
+            self.add_species(species_id_set)
+
+
+    def _ensure_synchronized_with_reaction_registry(self) -> None:
+        """
+        For lazy synchronization with external mutation in the reaction registry
+
+        :return:
+        """
+        if self._reaction_registry_version != self.reaction_data.version:
+            #print("************OUT OF SYNCH DETECTED!")
+            self._synchronize_species()
+            self._reaction_registry_version = self.reaction_data.version
 
 
 
@@ -656,7 +366,7 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                                 ~  MACROMOLECULE DYNAMICS ~                                   '''
+    '''                                 ~  MACROMOLECULE STRUCTURE ~                                   '''
 
     def ________MACROMOLECULE_DYNAMICS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs such asPycharm
@@ -747,930 +457,3 @@ class UniformCompartment:
             self.set_macromolecules({macromolecule: 1})
 
         self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
-
-
-
-    def update_occupancy(self) -> None:
-        """
-        Update the fractional occupancy at all binding sites,
-        based on the current system concentrations of the relevant ligands
-
-        :return:    None
-        """
-        for mm in self.macromolecules.get_macromolecules():
-            # For each macromolecule
-            d = self.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
-            for (site_number, ligand) in d.items():
-                aff_data = self.macromolecules.get_binding_site_affinity(mm, site_number)
-                conc = self.get_species_conc(ligand)
-                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
-
-                self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
-
-
-
-    def sigmoid(self, conc: float, Kd: float) -> float:
-        """
-        Return an estimate of fractional occupancy (between 0 and 1)
-        on a particular binding site on a particular macromolecule,
-        from the concentration of the ligand (such as a Transcription Factor)
-        and its affinity to that binding site.
-
-        A sigmoid curve is expected.
-
-        Based on fig. 3A of the 2019 paper "Low-Affinity Binding Sites and the
-        Transcription Factor Specificity Paradox in Eukaryotes"
-        (https://doi.org/10.1146/annurev-cellbio-100617-062719):
-
-            - at extremely low concentration, the occupancy is 0
-            - when the concentration is 10% of Kd, the occupancy is about 0.1
-            - when the concentration matches Kd, the occupancy is 1/2 by definition
-            - when the concentration is 10 times Kd, the occupancy is about 0.9
-            - at concentrations beyond that, the occupancy saturates to 1.0
-
-        :param conc:    Concentration of the ligand (such as a Transcription Factor), in microMolars
-        :param Kd:      Binding-side Affinity, in microMolars
-        :return:        Estimated binding-site fractional occupancy : a value between
-                            0. (no occupancy at all during the previous time step) and 1. (continuous occupancy)
-        """
-        if conc == 0:
-            conc = 1e-15     # To avoid taking log of 0
-
-        return self.logistic(x = math.log10(conc), x0 = math.log10(Kd), k = 2.1972245)
-
-
-
-    def logistic(self, x :float, x0 = 0., k = 1.) -> float:
-        """
-        Compute the value of the Logistic function, in the range (0, 1), at the given point
-        See: https://en.wikipedia.org/wiki/Logistic_function
-
-        :param x:
-        :param x0:
-        :param k:
-        :return:    The value of the Logistic function at the given point x
-        """
-        return 1. / ( 1 + math.exp( -k * (x-x0) ) )
-
-
-
-
-    #####################################################################################################
-
-    '''                                  ~   FOR DIAGNOSTICS   ~                                      '''
-
-    def ________FOR_DIAGNOSTICS________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
-
-
-    def enable_diagnostics(self):
-        """
-        Turn on the diagnostics mode.
-
-        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
-                 You might consider using the argument  enable_diagnostics=True
-                 when first instantiating UniformCompartment.
-
-        :return: None
-        """
-        #TODO: maybe automatically capture a snapshot of the current data
-        if self.diagnostics_enabled:
-            print("*** INFO: enable_diagnostics() - diagnostics were ALREADY enabled")
-
-        self.diagnostics_enabled = True
-        if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reaction_data, species_to_index=self.species_index_map.species_to_index)
-
-
-
-    def pause_diagnostics(self):
-        """
-        Turn off the overall diagnostics mode; existing diagnostics data, if any, is left untouched
-
-        :return:    None
-        """
-        if not self.diagnostics_enabled:
-            print("*** INFO: pause_diagnostics() - diagnostics were ALREADY off")
-
-        self.diagnostics_enabled = False
-
-
-
-    def get_diagnostics(self):
-        """
-
-        :return:    Object of type life123.diagnostics.Diagnostics
-        """
-        assert self.diagnostics is not None, \
-            "get_diagnostics(): no diagnostics data is available.  Did you call enable_diagnostics() prior to running the simulation?"
-
-        return self.diagnostics
-
-
-
-
-
-    #####################################################################################################
-
-    '''                                    ~   VISUALIZATION   ~                                           '''
-
-    def ________VISUALIZATION________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-
-    def describe_state(self) -> None:
-        """
-        Print out various data on the current state of the system, incl. system time
-
-        :return:        None
-        """
-        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
-
-        n_species = self.number_of_system_species()
-        print(f"{n_species} species:")
-
-        # Show a line of line of data for each species in turn
-        for species_index, name in enumerate(self.species_data.get_all_species_ids()):
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
-
-            if self.system is None:
-                print(f"  Species {species_index}{name}. No concentrations set yet")
-            else:
-                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
-
-        if self.macro_system != {}:
-            print("Macro-molecules, with their counts: ", self.macro_system)
-
-        if self.macro_system_state != {}:
-            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
-            for mm, state_dict in self.macro_system_state.items():
-                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
-                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
-                print(f"     {mm} || {state_str}")
-
-        #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Species involved in reactions: {self.reaction_data.get_species_in_any_reaction()}")
-        #else:
-            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.get_species_in_any_reaction()}")
-            #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
-
-
-
-    def plot_history(self, species=None, colors=None, add_colors=None,
-                     title=None, title_prefix=None,
-                     range_x=None, range_y=None,
-                     y_label=None,
-                     vertical_lines_to_add=None, show_intervals=False, show=False) -> pgo.Figure:
-        """
-        Using plotly, draw the plots of chemical concentration values over time, based on historical data that gets
-        automatically saved when running reactions.
-
-        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
-              EXAMPLE:
-                    from life123 import PlotlyHelper
-                    p1 = plot_history(various args, show=False)
-                    p2 = plot_history(various args, show=False)
-                    PlotlyHelper.combine_plots([p1, p2], other optional args)
-
-        :param species:         [OPTIONAL] Id, or list of id's, of the species whose concentration changes are to be plotted;
-                                    if None, then display all, in their index order
-
-        :param colors:          [OPTIONAL] Either a single color (a string with standard plotly name, such as "red"),
-                                    or list of names to use, in the same order as the chemicals of the previous argument;
-                                    if None, then use the colors registered with the species, if present,
-                                    or the hardwired defaults as a last resort.
-                                    If colors were provided or automatically generated, save them with the species data.
-                                    Cannot use if using the `add_colors` argument.
-        :param add_colors:      [OPTIONAL] Either a single color (a string with standard plotly name, such as "red"),
-                                    or list of names to use for species that lack a previously-assigned color.
-                                    If provide, `add_colors` must contain at least as many values as needed to cover all
-                                    the species that lack a registered color
-                                    Any color that gets used will be saved with the species data
-                                    Cannot use if using the `colors` argument.
-
-        :param title:           [OPTIONAL] Title for the plot;
-                                    if None, use default titles that will vary based on the # of reactions; EXAMPLES:
-                                    "Changes in concentrations for 5 reactions"
-                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
-                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix:    [OPTIONAL] If present, it gets prefixed (followed by ".  ") to the title,
-                                    whether the title is specified by the user or automatically generated
-        :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
-                                    Note: it's still possible to zoom out, and see the excluded portion
-        :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
-                                    Note: it's still possible to zoom out, and see the excluded portion
-        :param y_label:          [OPTIONAL] Caption to use for the y-axis.
-                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
-                                    or "Concentration" if more than 1 (a legend also shown)
-        :param vertical_lines_to_add: [OPTIONAL] Ignored if the argument `show_intervals` is specified.
-                                    List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines.
-                                    If the number of vertical lines is so large as to overwhelm the plot,
-                                    only a sample of them is shown.
-                                    Note that vertical lines, if requested, go into the plot's "layout";
-                                    as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines` argument,
-                                    and draws thin vertical dotted gray lines at all the x-coords
-                                    of the data points in the saved history data;
-                                    also, it adds a comment to the title.
-        :param show:            If True, the plot will be shown
-                                    Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                          leads to it being automatically shown
-
-        :return:                A plotly "Figure" object
-        """
-        if species is None:
-            species = self.species_data.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
-
-        if title is None:   # If no title was specified, create a default one based on how many reactions are present
-            number_of_rxns = self.reaction_data.number_of_reactions()
-            if number_of_rxns > 2:
-                title = f"Changes in concentrations for {number_of_rxns} reactions"
-            elif number_of_rxns == 1:
-                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
-                title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
-            else:   # Exactly 2 reactions
-                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
-                title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
-
-        if y_label is None:
-            if type(species) == str:
-                y_label = f"[{species}]"          # EXAMPLE:  "[A]"
-            else:
-                y_label = "Concentration"
-
-        if type(species) == str:
-            species = [species]          # Turn a single value into a string
-
-
-        df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
-
-        assert (colors is None) or (add_colors is None), \
-            "plot_history(): cannot use both arguments `colors` and `add_colors`"
-
-        if (colors is None) and (add_colors is None):      # If no colors were specified in this function call
-            # Attempt to make use of the previously-registered colors, if available;
-            # otherwise, automatically assign them, and save them with the species data
-            colors = self.species_data.assign_colors(species)   # TODO: ought to avoid existing colors (or at least color/style combos)
-        elif (add_colors is None):      # Using argument `colors`
-            if type(colors)==str:
-                colors = [colors]       # Turn a single value into a string
-            assert len(colors) == len(species), \
-                f"plot_history(): the number of provided colors ({len(colors)}) doesn't match the number of species ({len(species)})"
-            # Save the passed colors with the species data
-            for i, col in enumerate(colors):
-                self.get_species_data().set_value(species_id=species[i], field="plot_color", value=col)
-        else:                           # Using argument `add_colors`
-            if type(add_colors) == str:
-                add_colors = [add_colors]       # Turn a single value into a string
-            elif type(add_colors) == list:
-                add_colors = add_colors.copy()  # To avoid altering the list passed as argument
-            else:
-                raise Exception("plot_history(): the argument `add_colors` must be a string or a list")
-
-            colors = []     # The colors to be used for this plot, in the same order as the `species` list
-            for i, sp in enumerate(species):
-                registered_color = self.get_species_data().get_value(species_id=species[i], field="plot_color")    # Might be blank
-                if registered_color:    # A color was already assigned to this species
-                    colors.append(registered_color)     # Use the pre-assigned color for this species
-                else:
-                    assert len(add_colors) > 0, \
-                        "plot_history(): not enough values in `add_colors` to cover all the species that lack a registered color"
-
-                    new_color = add_colors[0]   # Get the next color, from the start of the list
-                    del add_colors[0]           # Drop that first element from the list
-                    # Use the passed color for this species (and also save it in its species data)
-                    self.get_species_data().set_value(species_id=species[i], field="plot_color", value=new_color)
-                    colors.append(new_color)
-
-
-        return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=species,
-                                        colors=colors, title=title, title_prefix=title_prefix,
-                                        range_x=range_x, range_y=range_y,
-                                        y_label=y_label, legend_header="Chemical",
-                                        vertical_lines_to_add=vertical_lines_to_add, show_intervals=show_intervals, show=show)
-
-
-
-    def plot_step_sizes(self, show_intervals=False) -> None:
-        """
-        Using Plotly, draw the plot of the step sizes vs. time
-        (only meaningful when the variable-step option was used).
-        The same scale as plot_history() will be used.
-
-        IMPORTANT: This function requires the diagnostics option to be turned on,
-                   prior to running the simulation, with a call to enable_diagnostics()
-
-        :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines
-                                    at the time steps
-        :return:                None
-        """
-        assert self.diagnostics is not None, \
-                "plot_step_sizes(): no diagnostic data is available. " \
-                "Did you invoke enable_diagnostics() prior to running the simulation?"
-
-        (transition_times, step_sizes) = self.diagnostics.explain_time_advance(return_times=True, silent=True)
-
-        x=transition_times
-        y=step_sizes
-
-        # Create a step plot (TODO: there might be a way to directly do this in plotly)
-        new_x = [x[0]]
-        new_y = [y[0]]
-        for i, xi in enumerate(x[1:-1]) :   # Drop the first and last elements
-            new_x.append(xi)
-            new_y.append(y[i])
-
-            new_x.append(xi)
-            new_y.append(y[i+1])
-
-        new_x.append(x[-1])
-        new_y.append(y[-1])
-
-
-        df = self.diagnostics.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
-
-        # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
-        #       the last value, to maintain the full x-axis size
-        fig = px.line(x=new_x, y=new_y)
-
-        if show_intervals:
-            for xi in df["TIME"]:
-                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
-
-
-        fig.update_layout(title='Simulation step sizes',
-                          xaxis_title='SYSTEM TIME',
-                          yaxis_title='Step size')
-
-        fig.show()
-
-
-
-    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
-        """
-        Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions.
-
-        ~~~ EXAMPLE of usage ~~~
-            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
-
-        :param log_file:            The name of the file into which to place the HTML code
-                                        to create the interactive network plot.
-                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
-                                        If the file already exists, it will get overwritten.
-                                        (Note: this file will automatically include an internal reference to the JavaScript
-                                        file specified in `graphic_component`)
-        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
-                                        an object with the following keys
-                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ReactionRegistry.prepare_graph_network()
-        :return:                    None
-        """
-        assert graphic_component == "vue_cytoscape_5", \
-            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
-
-        self.reaction_data.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
-
-
-
-
-
-    #####################################################################################################
-
-    '''                                      ~   HISTORY   ~                                          '''
-
-    def ________HISTORY________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-
-    def enable_history(self, kind="all", frequency=1, chem_labels=None, take_snapshot=False) -> None:
-        """
-        Request history capture, with the specified parameters.
-        If history was already enabled, this function can be used to alter its capture parameters.
-
-        :param kind:            [OPTIONAL] Allowed values are "all" (default),
-                                    "conc" (concentration history), and "rate" (reaction rate history)
-        :param frequency:       [OPTIONAL] How often to capture a snapshot of the data
-                                    (default: at every simulation cycle)
-        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
-                                    if None (default), include them all.
-        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
-
-        :return:                None
-        """
-        assert kind in ["all", "conc", "rate"], \
-            "enable_history(): argument `kind` must be either 'all' or 'conc' or 'rate'"
-
-        if kind in ["all", "conc"]:
-            self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels)
-            if take_snapshot:
-                self.capture_conc_snapshot()
-
-        if kind in ["all", "rate"]:
-            self.rate_history.enable_history(frequency=frequency, chem_labels=chem_labels)
-            if take_snapshot:
-                self.capture_rate_snapshot()
-
-
-
-    def capture_rate_snapshot(self, step_count=None, caption=None,
-                             force=False, system_time=None) -> None:
-        """
-        Take the reaction rates for the last (current) step of all reactions,
-        stored as a dict in the object property `self.system_rxn_rates`,
-        and save them in the ongoing table storing the "rate history".
-
-        Note: reaction rate history is regarded as akin to concentration history - something to periodically
-              sample and record, separate from diagnostics
-
-        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
-        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
-        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
-        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
-        :return:            None
-        """
-        if not force and not self.rate_history.to_capture(step_count):
-            return
-
-        if system_time is None:
-            system_time = self.system_time
-
-        data_snapshot = {}     # rxn_rates_snapshot
-        for k, v in self.system_rxn_rates.items():
-            if type(v) == tuple:
-                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
-                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
-                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
-            else:
-                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-        '''
-           EXAMPLE of data_snapshot:
-                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
-        '''
-        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
-
-
-
-    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
-        """
-
-        :param step_count:
-        :param caption:
-        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
-                                the capture frequency will NOT considered in the
-                                decision about saving it, but an extra check will be performed
-                                to make sure it's not a duplicate of the earlier capture
-
-        :return:                    None
-        """
-        if not self.conc_history.to_capture(step_count, extra=extra):
-            return
-
-        data_snapshot = self.get_conc_dict(chem_labels=self.conc_history.restrict_chemicals)
-        '''
-           EXAMPLE of data_snapshot:
-                {"A": 1.3, "B": 4.9}        
-        '''
-        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
-
-
-
-    def start_csv_log(self, log_file :str) -> None:
-        """
-        Register the specified filename for all future CSV logs.
-        Any existing file by that name will get over-written.
-
-        :param log_file:Name of a file to use for the CSV logs
-        :return:        None
-        """
-        self.conc_history.start_csv_log(log_file)
-
-
-
-    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
-        """
-        #TODO: already migrated.  Drop!
-
-        Retrieve and return a Pandas dataframe with the system history that had been saved
-        using capture_conc_snapshot().
-        Optionally, restrict the result with a start and/or end times,
-        or by limiting to a specified numbers of rows at the end
-
-        :param t_start: [OPTIONAL] Start time in the "SYSTEM TIME" column.  Watch out for roundoff errors!
-        :param t_end:   [OPTIONAL] End time.  Watch out for roundoff errors!
-        :param head:    [OPTIONAL] Number of records to return,
-                                   from the start of the history dataframe.
-        :param tail:    [OPTIONAL] Number of records to consider, from the end of the history dataframe
-        :param t:       [OPTIONAL] Individual time to pluck out from the dataframe;
-                                   the row with closest time will be returned.
-                                   If this parameter is specified, an extra column - called "search_value" -
-                                   is inserted at the beginning of the dataframe.
-                                   If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: [OPTIONAL] Name, or list of names, of the column(s) to return; if not specified, all are returned.
-                                   Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
-
-        :return:        A Pandas dataframe
-        """
-        #TODO: allow searches also for columns other than "SYSTEM TIME"
-
-        # Note: the history is an object of class CollectionTabular
-
-        df = self.conc_history.get_history().get_dataframe(head=head, tail=tail, search_val=t,
-                                                           search_col="SYSTEM TIME",
-                                                           val_start=t_start, val_end=t_end)
-
-        if columns:
-            assert (type(columns) == list) or (type(columns) == str), \
-                "get_history(): the argument `columns`, if specified, must be a list or string"
-            return df[columns]
-
-        return df
-
-
-
-    def get_historical_concentrations(self, row=None, t=None, df=None) -> np.array:
-        """
-        Typically used to retrieve a system snapshot from its history.
-
-        Return a Numpy array with ALL the chemical concentrations (in their index order)
-        from one row in the given Pandas data frame (by default, the system history);
-        the row can be identified either by it row number, or by the system time.
-
-        :param row: [OPTIONAL] Integer with the zero-based row number of the system history
-                        (which is a Pandas data frame)
-        :param t:   [OPTIONAL] Individual time to pluck out from the dataframe;
-                        the row with closest time will be returned.
-                        Exactly one of "t" and "row" must be specified
-        :param df:  [OPTIONAL] A Pandas data frame with concentration information in columns that have
-                        the names of the chemicals (if None, the system history is used)
-        :return:    A Numpy array of floats.  EXAMPLE: array([200., 40.5])
-        """
-        assert row is None or t is None, "Cannot specify both arguments `row` and `t`"
-        assert row is not None or t is not None, "Must specify either argument `row` and `t`"
-
-        if df is None:
-            if t:
-                df = self.get_history(t=t)
-            else:
-                df = self.get_history()
-
-        chem_list = self.species_data.get_all_species_ids()  # List of all the chemicals' names
-
-        if row:
-            return df.loc[row][chem_list].to_numpy(dtype='float32')
-        else:
-            return df.iloc[0][chem_list].to_numpy(dtype='float32')
-
-
-
-    def get_rate_history(self):
-        """
-        Return a Pandas dataframe with all the saved reaction rate history, for all reactions.
-
-        Rates refer to reaction products with stoichiometric coefficient 1.
-        To find the rate of change of the concentration of any product,
-        multiply the reaction rate for its stoichiometric coefficient.
-        For reactants, flip the signs.
-
-        :return:    A Pandas dataframe with the following columns:
-                        'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
-        """
-        # TODO: add the option to select a subset of the reactions
-        return self.rate_history.get_history().get_dataframe()
-
-
-
-
-    def add_rate_to_conc_history(self, rate_name=None, new_rate_name=None):
-        """
-        Merge together the concentration history and a column from the reaction rate history,
-        into a new dataframe.
-        The original histories aren't affected.
-
-        :param rate_name:       [OPTIONAL] Name of a single desired column from the reaction rate history
-                                    EXAMPLE: "rxn4_rate"
-                                    If not specified, all rates are included
-        :param new_rate_name:   [OPTIONAL] New name to assign to the rate_name column above;
-                                    only applicable if rate_name is specified
-        :return:                A Pandas dataframe with all the concentration history,
-                                    and extra columns from the reaction rate history,
-                                    merged by their match of SYSTEM TIME.
-                                    If either history is missing, raise an Exception
-        """
-        # TODO: perhaps make obsolete, by storing both histories together??
-
-        history = self.get_history()
-        rates = self.get_rate_history()
-
-        assert (not history.empty) and (not rates.empty), \
-            "add_rate_to_conc_history(): One or both the histories are missing"
-
-        if rate_name is not None:
-            rates = rates[["SYSTEM TIME", rate_name]]
-            if new_rate_name:
-                rates = rates.rename(columns={rate_name: new_rate_name})
-
-        # Set the tolerance for the merges based on the size of the time values
-        last_time = history["SYSTEM TIME"].iat[-1]
-        tolerance = last_time * 0.000001 + 0.000001     # We use a relative and an absolute tolerance
-
-        # Create a "left join" from the two dataframes, based on the colum 'SYSTEM TIME'
-        merged_df = pd.merge_asof(history, rates, on='SYSTEM TIME', direction='nearest', tolerance=tolerance)
-
-        # Filter to remove rows where the right DataFrame values are NaN (indicating no match)
-        # This has the overall effect of producing an inner join of the two original dataframes
-        # Note: the names "step_x" and "step_y" are automatically assigned by merge_asof() because of a repeated "step" column
-        inner_join_df = merged_df.dropna().rename(columns={"step_x": "step_conc", "step_y": "step_rate"})
-
-        return inner_join_df
-
-
-
-
-
-
-
-    #####################################################################################################
-
-    '''                                ~   RESULT ANALYSIS   ~                                        '''
-
-    def ________RESULT_ANALYSIS________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> bool|dict:
-        """
-        Ascertain whether the given concentrations (by default the current System concentrations)
-        are in equilibrium for the specified reactions (by default, check all reactions)
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
-                                if None, then check all the reactions
-        :param conc:        Dict with the concentrations of the species involved in the reaction(s).
-                            The keys are the chemical names
-                                EXAMPLE: {'A': 23.9, 'B': 36.1}
-                            If None, then use the current System concentrations instead; if that's not set,
-                                raise an Exception
-        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
-                                to establish satisfactory match with expected values
-        :param explain:     If True, print out details about the analysis,
-                                incl. the formula(s) being used to check the equilibrium
-                                EXAMPLES:   "([C][D]) / ([A][B])"
-                                            "[B] / [A]^2"
-
-        :return:            Return True if ALL the reactions are close enough to an equilibrium,
-                                as allowed by the requested tolerance;
-                                otherwise, return a dict of the form {False: [list of reaction indexes]}
-                                for all the reactions that failed the criterion
-                                EXAMPLE:  {False: [3, 6]}
-        """
-        # TODO: optionally display last lines in diagnostic data, if available
-
-        if conc is None:
-            conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
-                                        # EXAMPLE: {'A': 23.9, 'B': 36.1}
-            assert conc,  "is_in_equilibrium(): no concentration values provided, " \
-                          "nor available as system concentration data"
-
-        failures_dict = {False: []}     # 1-element dict whose value is
-                                        # a list of reactions that fail to meet the criterion for equilibrium
-
-        if rxn_index is not None:
-            # Check the 1 reaction that was requested
-            if explain:
-                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
-                print(description)
-
-            status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
-            if not status:
-                failures_dict = {False: [rxn_index]}    # Make a note that this reaction failed the equilibrium test
-
-        else:
-            # Check ALL the reactions
-            status = True       # Overall status
-            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
-            for rxn_index in range(self.reaction_data.number_of_reactions()):
-                # For each reaction
-                if explain:
-                    print(description_list[rxn_index])
-
-                single_status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
-
-                if not single_status:
-                    status = False
-                    failures_dict[False].append(rxn_index)      # Make a note that this reaction failed the equilibrium test
-
-        if status:
-            return True
-        else:
-            return failures_dict
-
-
-
-    def reaction_in_equilibrium(self, rxn_index :int, conc, tolerance, explain :bool) -> bool:
-        """
-        Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
-        return True or False, accordingly.
-
-        Pathological case: if at least one of the reactants AND at least one of the products have zero
-        concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
-                            The keys are the chemical names
-                                EXAMPLE: {'A': 23.9, 'B': 36.1}
-        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
-                                to establish satisfactory match with expected values
-        :param explain:     If True, print out the formula being used, as well as the concentrations (reactants, then products)
-                                and some other info.
-                                EXAMPLES of formulas:   "([C][D]) / ([A][B])"
-                                                        "[B] / [A]^2"
-        :return:            True if the given reaction is close enough to an equilibrium,
-                                as allowed by the requested tolerance
-        """
-        # Look up the "SimulationReaction" object of the requested reaction
-        rxn = self.reaction_data.get_reaction(rxn_index)
-
-        kR = rxn.extract_reverse_rate_constant()
-        assert kR is not None, \
-            "reaction_in_equilibrium(): reverse rate constant is unknown, or may not exist for this reaction type"
-
-        if np.allclose(kR, 0):
-            print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
-            return False
-
-        rate_ratio = rxn.extract_forward_rate_constant() / rxn.extract_reverse_rate_constant()  # Ratio of forward/reverse reaction rates
-
-        result = rxn.reaction_quotient(conc=conc, explain=explain)
-
-        # Unpack the result
-        if explain:
-            rxn_quotient, formula = result
-        else:
-            rxn_quotient = result
-
-        if explain:
-            # Prepare a concise listing from the given concentrations,
-            # only including the concentrations that are applicable to this reaction
-            all_applicable_concs = []
-
-            reactants = rxn.stoichiometry.get_reactant_ids()
-            for species_name in reactants:
-                s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
-                all_applicable_concs.append(s)
-
-            products = rxn.stoichiometry.get_product_ids()
-            for species_name in products:
-                if species_name not in reactants:           # Don't report the same concentration twice!
-                    s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"
-                    all_applicable_concs.append(s)
-
-            all_applicable_concs_str = " ; ".join(all_applicable_concs)     # EXAMPLE: "[A] = 20.3 ; [B] = 0.3"
-
-
-        # Handle the special case of zero concentration in some of the reactants AND in some of the products
-        if np.isnan(rxn_quotient):
-            if explain:
-                print(f"Current concentrations: {all_applicable_concs_str}")
-                print("Reaction IS in equilibrium because it can't proceed in either direction "
-                      "due to zero concentrations in both some reactants and products!\n")
-            return True
-
-        if np.isinf(rxn_quotient):      # If only the denominator is 0
-            if explain:
-                print(f"Current concentrations: {all_applicable_concs_str}")
-                print("Reaction is NOT in equilibrium because either the products contain a zero concentration\n")
-            return False
-
-
-        # Normal case
-        status = np.allclose(rxn_quotient, rate_ratio, rtol=tolerance/100., atol=0)
-
-        if explain:
-            print(f"Current concentrations: {all_applicable_concs_str}")
-            print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
-            print(f"    Formula used:  {formula}")
-            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio:,.6g}")
-            print(f"Discrepancy between the two values: {100 * abs(rxn_quotient - rate_ratio)/rate_ratio :,.4g} %")
-            if status:
-                print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
-            else:
-                print(f"Reaction is NOT in equilibrium (not within {tolerance:.2g}% tolerance)\n")
-
-        return status
-
-
-
-    def find_equilibrium_conc(self, rxn_index :int) -> dict:
-        """
-        Determine the equilibrium concentrations that would be eventually reached
-        by the chemicals of this reaction,
-        given the specified concentrations,
-        IN THE ABSENCE of any other reaction.
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :return:            A dictionary of the equilibrium concentrations of the
-                                chemicals involved in the specified reaction
-                                EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
-        """
-        rxn = self.reaction_data.get_reaction(rxn_index)                # Look up the requested reaction
-        chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
-        return rxn.source_object.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
-
-
-
-    def estimate_rate_constants_TODO(self, df, t, reactants, products):
-        """
-        TODO: not yet implemented -> It probably belongs to kinetic module
-
-        EXAMPLE:  estimate_rate_constants(df, t="SYSTEM TIME", reactants=["A", "B"], products="C")
-                    where df is a Pandas dataframe containing the columns "SYSTEM TIME", "A", "B" and "C"
-
-        :param df:
-        :param t:
-        :param reactants:
-        :param products:
-        :return:
-        """
-        pass
-
-
-
-    def reach_threshold(self, chem :str, threshold) -> float|None:
-        """
-
-        :param chem:        The name of the chemical of interest
-        :param threshold:   A number with the concentration value being sought
-        :return:            The time at which the linearly-interpolated concentration of the specified chemical
-                                first reaches the given threshold;
-                                or None if it never does (in which case a message is printed)
-        """
-        # Prepare a Pandas dataframe with 2 columns
-        df = self.get_history(columns=["SYSTEM TIME", chem])
-
-        x_intersection = Numerical.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
-        if x_intersection is None:
-            print(f"reach_threshold(): the concentrations of `{chem}` never reaches the specified threshold of {threshold}")
-
-        return x_intersection
-
-
-
-    def curve_intersect(self, chem1 :str, chem2 :str, t_start, t_end, explain=False) -> (float, float):
-        """
-        Find and return the intersection of the concentrations of the chemicals chem1 and chem2,
-        in the time interval [t_start, t_end]
-        If more than one is present, only the first (smallest value of x-coord) one will be returned;
-        so, the specified time interval should be narrow enough to bracket the intersection of interest
-
-        :param chem1:   The name of the 1st chemical of interest
-        :param chem2:   The name of the 2nd chemical of interest
-        :param t_start: The start of the time interval being considered
-        :param t_end:   The end of the time interval being considered
-        :param explain: [OPTIONAL] If True, print out some details of the computation
-        :return:        The pair (time of intersection, common value) ;
-                            if not found, a message is printed, and None is returned
-        """
-        # Prepare a Pandas dataframe with 3 columns
-        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
-
-        intersection = Numerical.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
-        if intersection is None:
-            print(f"curve_intersect(): No intersection detected between the concentrations of `{chem1}` and `{chem2}` "
-                  f"in the time interval [{t_start} - {t_end}]")
-
-        return intersection
-
-
-
-    def extract_delta_concentrations(self, df, row_from :int, row_to :int, chem_list: [str]) -> np.array:
-        """
-        Extract the concentration changes of the specified chemical species from a Pandas dataframe
-        of concentration values
-
-        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
-
-        :param df:          A Pandas dataframe of concentration values (it MUST contain columns
-                                with the names given in chem_list
-        :param row_from:    Row number of the first row of data we're interested in
-        :param row_to:      Row number of the last row of data we're interested in
-        :param chem_list:   A list of names of chemicals
-
-        :return:            A Numpy array of floats
-        """
-        # TODO: add validations
-        from_values = df.loc[row_from][chem_list]
-        to_values = df.loc[row_to][chem_list]
-        return (to_values - from_values).astype(float).to_numpy(dtype='float32')

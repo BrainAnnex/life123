@@ -128,7 +128,7 @@ def test_already_used():
 
     assert not net._already_used(reactants=["A", "C"], products="B")
 
-    net.reaction_data.species_data.add_species(id="D")
+    net.reaction_data.species_registry.add_species(id="D")
     assert not net._already_used(reactants=["C", "D"], products="B")
 
     net.reaction_data.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B
