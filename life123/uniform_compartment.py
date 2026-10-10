@@ -8,12 +8,10 @@ from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
 from life123.species_index_map import SpeciesIndexMap
-from life123.reactions import SimulationReaction
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
 from life123.reaction_simulator import VariableTimeSteps
-from life123.reaction_simulator import ExcessiveTimeStepHard
 from life123.reaction_simulator import ReactionSimulator
 
 
@@ -137,9 +135,6 @@ class UniformCompartment:
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
-        self.exact = exact          # If True, use exact analytical solutions whenever possible;
-                                    # if False, always use the "Forward Euler" approximation method
-
 
         self.system_time = 0.       # Global time of the system, from initialization
                                     # TODO: being transferred to ReactionSimulator
@@ -227,7 +222,7 @@ class UniformCompartment:
     def _add_species_set(self, species_id_set :set[str]) -> None:
         """
 
-        :param species_id_set:  Set of ID's of species participating in a reaction being added
+        :param species_id_set:  Set of ID's of species to be added to the system state
         :return:                None
         """
         number_added = self.species_index_map.add_species(species_id_set)
@@ -501,15 +496,6 @@ class UniformCompartment:
         self.adaptive_steps.use_adaptive_preset(preset)
 
 
-    def set_exact_mode(self, exact :bool) -> None:
-        """
-
-        :param exact:   If True, use exact analytical solutions whenever possible;
-                                if False (default), always use the "Forward Euler" approximation method
-        :return:        None
-        """
-        self.exact = exact
-
 
 
 
@@ -715,59 +701,6 @@ class UniformCompartment:
         :return:
         """
         return self.reaction_simulator.system_time
-
-
-
-    def validate_increment(self,  delta_conc :float, baseline_conc :float,
-                           rxn_index :int, species_index: int, delta_time) -> None:
-        """
-        Examine the single requested concentration change `delta_conc`
-        (typically, as computed by an ODE solver),
-        relative to the baseline (pre-reaction) value `baseline_conc`,
-        for the given SINGLE chemical species and SINGLE reaction.
-
-        If the requested concentration change would render the concentration negative,
-        save diagnostic data if diagnostics are enabled, and then
-        raise an Exception of custom type "ExcessiveTimeStepHard"
-
-        :param delta_conc:      The change in concentration that we're considering
-                                    for the specified chemical, in the given reaction
-        :param baseline_conc:   The initial concentration value for that chemical
-
-        [The remaining arguments are ONLY USED for diagnostics and error printing]
-        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
-        :param species_index:   The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
-        :param delta_time:      The time duration of the reaction step (ONLY USED for error printing)
-
-        :return:                None.  An Exception is raised if a negative new concentration would result
-                                    from the requested concentration change
-        """
-        if (baseline_conc + delta_conc) < 0:
-            # If the requested concentration change would lead to a negative concentration
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.index_species.species_at(species_index)}` "
-            #      f"in step starting at t={self.system_time:.5g})"
-
-            # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
-            #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
-            #   it's taken as a sign of excessive step size)
-            if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
-                                                                data={"action": "ABORT",
-                                                                      "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.species_index_map.species_at(species_index)} from rxn # {rxn_index}",
-                                                                      "time_step": delta_time},
-                                                                delta_conc_arr=None)
-                self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                               increment_dict_single_rxn=None,
-                                               aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.species_index_map.species_at(species_index)}`")
-
-            chem_name = self.species_index_map.species_at(species_index)
-            raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
-                                    f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
-                                    f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
-                                    f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
-                                    )
 
 
 
@@ -1513,34 +1446,6 @@ class UniformCompartment:
 
         return inner_join_df
 
-
-
-    def add_rate_to_conc_history_OLD(self, rate_name :str, new_rate_name=None):
-        """
-        Merge together the concentration history and a column from the reaction rate history
-
-        :param rate_name:       Name of the desired column from the reaction rate history
-                                    EXAMPLE: "rxn1_rate"
-        :param new_rate_name:   [OPTIONAL] New name for the above column
-        :return:                A Pandas dataframe with all the concentration history,
-                                    and an extra column from the reaction rate history
-        """
-        # TODO: possibly make obsolete, by storing both histories together
-
-        history = self.get_history()
-        rates = self.get_rate_history()
-        assert len(history) == len(rates), \
-            f"add_rate_to_conc_history(): unable to reconcile the system history data ({len(history)} rows)" \
-            f"with the reaction data ({len(rates)} rows) - mismatched number of rows"
-
-        df = history.copy()    # Duplicate the dataframe, to avoid messing up the concentration history
-
-        if new_rate_name is None:
-            new_rate_name = rate_name   # Rename column, if requested
-
-        df[new_rate_name] = rates[rate_name]
-
-        return df
 
 
 

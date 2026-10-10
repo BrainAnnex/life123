@@ -425,22 +425,6 @@ def test_reaction_in_equilibrium():
 
 
 
-def test_validate_increment():
-    uc = UniformCompartment(names=["A", "B", "C"])
-
-    uc.add_reaction(reactants="A", products="B",
-                    reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
-
-    uc.validate_increment(delta_conc=50., baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
-    uc.validate_increment(delta_conc=-9.99, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
-
-    with pytest.raises(Exception):      # Would lead to a negative concentration
-        uc.validate_increment(delta_conc=-10.001, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.97)
-
-    # TODO: test that diagnostic data, if enabled, gets saved as needed
-
-
-
 def test_sigmoid():
     rxn = UniformCompartment(None)
 

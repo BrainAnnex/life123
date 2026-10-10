@@ -113,7 +113,8 @@ class ReactionSimulator:
 
         self.species_index_map :SpeciesIndexMap = species_index_map 
         self.reaction_registry = reaction_registry
-        self.exact :bool = exact
+        self.exact :bool = exact                # If True, use exact analytical solutions whenever possible;
+                                                # if False, always use the "Forward Euler" approximation method
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
         self.diagnostics = diagnostics  # Object of class "Diagnostics"
@@ -1354,8 +1355,7 @@ class ReactionSimulator:
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
             self._validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                     rxn=rxn, rxn_index=rxn_index, species_id=species_id, rxn_rate=rxn_rate,
-                                     delta_time=delta_time)
+                                     rxn=rxn, rxn_index=rxn_index, species_id=species_id, rxn_rate=rxn_rate)
 
             # Accumulate the increment vector from the species in this reaction
             increment_vector[species_index] += delta_conc  # Accumulate  all the increments from this reaction
@@ -1372,7 +1372,7 @@ class ReactionSimulator:
 
 
     def _validate_increment(self, delta_conc :float, baseline_conc :float,
-                            rxn, rxn_index :int, species_id: str, rxn_rate, delta_time) -> None:
+                            rxn, rxn_index :int, rxn_rate, species_id: str) -> None:
         """
         Examine the single requested concentration change `delta_conc`
         (typically, as computed by an ODE solver),
@@ -1388,13 +1388,17 @@ class ReactionSimulator:
         :param baseline_conc:   The initial concentration value for that species
 
         [The remaining arguments are ONLY USED for diagnostics and error printing]
+        :param rxn:
         :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for diagnostics and error message)
+        :param rxn_rate:
         :param species_id:      The id of the species under consideration (ONLY USED for diagnostics and error message)
-        :param delta_time:      The time duration of the reaction step (ONLY USED for diagnostics and error message)
 
         :return:                None.  An Exception is raised if a negative new concentration would result
                                     from the requested concentration change
         """
+        # TODO: attempt to use more extensively `self.reaction_step_diagnostics`,
+        #       instead of passing a lot of args
+
         if (baseline_conc + delta_conc) < 0:
             # If the requested concentration change would lead to a negative concentration
 
@@ -1402,6 +1406,7 @@ class ReactionSimulator:
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
             #   it's taken as a sign of excessive step size)
 
+            delta_time = self.reaction_step_diagnostics.delta_time
             # After having saved the appropriate diagnostic data, raise the custom Exception "ExcessiveTimeStepHard"
             exception_data = {
                 "message": f"      The tentative time step ({delta_time:.6g}) "
@@ -1633,8 +1638,27 @@ class ReactionSimulator:
     
 
 
+    def set_exact_mode(self, exact :bool) -> None:
+        """
 
-    ############  DIAGNOSTICS  ############
+        :param exact:   If True, use exact analytical solutions whenever possible
+        :return:        None
+        """
+        self.exact = exact
+
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                  ~   FOR DIAGNOSTICS   ~                                      '''
+
+    def ________FOR_DIAGNOSTICS________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
+
 
     def enable_diagnostics(self):
         """

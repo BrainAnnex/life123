@@ -10,7 +10,7 @@ from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
 from life123.reaction_registry import ReactionRegistry
 from life123.kinetics import Custom_Model
-from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft
+from life123.reaction_simulator import ExcessiveTimeStepHard, ExcessiveTimeStepSoft, ReactionStep
 from life123.species_index_map import SpeciesIndexMap
 from life123.diagnostics import Diagnostics
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
@@ -1280,6 +1280,41 @@ def test_single_step_single_rxn_2():
     df_expected = pd.DataFrame(row, index=[0])
     assert compare_pandas(df_expected, df)
     """
+
+
+
+def test_validate_increment():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # A <-> B
+    rxns.add_reaction(reactants="A", products="B",
+                    reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
+
+    sim = ReactionSimulator(system=np.array([19, 3]), reaction_registry=rxns)
+    sim.reaction_step_diagnostics = ReactionStep(delta_time=0.97)
+
+    r = rxns.get_reaction(0)
+
+    sim._validate_increment(delta_conc=50., baseline_conc=10.,
+                            rxn=r, rxn_index=0, rxn_rate=123, species_id="B")
+    sim._validate_increment(delta_conc=-9.99, baseline_conc=10.,
+                            rxn=r, rxn_index=0, rxn_rate=123, species_id="B")
+
+    with pytest.raises(ExcessiveTimeStepHard) as ex:      # Would lead to a negative concentration
+        sim._validate_increment(delta_conc=-10.001, baseline_conc=10.,
+                               rxn=r, rxn_index=0, rxn_rate=123, species_id="B")
+    details = ex.value.details
+    assert details["function"] == "_validate_increment"
+    assert math.isclose(details["delta_time"], 0.97)
+    assert details["caption"] == 'aborted: neg. conc. in `B` from rxn # 0'
+    assert details["system_time"] == 0
+    assert details["rate"] == 123
+    assert details["rxn_index"] == 0
+    assert details["message"] == """      The tentative time step (0.97) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 10 at system time 0; requested change (NOT carried out): -10.001"""
+
+    # TODO: test that diagnostic data, if enabled, gets saved as needed
 
 
 
