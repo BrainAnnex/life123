@@ -6,6 +6,7 @@
 import math
 import cmath
 import numpy as np
+import pandas as pd
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -96,11 +97,15 @@ class ReactionSimulator:
         :param system:
         :param species_index_map:
         :param reaction_registry:
-        :param exact:
+        :param exact:       [OPTIONAL] If True, use exact analytical solutions whenever possible
         :param diagnostics:
         :param diagnostics_enabled:
         :param method:
-        :param preset:
+        :param preset:      [OPTIONAL] String with name of a standard preset
+                                that can be specified to make the time resolution finer or coarser;
+                                it will stay in effect from now on, unless explicitly changed later.
+                                Available values (in generally-increasing speed):
+                                    'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
         :param uniform_compartment:
         """
         # IMPORTANT: self.uniform_compartment might either be an "UniformCompartment" object, or this class itself
@@ -301,12 +306,17 @@ class ReactionSimulator:
 
 
 
-    def set_system_conc_by_dict(self, conc_dict :dict) -> None:
+    def set_system_conc_by_dict(self, conc_dict :dict, snapshot=False) -> None:
         """
 
-        :param conc_dict:
-        :return:
+        :param conc_dict:   EXAMPLE: {"U": 50., "X": 100.}
+        :return:            None
         """
+        if len(conc_dict) > 0 and (self.system is None):
+            # Initialize a Numpy array (TODO: maybe do at instantiation, instead of float)
+            self.system = np.zeros(0, dtype='d')   # float64
+
+
         for k, v in conc_dict.items():
             species_index = self.species_index_map.index_of(species_id=k, enforce=False)
             if species_index is None:
@@ -323,6 +333,9 @@ class ReactionSimulator:
 
 
             self.system[species_index] = v
+
+        if snapshot:
+            self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
 
 
@@ -1645,6 +1658,69 @@ class ReactionSimulator:
         :return:        None
         """
         self.exact = exact
+
+
+    def set_preset(self, preset :str) -> None:
+        """
+
+        :param preset:  String with name of a standard preset
+                            that can be specified to make the time resolution finer or coarser;
+                            it will stay in effect unless explicitly changed later.
+                            Available values (in generally-increasing speed):
+                                'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
+        :return:        None
+        """
+        self.adaptive_steps.use_adaptive_preset(preset)
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
+        """
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+        using capture_conc_snapshot().
+        Optionally, restrict the result with a start and/or end times,
+        or by limiting to a specified numbers of rows at the end
+
+        :param t_start: [OPTIONAL] Start time in the "SYSTEM TIME" column.  Watch out for roundoff errors!
+        :param t_end:   [OPTIONAL] End time.  Watch out for roundoff errors!
+        :param head:    [OPTIONAL] Number of records to return,
+                                   from the start of the history dataframe.
+        :param tail:    [OPTIONAL] Number of records to consider, from the end of the history dataframe
+        :param t:       [OPTIONAL] Individual time to pluck out from the dataframe;
+                                   the row with closest time will be returned.
+                                   If this parameter is specified, an extra column - called "search_value" -
+                                   is inserted at the beginning of the dataframe.
+                                   If either the "head" or the "tail" arguments are passed, this argument will get ignored
+        :param columns: [OPTIONAL] Name, or list of names, of the column(s) to return; if not specified, all are returned.
+                                   Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
+
+        :return:        A Pandas dataframe
+        """
+        #TODO: allow searches also for columns other than "SYSTEM TIME"
+
+        # Note: the history is an object of class CollectionTabular
+
+        df = self.conc_history.get_history().get_dataframe(head=head, tail=tail, search_val=t,
+                                                           search_col="SYSTEM TIME",
+                                                           val_start=t_start, val_end=t_end)
+
+        if columns:
+            assert (type(columns) == list) or (type(columns) == str), \
+                "get_history(): the argument `columns`, if specified, must be a list or string"
+            return df[columns]
+
+        return df
+
 
 
 

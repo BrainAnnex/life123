@@ -11,7 +11,6 @@ from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
-from life123.reaction_simulator import VariableTimeSteps
 from life123.reaction_simulator import ReactionSimulator
 
 
@@ -35,7 +34,7 @@ class UniformCompartment:
     """
 
     def __init__(self, reactions=None, species_data=None, names=None,
-                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None,
+                 enable_diagnostics=False, temp=298.15, macromolecules=None,
                  species_index_map=None):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
@@ -51,16 +50,6 @@ class UniformCompartment:
         :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order.)
                                 If passed, cannot pass either of the args `reactions` nor `species_data` (both those object contain the chemical names)
-
-
-        :param preset:      [OPTIONAL] String with name of a standard preset
-                                that can be specified to make the time resolution finer or coarser;
-                                it will stay in effect from now on, unless explicitly changed later.
-                                Available values (in generally-increasing speed):
-                                    'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
-
-        :param exact:       [OPTIONAL] If True, use exact analytical solutions whenever possible;
-                                if False (default), always use the "Forward Euler" approximation method
 
         :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
@@ -120,12 +109,7 @@ class UniformCompartment:
             self._synchronize_species()
 
 
-        """
-        if (index_species is None) and (reactions is not None):
-            # Assign an array index to all the species we're dealing with
-            all_species = reactions.get_species_in_any_reaction(sort=True)
-            index_species = SpeciesIndexMap(all_species)
-        """
+
 
         self.reaction_simulator = ReactionSimulator(uniform_compartment=self, species_index_map=self.species_index_map,
                                                     reaction_registry=self.reaction_data, method="forward_euler",
@@ -185,10 +169,6 @@ class UniformCompartment:
                                                                     # of (some of) the chemical reaction rates:
                                                                     # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
-        # The following 2 diagnostic values get reset at every run
-        self.number_neg_concs = 0
-        self.number_soft_aborts = 0
-
 
         # ***  FOR DIAGNOSTICS  ***
 
@@ -197,25 +177,9 @@ class UniformCompartment:
                                         #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
 
 
-
         self.diagnostics = self.reaction_simulator.diagnostics
         self.diagnostics_enabled = self.reaction_simulator.diagnostics_enabled
-        """
-        self.diagnostics_enabled = False  # Flag indicating whether using diagnostics
 
-
-        self.diagnostics = None         # Object of class "Diagnostics"
-
-        if enable_diagnostics:
-            self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
-        """
-
-
-        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
-        self.adaptive_steps = VariableTimeSteps(uc=self)
-
-        if preset:
-            self.adaptive_steps.use_adaptive_preset(preset)
 
 
 
@@ -300,9 +264,6 @@ class UniformCompartment:
         elif type(conc) == dict:
             for name, conc_value in conc.items():
                 #print(f"******** species_name=`{name}` | conc={conc_value}")
-                #print(self.index_species)
-                #print(self.system)
-
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
@@ -481,19 +442,6 @@ class UniformCompartment:
                 "set_temp(): allowable values for `units` are 'K' and 'C'"
 
         self.temp = temp
-
-
-    def set_preset(self, preset :str) -> None:
-        """
-
-        :param preset:  String with name of a standard preset
-                            that can be specified to make the time resolution finer or coarser;
-                            it will stay in effect unless explicitly changed later.
-                            Available values (in generally-increasing speed):
-                                'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
-        :return:        None
-        """
-        self.adaptive_steps.use_adaptive_preset(preset)
 
 
 
@@ -1313,6 +1261,8 @@ class UniformCompartment:
 
     def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
         """
+        #TODO: already migrated.  Drop!
+
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using capture_conc_snapshot().
         Optionally, restrict the result with a start and/or end times,

@@ -143,6 +143,123 @@ def test_single_compartment_react():
 
 
 
+def test_single_compartment_react__catch_neg_conc():
+    # Based on "Run 3" of experiment "negative_concentrations_1
+
+    species_registry = SpeciesRegistry(ids=["U", "X", "S"])
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # 1st reaction: 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
+    r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=species_registry,
+                           reaction_model="custom",
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+    rxns.register_reaction(r)
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True)
+
+    # 2nd reaction: elementary reaction S <-> X (mostly forward)
+    rxns.add_reaction(reactants="S", products="X",
+                      reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
+
+    sim.set_system_conc_by_dict(conc_dict={"U": 50., "X": 100., "S": 0.})
+    assert sim.species_index_map.index_to_species == ['S', 'U', 'X']
+    assert sim.species_index_map.species_to_index == {'S': 0, 'U': 1, 'X': 2}
+
+
+    # Perform a first reaction step
+    sim.single_compartment_react(initial_step=0.25, n_steps=1, variable_steps=False)
+
+    assert np.allclose(sim.system_time, 0.25)
+    assert np.allclose(sim.system, [ 125., 25.,  25. ])   # "S", "U", "X"
+    assert sim.get_conc_dict() == {'S': 125, 'U': 25, 'X': 25}
+
+
+    # Attempt a second reaction step
+    with pytest.raises(ExcessiveTimeStepHard) as ex:
+        # This step would make [S] negative
+        sim.single_compartment_react(initial_step=0.25, n_steps=1, variable_steps=False)
+    details = ex.value.details
+    print(details)
+    assert details["function"] == "reaction_step_common_fixed_step"
+    assert details["delta_time"] == 0.25
+    assert details["caption"] == "aborted: neg. conc. in `S` from rxn # 0"
+    assert details["system_time"] == 0.25
+    assert details["rxn_index"] == 0
+    assert details["rate"] == 950   # 8. * 125 - 2. * 25
+    assert details["species_id"] == "S"
+    assert details["previous_function"] == "_validate_increment"
+    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
+DETAILS: 
+      The tentative time step (0.25) would lead to a NEGATIVE concentration in the species `S` from the reaction `2 S <-> U` (rxn # 0)
+      Baseline concentration value of `S` : 125 at system time 0.25; requested change (NOT carried out): -475"""
+
+    # Nothing has changed, since that last step wasn't actually taken
+    assert np.allclose(sim.system_time, 0.25)
+    assert np.allclose(sim.system, [ 125., 25.,  25. ])
+
+    # A smaller step saves the day!
+    sim.single_compartment_react(initial_step=0.03, n_steps=1, variable_steps=False)
+    assert np.allclose(sim.system_time, 0.28)    # 0.25 + 0.03
+    assert np.allclose(sim.system, [47.75, 53.5,  45.25])
+
+
+
+def test_single_compartment_react__variable_steps():
+    # Based on experiment "variable_steps_1"
+
+    species_registry = SpeciesRegistry(ids=["U", "X", "S"])
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # 1st reaction:  2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
+    r = ReactionDefinition(reactants=[(2, "S")], products="U", species_registry=species_registry,
+                           reaction_model="custom",
+                           kinetic_parameters={"kF": 8., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
+    rxns.register_reaction(r)
+
+    #uc = UniformCompartment(species_data=species_registry, preset=None, reactions=rxns)
+    sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler",
+                            diagnostics_enabled=True, preset=None)
+
+    # 2nd reaction: elementary reaction S <-> X (mostly forward)
+    rxns.add_reaction(reactants="S", products="X",
+                      reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
+
+    sim.set_system_conc_by_dict(conc_dict={"U": 50., "X": 100., "S": 0.}, snapshot=True)
+    assert sim.species_index_map.index_to_species == ['S', 'U', 'X']
+    assert sim.species_index_map.species_to_index == {'S': 0, 'U': 1, 'X': 2}
+
+
+    sim.adaptive_steps.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+    sim.adaptive_steps.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
+
+    sim.single_compartment_react(initial_step=0.01, target_end_time=0.2,
+                                 variable_steps=True)
+
+    df = sim.get_history()
+    print(df)
+    assert len(df) == 23
+
+    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'S', 'U', 'X']].to_numpy(dtype='float16'),
+                       [0.0000,  0.000000,  50.000000,  100.000000])
+    assert df.iloc[0]["caption"] == "Set concentration"
+
+    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'S', 'U', 'X']].to_numpy(dtype='float16'),
+                       [0.0050,  2.500000,  49.500000,  98.500000], rtol=1e-03)     # Notice the halved step size
+    assert df.iloc[1]["caption"] == "1st reaction step"
+    assert df.iloc[1]["step"] == "1"
+
+    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'S', 'U', 'X']].to_numpy(dtype='float16'),
+                       [0.0075,  3.596250,  49.302500,  97.798750], rtol=1e-03)
+    assert df.iloc[2]["step"] == "2"
+
+    assert np.allclose(df.iloc[22][['SYSTEM TIME', 'S', 'U', 'X']].to_numpy(dtype='float16'),
+                       [0.2050,  19.671183,  55.600598,   69.127620], rtol=1e-03)
+    assert df.iloc[22]["caption"] == "last reaction step"
+    assert df.iloc[22]["step"] == "22"
+
+
+
 def test__single_compartment_react_main_loop_1():
     # FIXED steps
 
@@ -622,7 +739,7 @@ DETAILS:
 def test_reaction_step_common_variable_step_1():
     species_registry = SpeciesRegistry()
 
-    # Reaction : A <-> B  (created thu the ReactionRegistry object)
+    # Reaction : A <-> B  (created thru the ReactionRegistry object)
     rxns = ReactionRegistry(species_data=species_registry)
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
                       kinetic_parameters={"kF": 3., "kR": 2.})
