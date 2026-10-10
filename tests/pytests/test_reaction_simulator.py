@@ -1283,8 +1283,65 @@ def test_single_step_single_rxn_2():
 
 
 
-def test__fetch_concs_for_rnx():
-    pass    # TODO
+def test__fetch_concs_for_rxn():
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=species_registry)
+
+    # D -> F
+    rxns.add_reaction(reactants="D", products="F",
+                    reaction_model="mass action")
+
+    sim = ReactionSimulator(system=np.array([19, 3]), reaction_registry=rxns)
+    assert sim.species_index_map.index_to_species == ['D', 'F']
+    assert sim.species_index_map.species_to_index == {'D': 0, 'F': 1}
+
+    r = rxns.get_reaction(0)         # D -> F
+    result = sim._fetch_concs_for_rxn(rxn=r)
+    assert result == {"D": 19, "F": 3}
+    assert np.allclose(sim.system, np.array([19, 3]))
+
+
+    # A + F -> C
+    rxns.add_reaction(reactants=["A", "F"], products="C",
+                      reaction_model="mass action")
+    sim.set_system_conc_by_dict({"A": 12, "C": 31})
+    assert sim.species_index_map.index_to_species == ['D', 'F', 'A', 'C']   # Notice how 'A' and 'C' got added, in sorted order
+    assert sim.species_index_map.species_to_index == {'D': 0, 'F': 1, 'A': 2, 'C': 3}
+    assert np.allclose(sim.system, np.array([19, 3, 12, 31]))   # `A` got over-written; system array got expanded
+
+    r = rxns.get_reaction(1)         # A + F -> C
+    result = sim._fetch_concs_for_rxn(rxn=r)
+    assert result == {"A": 12, "C": 31, "F": 3}
+
+
+    # C -> A
+    r_uni = ReactionDefinition(reactants="C", products="A",
+                               species_registry=species_registry,
+                               reaction_model="mass action")
+    rxns.register_reaction(r_uni)
+    assert sim.species_index_map.index_to_species == ['D', 'F', 'A', 'C']
+    assert sim.species_index_map.species_to_index == {'D': 0, 'F': 1, 'A': 2, 'C': 3}
+    assert np.allclose(sim.system, np.array([19, 3, 12, 31]))
+
+    r = rxns.get_reaction(2)        # C -> A
+    result = sim._fetch_concs_for_rxn(rxn=r)
+    assert result == {"A": 12, "C": 31}
+
+
+    # C + D -> B
+    r_syn = ReactionDefinition(reactants=["C", "D"], products="B",
+                               species_registry=species_registry,
+                               reaction_model="mass action", autoregister_species=True)
+    rxns.register_reaction(r_syn)
+    assert np.allclose(sim.system, [19,  3, 12, 31])
+    sim.set_system_conc_by_dict({"B": 1})
+    assert sim.species_index_map.index_to_species == ['D', 'F', 'A', 'C', 'B']
+    assert sim.species_index_map.species_to_index == {'D': 0, 'F': 1, 'A': 2, 'C': 3, 'B': 4}
+    assert np.allclose(sim.system, [19,  3, 12, 31, 1])  # The set_system_conc_by_dict() op expanded the system array
+
+    r = rxns.get_reaction(3)        # C + D -> B
+    result = sim._fetch_concs_for_rxn(rxn=r, )
+    assert result == {"B": 1, "C": 31, "D": 19}
 
 
 

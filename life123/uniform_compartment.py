@@ -718,29 +718,6 @@ class UniformCompartment:
 
 
 
-    def _fetch_concs_for_rnx(self, rxn :SimulationReaction, conc_array :np.ndarray):    # TODO: eliminate
-        """
-        Extract, out of the Numpy array of the given system concentrations,
-        just the concentrations of relevance for the specified reaction
-
-        :param rxn:         An object of type "SimulationReaction"
-        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :return:            A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-        """
-        # Get the SET of the id's of ALL the species appearing in this reaction
-        chem_labels = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
-
-        conc_dict = {}
-        for label in chem_labels:
-            chem_index = self.species_index_map.index_of(label)    # The integer index this chemical
-            conc_dict[label] = conc_array[chem_index]
-
-        return conc_dict
-
-
-
     def validate_increment(self,  delta_conc :float, baseline_conc :float,
                            rxn_index :int, species_index: int, delta_time) -> None:
         """

@@ -268,6 +268,7 @@ class ReactionSimulator:
                                         caption=caption)
 
 
+
     def set_system_conc(self, conc_array :np.ndarray|list):
         """
 
@@ -296,6 +297,31 @@ class ReactionSimulator:
             # Assign an array index to all the species we're dealing with
             all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
             self.species_index_map = SpeciesIndexMap(all_species)
+
+
+
+    def set_system_conc_by_dict(self, conc_dict :dict) -> None:
+        """
+
+        :param conc_dict:
+        :return:
+        """
+        for k, v in conc_dict.items():
+            species_index = self.species_index_map.index_of(species_id=k, enforce=False)
+            if species_index is None:
+                # Attempt to update the index
+                all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
+                self.species_index_map.add_species(all_species)
+                # Try again (this time it will raise an Exception if not found
+                species_index = self.species_index_map.index_of(species_id=k, enforce=True)
+
+            # If no array position already exists for the species whose concentration we're setting
+            if species_index >= len(self.system):
+                number_of_entries_to_add = species_index - len(self.system) + 1
+                self.system = np.pad(self.system, (0, number_of_entries_to_add))
+
+
+            self.system[species_index] = v
 
 
 
@@ -1309,7 +1335,7 @@ class ReactionSimulator:
 
         :return:                The initial rate of the reaction
         """
-        conc_init = self._fetch_concs_for_rnx(rxn=rxn)
+        conc_init = self._fetch_concs_for_rxn(rxn=rxn)
         # For the species in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
         increment_dict_single_rxn, rxn_rate = self.dispatcher_single_rxn(rxn=rxn, conc_init=conc_init,
@@ -1407,7 +1433,7 @@ class ReactionSimulator:
 
 
 
-    def _fetch_concs_for_rnx(self, rxn):    # TODO: fix spelling
+    def _fetch_concs_for_rxn(self, rxn):
         """
         Extract, out of the Numpy array of the system concentrations,
         just the concentrations of relevance for the specified reaction

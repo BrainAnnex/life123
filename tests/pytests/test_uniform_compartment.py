@@ -343,44 +343,6 @@ def test_single_compartment_correct_neg_conc():
 ###############################  LOWER-LEVEL METHODS  ###############################
 
 
-def test__fetch_concs_for_rnx():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(species_data=chem_data)
-    rxns = uc.get_reactions()
-
-    uc.add_reaction(reactants="D", products="F",
-                    reaction_model="mass action")
-    uc.set_conc({"D": 19, "F": 3})
-    r = uc.get_single_reaction(0)
-    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
-    assert result == {"D": 19, "F": 3}
-
-    uc.add_reaction(reactants=["A", "F"], products="C",
-                    reaction_model="mass action")
-    uc.set_conc({"A": 12, "C": 31})
-    r = uc.get_single_reaction(1)
-    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
-    assert result == {"A": 12, "C": 31, "F": 3}
-
-    r_uni = ReactionDefinition(reactants="C", products="A", species_registry=chem_data,
-                               reaction_model="mass action")
-    rxns.register_reaction(r_uni)
-    r = uc.get_single_reaction(2)
-    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
-    assert result == {"A": 12, "C": 31}
-
-    r_syn = ReactionDefinition(reactants=["C", "D"], products="B", species_registry=chem_data,
-                               reaction_model="mass action")
-    rxns.register_reaction(r_syn)
-    assert np.allclose(uc.system, [19,  3, 12, 31])
-    uc.set_conc({"B": 1})
-    assert np.allclose(uc.system, [19,  3, 12, 31, 1])  # The set_conc() op forced a re-synchronization of `uc` against `rxns`
-    r = uc.get_single_reaction(3)
-    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
-    assert result == {"B": 1, "C": 31, "D": 19}
-
-
-
 def test_is_in_equilibrium():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(species_data=chem_data)
