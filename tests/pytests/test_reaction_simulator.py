@@ -105,3 +105,36 @@ def test_CONSTRUCTOR():
     assert sim.species_index_map.get_all_species_ids(sort=True) == ['P', 'R']
 
     assert np.allclose(sim.uniform_compartment.system, np.array([0, 0]))
+
+
+    # Run 4
+    rxns = ReactionRegistry()
+    assert rxns.number_of_reactions() == 0
+    assert rxns.version == 0
+    sim = ReactionSimulator(reaction_registry=rxns)
+    assert np.allclose(sim.uniform_compartment.system, np.array([]))
+
+    rxns.add_reaction(reactants="R", products="P", reaction_model="mass action")
+    assert rxns.number_of_reactions() == 1
+    assert rxns.version == 1    # A mutation in the ReactionRegistry object just occurred
+
+    assert type(sim.species_registry) is SpeciesRegistry
+    assert sim.species_registry.get_all_species_ids(sort=True) == ['P', 'R']    # Automatically added when the reaction was added
+
+    assert type(sim.reaction_registry) is ReactionRegistry
+    assert sim.reaction_registry.number_of_reactions() == 1
+
+    assert type(sim.species_index_map) is SpeciesIndexMap
+    # The SpeciesIndexMap object has not yet registered the new species
+    assert sim._reaction_registry_version == 0  # The stale version
+    assert sim.species_index_map.number_of_mapped_species() == 0
+    assert sim.uniform_compartment.number_of_system_species() == 0
+
+    sim.set_system_conc([10, 20])
+    assert sim._reaction_registry_version == 1  # The above update triggered a re-synchronization
+
+    assert sim.species_index_map.get_all_species_ids(sort=True) == ['P', 'R']
+
+    assert np.allclose(sim.uniform_compartment.system, np.array([10, 20]))
+
+    # TODO next: add the reaction late on, thru the sim object
