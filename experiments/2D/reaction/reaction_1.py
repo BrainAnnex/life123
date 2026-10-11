@@ -78,7 +78,7 @@ bio.reaction_step(delta_time=0.1)
 print("bio.delta_reactions:\n", bio.delta_reactions)
 
 # %%
-bio.system += bio.delta_reactions       # Matrix operation to update all the concentrations
+bio.system_state += bio.delta_reactions       # Matrix operation to update all the concentrations
 bio.system_time += 0.1
 
 bio.describe_state()

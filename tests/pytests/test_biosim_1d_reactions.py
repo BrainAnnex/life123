@@ -33,7 +33,7 @@ def test_reaction_step_1():
                                reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
     assert bio.reactions.number_of_reactions() == 1
-    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
+    assert np.allclose(bio.system_state, [[10., 10., 10.] , [50., 50., 50.]])
 
     # Just the first reaction step, with the lower-level call to reaction_step()
     bio.reaction_step(0.1)
@@ -67,25 +67,25 @@ def test_reaction_step_1b():
             '        Kinetics - derived:  1 derived reaction\n'
             '            (1) Type: "mass action"   (kF = 3 | kR = 2 | K = 1.5 | reversible = True)'
     ]
-    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
+    assert np.allclose(bio.system_state, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
     bio.react(time_step=0.1, n_steps=1)
     assert np.allclose(bio.delta_reactions, [[ 7., 7., 7.] , [-7., -7., -7.]])
-    assert np.allclose(bio.system, [[17., 17., 17.] , [43., 43., 43.]])
+    assert np.allclose(bio.system_state, [[17., 17., 17.] , [43., 43., 43.]])
 
     # More steps
     for i in range(10):
         bio.reaction_step(0.1)
-        bio.system += bio.delta_reactions     # Matrix operation
+        bio.system_state += bio.delta_reactions     # Matrix operation
 
-    assert np.allclose(bio.system,
+    assert np.allclose(bio.system_state,
                        [[ 23.99316406, 23.99316406, 23.99316406] ,
                         [ 36.00683594, 36.00683594, 36.00683594]])
 
     # Taken to equilibrium
     bio.react(time_step=0.1, n_steps=20)
-    assert np.allclose(bio.system, [[24., 24., 24.] , [36., 36., 36.]])
+    assert np.allclose(bio.system_state, [[24., 24., 24.] , [36., 36., 36.]])
 
 
 
@@ -106,7 +106,7 @@ def test_react_1():
 
     # Large number of steps
     bio.react(time_step=0.1, n_steps=15)
-    assert np.allclose(bio.system, [[14.54545455] , [36.36363636]])
+    assert np.allclose(bio.system_state, [[14.54545455] , [36.36363636]])
     assert bio.n_bins == 1
 
 
@@ -128,11 +128,11 @@ def test_react_2():
 
     # First step
     bio.react(time_step=0.1, n_steps=1)
-    assert np.allclose(bio.system, [[20.] , [35.]])
+    assert np.allclose(bio.system_state, [[20.] , [35.]])
 
     # Large number of steps
     bio.react(time_step=0.1, n_steps=100)
-    assert np.allclose(bio.system, [[16.25] , [40.625]])
+    assert np.allclose(bio.system_state, [[16.25] , [40.625]])
     assert bio.n_bins == 1
 
 
@@ -155,11 +155,11 @@ def test_react_3():
 
     # First step
     bio.react(time_step=0.002, n_steps=1)
-    assert np.allclose(bio.system, [[5.08], [45.08], [24.92]])
+    assert np.allclose(bio.system_state, [[5.08], [45.08], [24.92]])
 
     # Large number of steps
     bio.react(time_step=0.002, n_steps=40)
-    assert np.allclose(bio.system, [[0.29487741], [40.29487741], [29.70512259]])
+    assert np.allclose(bio.system_state, [[0.29487741], [40.29487741], [29.70512259]])
     assert bio.n_bins == 1
 
 
@@ -180,11 +180,11 @@ def test_react_4():
 
     # First step
     bio.react(time_step=.2, n_steps=1)
-    assert np.allclose(bio.system, [[5.6], [3.8], [0.4]])
+    assert np.allclose(bio.system_state, [[5.6], [3.8], [0.4]])
 
     # Numerous more steps
     bio.react(time_step=.05, n_steps=30)
-    assert np.allclose(bio.system, [[4.31058733], [6.37882534], [1.68941267]])
+    assert np.allclose(bio.system_state, [[4.31058733], [6.37882534], [1.68941267]])
     assert bio.n_bins == 1
 
 
@@ -205,17 +205,17 @@ def test_react_5():
 
     # First step
     bio.react(time_step=0.001, n_steps=1)
-    assert np.allclose(bio.system, [[3.76],
-                                    [6.4 ],
-                                    [5.48],
-                                    [2.36]])
+    assert np.allclose(bio.system_state, [[3.76],
+                                          [6.4 ],
+                                          [5.48],
+                                          [2.36]])
 
     # Numerous more steps
     bio.react(time_step=0.001, n_steps=40)
-    assert np.allclose(bio.system, [[2.80284552],
-                                    [4.00711381],
-                                    [7.39430896],
-                                    [3.79573172]])
+    assert np.allclose(bio.system_state, [[2.80284552],
+                                          [4.00711381],
+                                          [7.39430896],
+                                          [3.79573172]])
     assert bio.n_bins == 1
 
 
@@ -236,13 +236,13 @@ def test_react_6():
 
     # First step
     bio.react(time_step=0.02, n_steps=1)
-    assert np.allclose(bio.system, [[1.6],
-                                    [5.7]])
+    assert np.allclose(bio.system_state, [[1.6],
+                                          [5.7]])
 
     # Numerous more steps
     bio.react(time_step=0.02, n_steps=20)
-    assert np.allclose(bio.system, [[1.51554944],
-                                    [5.74222528]])
+    assert np.allclose(bio.system_state, [[1.51554944],
+                                          [5.74222528]])
     assert bio.n_bins == 1
 
 
@@ -263,25 +263,25 @@ def test_react_7():
 
     # First step
     bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.system, [[2.27],
-                                    [4.27 ],
-                                    [1.702],
-                                    [0.372],
-                                    [0.128]])
+    assert np.allclose(bio.system_state, [[2.27],
+                                          [4.27 ],
+                                          [1.702],
+                                          [0.372],
+                                          [0.128]])
 
     # 2nd step
     bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.system, [[1.819395],
-                                    [3.819395  ],
-                                    [2.10707348],
-                                    [0.32646848],
-                                    [0.17353152]])
+    assert np.allclose(bio.system_state, [[1.819395],
+                                          [3.819395  ],
+                                          [2.10707348],
+                                          [0.32646848],
+                                          [0.17353152]])
 
     # Numerous more steps
     bio.react(time_step=0.01, n_steps=200)
-    assert np.allclose(bio.system, [[0.50508029],
-                                    [2.50508029],
-                                    [3.16316668],
-                                    [0.06824696],
-                                    [0.43175304]])
+    assert np.allclose(bio.system_state, [[0.50508029],
+                                          [2.50508029],
+                                          [3.16316668],
+                                          [0.06824696],
+                                          [0.43175304]])
     assert bio.n_bins == 1

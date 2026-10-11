@@ -59,15 +59,15 @@ def test_diffuse_1():
     # 1st diffusion step
     bio.diffuse_step(time_step=delta_t, h=delta_s)
     #print(bio.delta_diffusion)
-    bio.system += bio.delta_diffusion
+    bio.system_state += bio.delta_diffusion
     #bio.describe_state()
 
     # 2nd diffusion step
     bio.diffuse_step(time_step=delta_t, h=delta_s)
     #print(bio.delta_diffusion)
-    bio.system += bio.delta_diffusion
+    bio.system_state += bio.delta_diffusion
     #bio.describe_state()
-    snapshot_of_system_state = bio.system.copy()
+    snapshot_of_system_state = bio.system_state.copy()
 
     # Now, re-initialize the system, and do both steps with a single function call
     chem_data = SpeciesRegistry(n_species=1, diffusion_rate=[diff])    # Just 1 chemical species
@@ -77,7 +77,7 @@ def test_diffuse_1():
 
     bio.diffuse(time_step=delta_t, n_steps=2, h=delta_s)    # 2 diffusion steps
     #bio.describe_state()
-    assert np.allclose(bio.system, snapshot_of_system_state)
+    assert np.allclose(bio.system_state, snapshot_of_system_state)
 
 
 
@@ -100,10 +100,10 @@ def test_diffuse_2():
     for _ in range(3):
         bio.diffuse_step(time_step=delta_t, h=delta_s)
         #print(bio.delta_diffusion)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         #bio.describe_state()
 
-    snapshot_of_system_state = bio.system.copy()
+    snapshot_of_system_state = bio.system_state.copy()
 
 
     # Now, re-initialize the system, and do all diffusion steps with a single function call
@@ -115,7 +115,7 @@ def test_diffuse_2():
 
     bio.diffuse(time_step=delta_t, n_steps=3, h=delta_s)    # 3 diffusion steps
     #bio.describe_state()
-    assert np.allclose(bio.system, snapshot_of_system_state)
+    assert np.allclose(bio.system_state, snapshot_of_system_state)
 
 
 

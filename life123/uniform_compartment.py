@@ -23,7 +23,7 @@ class UniformCompartment:
     """
 
     def __init__(self, species_index_map, species_registry=None,
-                 macromolecules=None, diagnostics=None, species_list=None, names=None):
+                 macromolecules=None, diagnostics=None, sync_func=None, species_list=None, names=None):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
 
@@ -38,6 +38,8 @@ class UniformCompartment:
         :param macromolecules:      [OPTIONAL] Object of class "Macromolecule"
         :param species_index_map:   [OPTIONAL] Object of type "IndexSpecies"
         """
+        self.sync_func = sync_func                  # Optional external function to invoke for "lazy synchronization"
+
         self.species_registry = species_registry    # Object of type "SpeciesRegistry" (with data about all the species)
 
         self.species_index_map = species_index_map  # Indexes to reconcile the species id's
@@ -52,17 +54,10 @@ class UniformCompartment:
                 assert species_registry == self.species_index_map.species_registry,\
                     "incompatibility between objects passed by arguments `species_registry` and `species_index_map`"
 
-        """
-        if self.species_index_map is None:
-            self.species_index_map = SpeciesIndexMap()
-
-        if (species_list is not None) and (species_registry is None):
-            pass
-        """
 
         system_state_size = self.species_index_map.number_of_mapped_species()
 
-        self.system :np.ndarray = np.zeros(system_state_size, dtype='d')   # float64    SYSTEM STATE    TODO: maybe rename to "system_state
+        self.system_state :np.ndarray = np.zeros(system_state_size, dtype='d')   # float64    CONCENTRATION SYSTEM STATE
                             # TODO: allow users to specify the type
                             # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
@@ -127,7 +122,7 @@ class UniformCompartment:
         Number of species being simulated (and kept in the system state)
         :return:
         """
-        number = len(self.system)
+        number = len(self.system_state)
         assert number <= self.species_index_map.number_of_mapped_species(), \
             f"number_of_system_species(): the system size ({number}) " \
             f"exceeds the number of species mapped in the species index ({self.species_index_map.number_of_mapped_species()})"
@@ -145,7 +140,7 @@ class UniformCompartment:
                             EXAMPLE:  array([12.3, 4.56, 0.12])
                                       The 0-th chemical has concentration 12.3, and so on...
         """
-        return self.system
+        return self.system_state
 
 
 
@@ -154,11 +149,21 @@ class UniformCompartment:
         Return the current system concentration of the given species, specified by its id.
         If no species with that id exists, an Exception is raised
 
+        Synchronization, if registered, will take place
+
         :param species_id:  The id of a species
         :return:            The current system concentration of the above species
         """
-        species_index = self.species_index_map.index_of(species_id)
-        return self.system[species_index]
+        try:
+            species_index = self.species_index_map.index_of(species_id, enforce=True)
+        except IndexError:
+            if self.sync_func:
+                self.sync_func()
+
+            # Try again, post-synchronization
+            species_index = self.species_index_map.index_of(species_id, enforce=True)
+
+        return self.system_state[species_index]
 
 
 
@@ -166,6 +171,8 @@ class UniformCompartment:
         """
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
+
+        Synchronization, if registered, will take place
 
         :param species_ids: [OPTIONAL] List, tuple or set of the id's of the species of interest;
                                 by default, return all
@@ -178,7 +185,7 @@ class UniformCompartment:
         # TODO: maybe drop the `system_data` arg?
 
         if system_data is None:
-            system_data = self.system
+            system_data = self.system_state
 
 
         if species_ids is None:
@@ -194,8 +201,9 @@ class UniformCompartment:
 
             conc_dict = {}
             for sp_id in species_ids:
-                species_index = self.species_index_map.index_of(sp_id)
-                conc_dict[sp_id] = system_data[species_index]
+                #species_index = self.species_index_map.index_of(sp_id)
+                #conc_dict[sp_id] = system_data[species_index]
+                conc_dict[sp_id] = self.get_species_conc(species_id=sp_id)  # This will also take care of synchronization, if needed
 
             return conc_dict
 
@@ -216,7 +224,9 @@ class UniformCompartment:
 
     def add_species(self, species_ids : str | set[str] | list[str] | tuple[str, ...]) -> int:
         """
-        Add the requested species to the system state.
+        Add the requested species, or group of species, to the system state,
+        with values initialized to zero.
+        The existing part of the system state won't be affected.
 
         :param species_ids: String, set, list or tuple of the ID's of species whose indexing needs to be managed;
                                 no harm in also including species that are already managed (they will be ignored).
@@ -231,12 +241,35 @@ class UniformCompartment:
 
         if number_added > 0:
             # Expand the system state array for concentrations
-            self.system = np.pad(self.system, (0, number_added))
-
-            #if self.reaction_simulator:
-            #    self.reaction_simulator.system = self.system    # Re-align
+            self.system_state = np.pad(self.system_state, (0, number_added))
 
         return number_added
+
+
+
+    def set_system_state(self, conc_array : np.ndarray | list | tuple) -> None:
+        """
+        Completely set the entire system state, from the given concentration array or list/tuple.
+        The array indexes must be present in `self.species_index_map` (i.e. have an assigned
+        species correspondence).
+        IMPORTANT: make sure that the array is in the right order, according to the current species index map.
+                   A safer function to use is set_conc(), where species id's are used, instead of their array indexes
+
+        :param conc_array:  Numpy array or list/tuple of concentration values
+        :return:            None
+        """
+        assert len(conc_array) <= self.species_index_map.number_of_mapped_species(), \
+            f"set_system_state(): the number of the passed concentration values ({len(conc_array)}) " \
+            f"exceeds the size of the species index ({self.species_index_map.number_of_mapped_species()});\n" \
+            f"try using set_conc() instead"
+
+        if self.sync_func:
+            self.sync_func()
+
+        if isinstance(conc_array, (list, tuple)):
+            self.system_state = np.array(conc_array)
+        else:
+            self.system_state = conc_array.copy()    # Clone
 
 
 
@@ -245,10 +278,10 @@ class UniformCompartment:
         """
         Set the concentrations of 1 species.
 
-        Note: if both `species_index` and `species_name` are provided,an Exception is raised
+        Note: if both `species_id` and `species_index` and  are provided,an Exception is raised
 
         :param conc:            A non-negative number with the desired concentration value
-                                    of the chemical specified below.  (Any previous value will get over-written)
+                                    of the species specified below.  (Any previous value will get over-written)
         :param species_id:      [OPTIONAL] The id of the species of interest.
         :param species_index:   [OPTIONAL] An integer that indexes the species of interest (numbering starts at 0)
                                     If both `species_name` and `species_index` are provided, an Exception is raised.
@@ -263,11 +296,21 @@ class UniformCompartment:
         assert conc >= 0, \
             f"UniformCompartment.set_single_conc(): species concentrations cannot be negative (value passed: {conc})"
 
-        if species_id is not None:
-            assert species_index is None, \
-                "set_single_conc(): cannot pass both arguments `species_name` and `species_index`"
+        if species_index is not None:
+            assert species_id is None, \
+                "set_single_conc(): cannot pass both arguments `species_id` and `species_index`"
 
-            #self._ensure_synchronized_with_reaction_registry()
+            assert species_index < self.species_index_map.number_of_mapped_species(), \
+                f"set_single_conc(): the requested species index ({species_index}) " \
+                f"exceeds the range of the species index (0-{self.species_index_map.number_of_mapped_species()-1});\n" \
+                f"try using the argument `species_id` instead"
+
+
+        if self.sync_func:
+            self.sync_func()
+
+
+        if species_id is not None:
             species_index = self.species_index_map.index_of(species_id)
 
         elif species_index is not None:
@@ -281,19 +324,16 @@ class UniformCompartment:
 
         # If no array position already exists
         # for the species whose concentration we're setting
-        if species_index >= len(self.system):
+        if species_index >= len(self.system_state):
             assert allow_growth, \
                 f"UniformCompartment.set_single_conc(): the given index ({species_index}) cannot fit in the current " \
-                f"system size ({len(self.system)}); use the argument `allow_growth=True` to automatically grow the system-state array"
+                f"system size ({len(self.system_state)}); use the argument `allow_growth=True` to automatically grow the system-state array"
 
-            number_of_entries_to_add = species_index - len(self.system) + 1
-            self.system = np.pad(self.system, (0, number_of_entries_to_add))
-
-            #if self.reaction_simulator:
-            #    self.reaction_simulator.system = self.system    # Re-align
+            number_of_entries_to_add = species_index - len(self.system_state) + 1
+            self.system_state = np.pad(self.system_state, (0, number_of_entries_to_add))
 
 
-        self.system[species_index] = conc
+        self.system_state[species_index] = conc
 
         if snapshot is not None:
             # Invoke a passed external function
@@ -305,21 +345,22 @@ class UniformCompartment:
         """
         Set the concentrations of a group of species
 
-        :param conc:   A dict indexed by the species id, for some or all of the species of interest.
+        :param conc:        A dict indexed by the species id, for some or all of the species of interest.
                                 Anything not specified will be left undisturbed
                                 EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
-                        Note: any previous values will get over-written
+                            Note: any previous values will get over-written
 
-        :param snapshot:[OPTIONAL] A function that accepts an argument called "caption"
+        :param snapshot:    [OPTIONAL] A function that accepts an argument called "caption"
         :param system_time: [OPTIONAL] Only used for inclusion into diagnostic data, if applicable
-        :return:        None
+        :return:            None
         """
         assert type(conc) is dict, \
             "set_conc(): argument `conc` must be a dict"
 
         for sp_id, conc_value in conc.items():
-            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot=None)
+            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot=None)  # This function will also take care
+                                                                                    # of optional synchronization
 
         if snapshot is not None:
             # Invoke a passed external function
@@ -327,7 +368,7 @@ class UniformCompartment:
 
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
-            system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+            system_data = self.get_conc_dict(system_data=self.system_state)   # The current System State, as a dict
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
                                                        caption="Set concentration")
 

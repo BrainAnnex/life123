@@ -31,7 +31,7 @@ def test_constructor():
     assert bio.n_species == 1
     assert bio.species_data == chem_data
     expected = np.zeros((1, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
 
 
     # New test
@@ -42,7 +42,7 @@ def test_constructor():
     assert bio.n_species == 3
     assert bio.species_data == chem_data
     expected = np.zeros((3,15), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
 
@@ -60,7 +60,7 @@ def test_constructor():
     assert bio.n_bins == 5
     assert bio.n_species == 3
     expected = np.zeros((3, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
     assert type(bio.species_data) == SpeciesRegistry

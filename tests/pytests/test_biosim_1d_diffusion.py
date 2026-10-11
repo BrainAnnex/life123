@@ -44,7 +44,7 @@ def test_diffuse_step_4():
 
     for i in range(4):
         bio.diffuse_step(time_step=.3)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         #print(f"At end of step {i+1}:")
         #bio.describe_state()
 
@@ -66,7 +66,7 @@ def test_diffuse_step_5():
 
     for i in range(3):
         bio.diffuse_step(time_step=0.6666)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         #print(f"At end of step {i+1}:")
         #print(bio.system)
 
@@ -87,7 +87,7 @@ def test_diffuse_step_6():
     #print("The default max allowed time step is: ", diff_obj.max_time_step(.5, delta_x=1))
     for i in range(20):
         bio.diffuse_step(time_step=0.6666)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         #print(f"At end of step {i+1}:")
         #print(bio.lookup_species(0))
 
@@ -106,7 +106,7 @@ def test_diffuse_step_7():
 
     for i in range(20*2):
         bio.diffuse_step(time_step=0.6666/2)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         """
         if i<10 or i >35:
             print(f"At end of step {i+1}:")
@@ -131,7 +131,7 @@ def test_diffuse_step_8():
 
     for i in range(2000):
         bio.diffuse_step(time_step=1)
-        bio.system += bio.delta_diffusion
+        bio.system_state += bio.delta_diffusion
         '''
         if i<4:
             print(f"At end of step {i+1}:")
@@ -171,14 +171,14 @@ def test_diffuse_step_1_b():
     """
 
     bio.diffuse_step(0.01)
-    bio.system += bio.delta_diffusion
+    bio.system_state += bio.delta_diffusion
     #bio.describe_state()
     """
     3 bins and 2 species:
      [[ 5. 90.  5.]
      [12. 24. 44.]]
     """
-    assert np.allclose(bio.system, [[5., 90., 5.] , [12., 24., 44.]])
+    assert np.allclose(bio.system_state, [[5., 90., 5.] , [12., 24., 44.]])
 
 
 
@@ -278,7 +278,7 @@ def test_diffuse_4():
     [[95.  5.  0.]
      [12. 24. 44.]]
     """
-    assert np.allclose(bio.system, [[5., 90., 5.] , [12., 24., 44.]])
+    assert np.allclose(bio.system_state, [[5., 90., 5.] , [12., 24., 44.]])
 
     # Repeat 1 step
     bio.diffuse(time_step = 0.01, n_steps = 1)
@@ -288,7 +288,7 @@ def test_diffuse_4():
     [[ 9.25 81.5   9.25]
      [14.4  25.6  40.  ]]
     """
-    assert np.allclose(bio.system, [[9.25, 81.5, 9.25] , [14.4, 25.6, 40.]])
+    assert np.allclose(bio.system_state, [[9.25, 81.5, 9.25] , [14.4, 25.6, 40.]])
 
 
     # Reset the system
@@ -297,7 +297,7 @@ def test_diffuse_4():
     #bio.describe_state()
     # Re-take the 2 steps
     bio.diffuse(time_step = 0.01, n_steps = 2)
-    assert np.allclose(bio.system, [[9.25, 81.5, 9.25] , [14.4, 25.6, 40.]])
+    assert np.allclose(bio.system_state, [[9.25, 81.5, 9.25] , [14.4, 25.6, 40.]])
 
 
 

@@ -76,7 +76,7 @@ def test_set_conc():
     assert uc.reaction_data.number_of_reactions() == 1
     assert uc.species_index_map.index_to_species == ['A', 'B', 'C']
     assert uc.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2}
-    assert np.allclose(uc.system, [0, 0, 0])
+    assert np.allclose(uc.system_state, [0, 0, 0])
 
     with pytest.raises(Exception):
         uc.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
@@ -86,19 +86,19 @@ def test_set_conc():
         uc.set_conc(conc=(10., 20., -0.01))    # Negative values
 
     uc.set_conc(conc=[1., 2., 3.])
-    assert np.allclose(uc.system, [1., 2., 3.])
+    assert np.allclose(uc.system_state, [1., 2., 3.])
 
     uc.set_conc(conc=(10., 20., 30.))
-    assert np.allclose(uc.system, [10., 20., 30.])
+    assert np.allclose(uc.system_state, [10., 20., 30.])
 
     uc.set_conc(conc={"B": 100})
-    assert np.allclose(uc.system, [10., 100., 30.])
+    assert np.allclose(uc.system_state, [10., 100., 30.])
 
     uc.set_conc(conc={"C": 3})
-    assert np.allclose(uc.system, [10., 100., 3.])
+    assert np.allclose(uc.system_state, [10., 100., 3.])
 
     uc.set_conc(conc={"C": 8, "A": 1, "B": 5})
-    assert np.allclose(uc.system, [1., 5., 8.])
+    assert np.allclose(uc.system_state, [1., 5., 8.])
 
     with pytest.raises(Exception):
         uc.set_conc(conc={"A": -0.01})

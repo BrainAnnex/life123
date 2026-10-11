@@ -105,12 +105,12 @@ def test_single_compartment_react():
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
     uc.set_conc(conc=initial_conc, snapshot=True)
 
-    assert np.allclose(uc.system, [ 100.,    0.,    0., 1000. ,   0.])
-    assert np.allclose(sim.system, [ 100.,    0.,    0., 1000. ,   0.])
+    assert np.allclose(uc.system_state, [100., 0., 0., 1000. , 0.])
+    assert np.allclose(sim.system_state, [100., 0., 0., 1000. , 0.])
 
 
     sim.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
-    assert np.allclose(sim.system, uc.system)
+    assert np.allclose(sim.system_state, uc.system_state)
 
     run1 = uc.get_system_conc()
 
@@ -140,8 +140,8 @@ def test_single_compartment_react():
 
     uc2.set_conc(conc=initial_conc, snapshot=True)
 
-    assert np.allclose(uc2.system, [ 100.,    0.,    0., 1000. ,   0.])
-    assert np.allclose(sim2.system, [ 100.,    0.,    0., 1000. ,   0.])
+    assert np.allclose(uc2.system_state, [100., 0., 0., 1000. , 0.])
+    assert np.allclose(sim2.system_state, [100., 0., 0., 1000. , 0.])
 
     for _ in range(7):
         sim2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)

@@ -110,7 +110,7 @@ bio.describe_state(concise=True)
 
 # %%
 # SAVE the above system data (a matrix of dimension n_species x n_bins):  this is the result of diffusion with delta_x = 1
-diffuse_dx_1 = bio.system
+diffuse_dx_1 = bio.system_state
 
 # %%
 # Line plot
@@ -148,7 +148,7 @@ bio.describe_state(concise=True)
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/2
-diffuse_dx_1_2 = bio.system
+diffuse_dx_1_2 = bio.system_state
 
 # %% [markdown]
 # ### Compare the last 2 runs (with dx=1 and dx=1/2)
@@ -183,7 +183,7 @@ bio.describe_state(concise=True)
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/4
-diffuse_dx_1_4 = bio.system
+diffuse_dx_1_4 = bio.system_state
 
 # %% [markdown]
 # ### Compare the latest 2 runs (with dx=1/2 and dx=1/4)
@@ -217,7 +217,7 @@ bio.describe_state(concise=True)
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/10
-diffuse_dx_1_10 = bio.system
+diffuse_dx_1_10 = bio.system_state
 
 # %% [markdown]
 # ### Again, compare the latest 2 runs (with dx=1/4 and dx=1/10)

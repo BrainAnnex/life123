@@ -54,7 +54,7 @@ class SpeciesIndexMap:
 
 
 
-    def index_of(self, species_id :str, enforce=True) -> int:
+    def index_of(self, species_id :str, enforce=True) -> int|None:
         """
         Locate and return the array index (meant for system-state arrays)
         associated to the given species ID.
@@ -66,9 +66,9 @@ class SpeciesIndexMap:
         species_index = self.species_to_index.get(species_id, None)
 
         if enforce:
-            assert species_index is not None, \
-                f'IndexSpecies.index_of(): no species with id "{species_id}" is currently registered ' \
-                f'in the system-state array. \nDid you include it?'
+            if species_index is None:
+                raise IndexError(f'IndexSpecies.index_of(): no species with id "{species_id}" is currently registered ' \
+                                 f'in the system-state array. \nDid you include it?')
 
         return species_index
 

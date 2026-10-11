@@ -60,9 +60,9 @@ class ReactDiffuse:
             case "uniform":
                 uc = UniformCompartment(species_index_map=self.index_species)
                 self.module = uc
-                self.sim = ReactionSimulator(system=uc.system, species_index_map=self.index_species,
-                            reaction_registry=uc.reaction_data, method="forward_euler",
-                            diagnostics_enabled=False)
+                self.sim = ReactionSimulator(system=uc.system_state, species_index_map=self.index_species,
+                                             reaction_registry=uc.reaction_data, method="forward_euler",
+                                             diagnostics_enabled=False)
 
 
             case "1d":

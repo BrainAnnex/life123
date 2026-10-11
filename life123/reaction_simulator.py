@@ -118,7 +118,7 @@ class ReactionSimulator:
                                 it will stay in effect from now on, unless explicitly changed later.
                                 Available values (in generally-increasing speed):
                                     'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
-        :param uniform_compartment:
+        :param system:
         :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         :param species_ids: [OPTIONAL] A single id, or list or tuple of id's, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order)
@@ -224,11 +224,12 @@ class ReactionSimulator:
 
 
         if uniform_compartment is not None:
-            self.uniform_compartment = uniform_compartment
+            self.system = uniform_compartment
         else:
-            self.uniform_compartment = UniformCompartment(species_index_map=self.species_index_map,
+            self.system = UniformCompartment(species_index_map=self.species_index_map,
                                             species_registry=self.species_registry,
-                                            diagnostics=self.diagnostics)
+                                            diagnostics=self.diagnostics,
+                                            sync_func=self.ensure_synchronized_with_reaction_registry)
 
 
         # Build the needed indexes, based on the reactions, and on macromolecules
@@ -237,7 +238,7 @@ class ReactionSimulator:
                                                                             # i.e. to check for changes externally made to the registry
 
         if system is not None:
-            self.set_system_conc(conc_array=system)
+            self.system.set_system_state(conc_array=system)
 
 
 
@@ -258,18 +259,18 @@ class ReactionSimulator:
         for rxn in self.reaction_registry.get_all_reactions():
             # rxn is a "SimulationReaction" object
             species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
-            self.uniform_compartment.add_species(species_id_set)
+            self.system.add_species(species_id_set)
 
 
 
-    def _ensure_synchronized_with_reaction_registry(self) -> None:
+    def ensure_synchronized_with_reaction_registry(self) -> None:
         """
         For "lazy synchronization" with external mutation in the reaction registry
 
         :return:
         """
         if self._reaction_registry_version != self.reaction_registry.version:
-            #print("************OUT OF SYNCH DETECTED!")
+            #print("************ ensure_synchronized_with_reaction_registry(): OUT OF SYNCH DETECTED!")
             self._synchronize_species()
             self._reaction_registry_version = self.reaction_registry.version
 
@@ -349,8 +350,8 @@ class ReactionSimulator:
         :param species_id:  The id of a species
         :return:            The current system concentration of the above species
         """
-        self._ensure_synchronized_with_reaction_registry()
-        return self.uniform_compartment.get_species_conc(species_id)
+        self.ensure_synchronized_with_reaction_registry()
+        return self.system.get_species_conc(species_id)
 
         #species_index = self.species_index_map.index_of(species_id)
         #return self.system[species_index]
@@ -370,75 +371,8 @@ class ReactionSimulator:
         :return:            A dictionary, possibly empty, indexed by the species id's, of the concentration values;
                                 EXAMPLE: {"A": 1.2, "D": 4.67}
         """
-        self._ensure_synchronized_with_reaction_registry()
-        return self.uniform_compartment.get_conc_dict(species_ids=species_ids, system_data=system_data)
-
-
-
-    def set_system_conc(self, conc_array :np.ndarray|list):
-        """
-
-        :param conc_array:
-        :return:
-        """
-        self._ensure_synchronized_with_reaction_registry()
-
-        assert len(conc_array) <= self.species_index_map.number_of_mapped_species(), \
-            f"set_system_conc(): the number of the passed concentration values ({len(conc_array)}) " \
-            f"exceeds the size of the species index ({self.species_index_map.number_of_mapped_species()})"
-
-        """                  
-        if self.species_index_map is not None:
-            # If a species index already exist, make sure that the number of species match
-            if  len(conc_array) != self.species_index_map.number_of_mapped_species():
-                # Attempt to update the index
-                all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
-                self.species_index_map.add_species(all_species)
-
-                assert len(conc_array) == self.species_index_map.number_of_mapped_species(), \
-                    f"set_system_conc(): the number of the passed concentration values ({len(conc_array)}) " \
-                    f"doesn't match the size of the species index ({self.species_index_map.number_of_mapped_species()})"
-        """
-
-        if type(conc_array) is list:
-            self.uniform_compartment.system = np.array(conc_array)
-        else:
-            self.uniform_compartment.system = conc_array.copy()    # Clone
-
-
-
-    """
-    def set_system_conc_by_dict(self, conc_dict :dict, snapshot=False) -> None:
-
-
-        :param conc_dict:   EXAMPLE: {"U": 50., "X": 100.}
-        :return:            None
-
-        if len(conc_dict) > 0 and (self.uniform_compartment.system is None):
-            # Initialize a Numpy array (TODO: maybe do at instantiation, instead of float)
-            self.uniform_compartment.system = np.zeros(0, dtype='d')   # float64
-
-
-        for k, v in conc_dict.items():
-            species_index = self.species_index_map.index_of(species_id=k, enforce=False)
-            if species_index is None:
-                # Attempt to update the index
-                all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
-                self.species_index_map.add_species(all_species)
-                # Try again (this time it will raise an Exception if not found
-                species_index = self.species_index_map.index_of(species_id=k, enforce=True)
-
-            # If no array position already exists for the species whose concentration we're setting
-            if species_index >= len(self.uniform_compartment.system):
-                number_of_entries_to_add = species_index - len(self.uniform_compartment.system) + 1
-                self.uniform_compartment.system = np.pad(self.uniform_compartment.system, (0, number_of_entries_to_add))
-
-
-            self.uniform_compartment.system[species_index] = v
-
-        if snapshot:
-            self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
-    """
+        self.ensure_synchronized_with_reaction_registry()
+        return self.system.get_conc_dict(species_ids=species_ids, system_data=system_data)
 
 
 
@@ -586,7 +520,7 @@ class ReactionSimulator:
         based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
-        (object attributes self.uniform_compartment.system and self.system_time)
+        (object attributes self.system.system and self.system_time)
 
         :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
         :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
@@ -620,7 +554,7 @@ class ReactionSimulator:
                                             to inform the user of the current status
 
         :return:                        A dictionary containing the key "recommended_next_step"
-                                        Note: the object attributes self.uniform_compartment.system and self.system_time get updated
+                                        Note: the object attributes self.system.system and self.system_time get updated
         """
 
         # Default values
@@ -628,7 +562,7 @@ class ReactionSimulator:
         final_step_caption = "last reaction step"
 
         # Validation
-        #assert self.uniform_compartment.system is not None, "UniformCompartment.single_compartment_react(): " \
+        #assert self.system.system is not None, "UniformCompartment.single_compartment_react(): " \
         #                                "the concentration values of the various chemicals must be set first"
 
         if variable_steps and (n_steps is not None):
@@ -838,9 +772,9 @@ class ReactionSimulator:
 
 
         # Update the System State
-        self.previous_system = self.uniform_compartment.system.copy()   # Clone the earlier state (note: this is used for adaptive time steps. TODO: maybe jettison for fixed steps)
-        self.uniform_compartment.system += delta_concentrations
-        if min(self.uniform_compartment.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
+        self.previous_system = self.system.system_state.copy()   # Clone the earlier state (note: this is used for adaptive time steps. TODO: maybe jettison for fixed steps)
+        self.system.system_state += delta_concentrations
+        if min(self.system.system_state) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
             print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
                   f"upon advancing reactions from system time t={self.system_time:,.5g}")
 
@@ -901,7 +835,7 @@ class ReactionSimulator:
         :param delta_time:      The requested time duration of the reaction step
         :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order.
-                                    If not provided, self.uniform_compartment.system is used instead
+                                    If not provided, self.system.system is used instead
         :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
         :return:                The increment vector for the concentrations of ALL the chemical species,
@@ -909,11 +843,11 @@ class ReactionSimulator:
                                     EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
                                         array([7. , -21.])
         """
-        # TODO: no longer pass conc_array .  Use the object variable self.uniform_compartment.system instead
+        # TODO: no longer pass conc_array .  Use the object variable self.system.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
 
         if conc_array is not None:
-            self.set_system_conc(conc_array)    # For historical reasons, as a convenience to Bio1D, etc.
+            self.system.set_system_state(conc_array)    # For historical reasons, as a convenience to Bio1D, etc.
 
         #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common_fixed_step() with:")
         #print(f"             delta_time={delta_time}, system={self.system}, ")
@@ -975,7 +909,7 @@ class ReactionSimulator:
         :param delta_time:      The requested time duration of the reaction step
         :param conc_array:      [OPTIONAL] All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the species, in their array index order.
-                                    If not provided, self.uniform_compartment.system is used instead
+                                    If not provided, self.system.system is used instead
         :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form (t_start, t_end);
                                             a brief explanation will be printed about how the variable step sizes were chosen,
                                             when the System time inside that range
@@ -991,11 +925,11 @@ class ReactionSimulator:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
-        # TODO: no longer pass conc_array .  Use the object variable self.uniform_compartment.system instead
+        # TODO: no longer pass conc_array .  Use the object variable self.system.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
 
         if conc_array is not None:
-            self.set_system_conc(conc_array)    # For historical reasons, as a convenience to Bio1D, etc.
+            self.system.set_system_state(conc_array)    # For historical reasons, as a convenience to Bio1D, etc.
 
 
         if explain_variable_steps:
@@ -1114,10 +1048,10 @@ class ReactionSimulator:
                                                 # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.uniform_compartment.number_of_system_species(),
+            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.system.number_of_system_species(),
                                                                 indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations,
-                                                                baseline_conc=self.uniform_compartment.system, prev_conc=self.previous_system)
+                                                                baseline_conc=self.system.system_state, prev_conc=self.previous_system)
             #print("decision_data: ", decision_data)
             # EXAMPLE: {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.98, 'norm_B': 0.14}, 'applicable_norms': 'ALL'}
 
@@ -1171,7 +1105,7 @@ class ReactionSimulator:
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
         # if so, raise an "ExcessiveTimeStepHard" exception (a custom exception)
-        tentative_updated_system = self.uniform_compartment.system + delta_concentrations
+        tentative_updated_system = self.system.system_state + delta_concentrations
         if min(tentative_updated_system) < 0:
             # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
             self._save_hard_abort_diagnostics_all_rxns(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
@@ -1183,7 +1117,7 @@ class ReactionSimulator:
                 "message": f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the species (for instance `{chem_name}`, of index {first_neg_index}), from the COMBINED reactions."
-                                        f"\n      Baseline concentration values: {self.uniform_compartment.system} at system time {self.system_time:.5g}; requested changes (NOT carried out): {delta_concentrations}",
+                                        f"\n      Baseline concentration values: {self.system.system_state} at system time {self.system_time:.5g}; requested changes (NOT carried out): {delta_concentrations}",
                 "function": "attempt_reaction_step",
                 "delta_time": delta_time
             }
@@ -1223,10 +1157,10 @@ class ReactionSimulator:
             print(f"\n(STEP {step_counter} {step_status}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
                   f"due to tentative Δt={delta_time:.5g} ...")
             print("    Previous: ", self.previous_system)
-            print("    Baseline: ", self.uniform_compartment.system)
+            print("    Baseline: ", self.system.system_state)
             print("    Deltas:   ", delta_concentrations)
 
-            if len(self.reaction_registry.active_chemicals) < self.uniform_compartment.number_of_system_species():
+            if len(self.reaction_registry.active_chemicals) < self.system.number_of_system_species():
                 print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
                 f"species only: {self.reaction_registry.get_species_in_any_reaction()} , with indexes: {self.indexes_of_active_chemicals()}")
 
@@ -1719,13 +1653,13 @@ class ReactionSimulator:
     def react_to_equilibrium(self, initial_step, silent=True, max_cycles=1000) -> None:
         """
         Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.uniform_compartment.system , until equilibrium is reached,
+        based on the INITIAL concentrations stored in self.system.system , until equilibrium is reached,
         or the specified max number of rounds of simulations is reached (in the latter case, an Exception is raised).
 
         Adaptive variable time steps are automatically picked.
 
         Update the system state and the system time accordingly
-        (object attributes self.uniform_compartment.system and self.system_time)
+        (object attributes self.system.system and self.system_time)
 
         :param initial_step:The suggested size of the first step (it might be reduced automatically,
                                 in case of "hard" errors resulting from overly-large steps)
@@ -1815,7 +1749,7 @@ class ReactionSimulator:
             rxn_index = self.reaction_registry.add_reaction(autoregister_species=True, **kwargs)
 
         species_id_set =  self.reaction_registry.get_species_in_single_reaction(rxn_index)
-        self.uniform_compartment.add_species(species_id_set)
+        self.system.add_species(species_id_set)
 
         return rxn_index
 

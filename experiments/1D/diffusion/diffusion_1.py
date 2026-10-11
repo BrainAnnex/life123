@@ -64,7 +64,7 @@ bio.system_snapshot()
 bio.visualize_system(title_prefix="Diffusion", smoothed=False)   # Line curve view
 
 # %%
-bio.system
+bio.system_state
 
 # %%
 bio.system_heatmaps(title_prefix="Diffusion")

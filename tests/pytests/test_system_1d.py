@@ -34,7 +34,7 @@ def test_constructor():
     assert bio.global_Dx == 1
     assert np.allclose(bio.system_time, 0)
     expected = np.zeros((1, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
 
 
     # New test
@@ -46,7 +46,7 @@ def test_constructor():
     assert bio.index_species.index_to_species == ['A', 'B', 'C']
     assert bio.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
     expected = np.zeros((3,15), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
 
 
 
@@ -213,15 +213,15 @@ def test_double_spacial_resolution_linear_inter():
     bio = System1D(n_bins=2, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[1., 2.])
     bio.double_spatial_resolution_linear()
-    assert np.allclose(bio.system, [[1., 1.5, 2.]])
+    assert np.allclose(bio.system_state, [[1., 1.5, 2.]])
 
     chem_data = SpeciesRegistry(ids=["A", "B"])
     bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(chem_index=1, conc_list=[5., 15., 25.])
     bio.double_spatial_resolution_linear()
-    assert np.allclose(bio.system, [[11.,11.5,12.,12.5,13.],
-                                    [ 5.,10. ,15.,20. ,25.]])
+    assert np.allclose(bio.system_state, [[11., 11.5, 12., 12.5, 13.],
+                                          [ 5.,10. ,15.,20. ,25.]])
 
     bio = System1D(n_bins=1, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[3.14])
@@ -235,24 +235,24 @@ def test_decrease_spacial_resolution():
     bio = System1D(n_bins=6, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
     bio.set_species_conc(chem_index=1, conc_list=[2., 8., 5., 15., 4., 2.])
-    original_state = bio.system
+    original_state = bio.system_state
 
     # Group by pairs
     bio.decrease_spatial_resolution(2)
-    assert np.allclose(bio.system, [[15., 35., 55.],
-                                    [ 5., 10.,  3.]])
+    assert np.allclose(bio.system_state, [[15., 35., 55.],
+                                          [ 5., 10.,  3.]])
 
     # Group by triplets
     bio.replace_system(original_state)
     bio.decrease_spatial_resolution(3)
-    assert np.allclose(bio.system, [[20., 50.],
-                                    [ 5., 7.]])
+    assert np.allclose(bio.system_state, [[20., 50.],
+                                          [ 5., 7.]])
 
     # Group into just 1 single bin
     bio.replace_system(original_state)
     bio.decrease_spatial_resolution(6)
-    assert np.allclose(bio.system, [[35.],
-                                    [ 6.]])
+    assert np.allclose(bio.system_state, [[35.],
+                                          [ 6.]])
 
 
 
@@ -265,7 +265,7 @@ def test_smooth_spatial_resolution():
     bio.smooth_spatial_resolution()
     expected = np.array([[10., 15., 20., 25., 30.],
                          [ 2.,  5.,  8.,  6.,  4.]])
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
     assert bio.n_bins == 5
     assert bio.n_species == 2
 
@@ -278,12 +278,12 @@ def test_varying_spacial_resolution():
     bio.set_species_conc(chem_label="B", conc_list=[5., 15., 25.])
 
     # First, increase the spacial resolution, after saving the original matrix
-    original_state = bio.system
+    original_state = bio.system_state
     bio.increase_spatial_resolution(3)
 
     # Then, decrease the spacial resolution, by the same factor
     bio.decrease_spatial_resolution(3)
-    assert np.allclose(bio.system, original_state)
+    assert np.allclose(bio.system_state, original_state)
 
 
 

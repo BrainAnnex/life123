@@ -33,7 +33,7 @@ def test_constructor():
     assert bio.index_species.index_to_species == ['A']
     assert bio.index_species.species_to_index == {'A': 0}
     expected = np.zeros((1, 3, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
 
 
     # New test
@@ -47,7 +47,7 @@ def test_constructor():
     assert bio.index_species.index_to_species == ['A', 'B', 'C', 'D']
     assert bio.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     expected = np.zeros((4, 3, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
 
@@ -68,7 +68,7 @@ def test_constructor():
     assert bio.index_species.index_to_species == ['A', 'B', 'C']
     assert bio.index_species.species_to_index == {'A': 0, 'B': 1, 'C': 2}
     expected = np.zeros((3, 4, 2), dtype=float)
-    assert np.allclose(bio.system, expected)
+    assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
     assert type(bio.species_data) == SpeciesRegistry
@@ -99,8 +99,8 @@ def test_set_bin_conc():
 
     expected_1 = np.zeros((3, 4), dtype=float)
 
-    assert np.allclose(bio.system[0], expected_0)
-    assert np.allclose(bio.system[1], expected_1)
+    assert np.allclose(bio.system_state[0], expected_0)
+    assert np.allclose(bio.system_state[1], expected_1)
 
 
     bio.set_bin_conc(bin_address=(2,3), chem_label="B", conc=1.23)
@@ -111,8 +111,8 @@ def test_set_bin_conc():
         [0. , 0.,  0. , 0.],
         [0. , 0.,  0. , 1.23]
     ])
-    assert np.allclose(bio.system[0], expected_0)
-    assert np.allclose(bio.system[1], expected_1)
+    assert np.allclose(bio.system_state[0], expected_0)
+    assert np.allclose(bio.system_state[1], expected_1)
 
 
 
@@ -135,8 +135,8 @@ def test_set_bin_conc_all_species():
         [0. , 0.,  0.  , 0.]
     ])
 
-    assert np.allclose(bio.system[0], expected_0)
-    assert np.allclose(bio.system[1], expected_1)
+    assert np.allclose(bio.system_state[0], expected_0)
+    assert np.allclose(bio.system_state[1], expected_1)
 
 
 
@@ -204,16 +204,16 @@ def test_react():
     bio.react(time_step=0.1, n_steps=1)
     #bio.describe_state()
 
-    assert np.allclose(bio.system[0], [[ 17., 21., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 23.5]])
-    assert np.allclose(bio.system[1], [[43., 34., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 81.5]])
+    assert np.allclose(bio.system_state[0], [[17., 21., 0., 0.] , [0., 0., 0., 0.] , [0., 0., 0., 23.5]])
+    assert np.allclose(bio.system_state[1], [[43., 34., 0., 0.] , [0., 0., 0., 0.] , [0., 0., 0., 81.5]])
 
     # Continue to equilibrium
     bio.react(time_step=0.1, n_steps=20)
     #bio.describe_state()
 
-    assert np.allclose(bio.system[1, 0, 0] / bio.system[0, 0, 0], 1.5)  # From the ration forward/back reaction rates
-    assert np.allclose(bio.system[1, 0, 1] / bio.system[0, 0, 1], 1.5)
-    assert np.allclose(bio.system[1, 2, 3] / bio.system[0, 2, 3], 1.5)
+    assert np.allclose(bio.system_state[1, 0, 0] / bio.system_state[0, 0, 0], 1.5)  # From the ration forward/back reaction rates
+    assert np.allclose(bio.system_state[1, 0, 1] / bio.system_state[0, 0, 1], 1.5)
+    assert np.allclose(bio.system_state[1, 2, 3] / bio.system_state[0, 2, 3], 1.5)
 
 
 
