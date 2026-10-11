@@ -1,6 +1,6 @@
 import pytest
-import numpy as np
-from life123 import SpeciesRegistry, ReactionRegistry, ReactionKinetics
+from life123.species_registry import SpeciesRegistry
+from life123.reaction_registry import ReactionRegistry
 from life123.reactions import Stoichiometry, ReactionDefinition, SimulationReaction
 from tests.utilities.comparisons import *
 
@@ -8,7 +8,7 @@ from tests.utilities.comparisons import *
 
 def test_constructor_ReactionRegistry():
     species_registry = SpeciesRegistry()
-    rxns = ReactionRegistry(species_data=species_registry)
+    rxns = ReactionRegistry(species_registry=species_registry)
 
     assert rxns.reaction_list == []
 
@@ -18,7 +18,7 @@ def test_constructor_ReactionRegistry():
 
 def test_number_of_reactions():
     species_registry = SpeciesRegistry(ids=["A", "B", "C"])
-    rxns = ReactionRegistry(species_data=species_registry)
+    rxns = ReactionRegistry(species_registry=species_registry)
 
     assert rxns.number_of_reactions() == 0
 

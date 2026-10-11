@@ -38,9 +38,8 @@ def ________ReactionSimulator________(DIVIDER):
 #####################################################################################################
 
 
-def test_CONSTRUCTOR():
+def test_CONSTRUCTOR_1():
 
-    # Run 1
     ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
     sim = ReactionSimulator(species_index_map=ind)
 
@@ -73,7 +72,8 @@ def test_CONSTRUCTOR():
     assert np.allclose(sim.system.system_state, np.array([0, 0, 0]))
 
 
-    # Run 2
+def test_CONSTRUCTOR_2():
+
     sr = SpeciesRegistry(n_species=4)
     sim = ReactionSimulator(species_registry=sr)
 
@@ -89,10 +89,12 @@ def test_CONSTRUCTOR():
     assert np.allclose(sim.system.system_state, np.array([0, 0, 0, 0]))
 
 
-    # Run 3
+def test_CONSTRUCTOR_3():
+
     rxns = ReactionRegistry()
     assert rxns.version == 0
 
+    # 1st reaction, prior to instantiating ReactionSimulator
     rxns.add_reaction(reactants=["A", "B"], products="C", reaction_model="mass action")
     assert rxns.number_of_reactions() == 1
     assert rxns.version == 1    # A mutation in the ReactionRegistry object just occurred
@@ -159,7 +161,7 @@ def test_CONSTRUCTOR():
     assert sim.system.number_of_system_species() == 6                                               # Expanded
 
     # 4th reaction added
-    rxns.add_reaction(reactants="F", products=["Z"], reaction_model="mass action")
+    rxns.add_reaction(reactants="F", products="Z", reaction_model="mass action")
     assert rxns.number_of_reactions() == 4
     assert rxns.version == 4    # A mutation in the ReactionRegistry object just occurred
     assert sim.species_registry.get_all_species_ids(sort=True) == ['A', 'B', 'C', 'F', 'P', 'R', 'Z']  # Auto-updated when rxn added
@@ -176,4 +178,34 @@ def test_CONSTRUCTOR():
     assert np.allclose(sim.system.system_state, np.array([10, 20, 30, 40, 50, 123, 0]))                 # Expanded
     assert sim.system.number_of_system_species() == 7                                                   # Expanded
 
-    # TODO: add a reaction directly thru sim
+    # 5th reaction added - this time thru the ReactionSimulation object
+    sim.add_reaction(reactants="J", products="K", reaction_model="mass action")
+    assert rxns.number_of_reactions() == 5
+    assert rxns.version == 5    # A mutation in the ReactionRegistry object just occurred
+    assert sim.species_registry.get_all_species_ids(sort=True) == ['A', 'B', 'C', 'F', 'J', 'K', 'P', 'R', 'Z']  # Auto-updated when rxn added
+
+    # Nothing is stale this time around!
+    assert sim._reaction_registry_version == 5
+    assert sim.species_index_map.get_all_species_ids(sort=True) == ['A', 'B', 'C', 'F', 'J', 'K', 'P', 'R', 'Z']    # Up-to-date
+    assert np.allclose(sim.system.system_state, np.array([10, 20, 30, 40, 50, 123, 0, 0, 0]))           # Expanded for the 2 new species
+    assert sim.system.number_of_system_species() == 9                                                   # Expanded for the 2 new species
+
+
+def test_CONSTRUCTOR_4():
+
+    with pytest.raises(Exception):
+        ReactionSimulator(species_ids=123)
+
+    sim = ReactionSimulator(species_ids=["A", "B"])
+
+    assert type(sim.species_registry) is SpeciesRegistry
+    assert sim.species_registry.get_all_species_ids(sort=True) == ['A', 'B']
+
+    assert type(sim.reaction_registry) is ReactionRegistry
+    assert sim.reaction_registry.number_of_reactions() == 0
+
+    assert type(sim.species_index_map) is SpeciesIndexMap
+    assert sim.species_index_map.get_all_species_ids(sort=True) == ['A', 'B']
+
+    assert sim.system.number_of_system_species() == 2
+    assert np.allclose(sim.system.system_state, np.array([0, 0]))

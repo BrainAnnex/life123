@@ -167,7 +167,7 @@ class UniformCompartment:
 
 
 
-    def get_conc_dict(self, species_ids=None, system_data=None) -> dict:
+    def get_conc_dict(self, species_ids=None) -> dict:
         """
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
@@ -176,24 +176,13 @@ class UniformCompartment:
 
         :param species_ids: [OPTIONAL] List, tuple or set of the id's of the species of interest;
                                 by default, return all
-        :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
-                                index of the requested species; by default, use the SYSTEM DATA
 
         :return:            A dictionary, possibly empty, indexed by the species id's, of the concentration values;
                                 EXAMPLE: {"A": 1.2, "D": 4.67}
         """
-        # TODO: maybe drop the `system_data` arg?
-
-        if system_data is None:
-            system_data = self.system_state
-
-
         if species_ids is None:
-            if system_data is None:
-                return {}
-            else:
-                return {self.species_index_map.species_at(index): system_data[index]
-                        for index, conc in enumerate(system_data)}
+            return {self.species_index_map.species_at(index): self.system_state[index]
+                    for index, conc in enumerate(self.system_state)}
         else:
             assert isinstance(species_ids, (list, tuple, set)), \
                 f"UniformCompartment.get_conc_dict(): the argument `species` must be a list, tuple or set" \
@@ -201,9 +190,9 @@ class UniformCompartment:
 
             conc_dict = {}
             for sp_id in species_ids:
-                #species_index = self.species_index_map.index_of(sp_id)
-                #conc_dict[sp_id] = system_data[species_index]
-                conc_dict[sp_id] = self.get_species_conc(species_id=sp_id)  # This will also take care of synchronization, if needed
+                # This will also take care of synchronization, if needed
+                conc_dict[sp_id] = self.get_species_conc(species_id=sp_id)
+
 
             return conc_dict
 

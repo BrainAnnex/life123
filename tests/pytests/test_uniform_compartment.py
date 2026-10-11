@@ -8,6 +8,7 @@ from life123.species_registry import MacroMolecules
 
 
 def test_CONSTRUCTOR():
+
     species_list = ["A", "B", "C"]
     sp = SpeciesRegistry(ids=species_list)
     ind = SpeciesIndexMap(species_ids=species_list, species_registry=sp)
@@ -81,23 +82,15 @@ def test_get_conc_dict():
     uc = UniformCompartment(species_index_map=ind)
 
     uc.set_conc(conc={"A": 7, "B": 4, "C": 88})
-
     assert uc.get_conc_dict() == {"A": 7, "B": 4, "C": 88}
 
     assert uc.get_conc_dict(species_ids=["B"]) == {"B": 4}
     assert uc.get_conc_dict(species_ids=("B", "C")) == {"B": 4, "C": 88}
     assert uc.get_conc_dict(species_ids={"B", "A", "C"}) == {"A": 7, "B": 4, "C": 88}
 
-    assert uc.get_conc_dict(system_data=np.array([1, 2, 3])) == {"A": 1, "B": 2, "C": 3}
-
     with pytest.raises(Exception):
-        uc.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
+        uc.get_conc_dict(species_ids=["UNKNOWN"])
 
-    assert uc.get_conc_dict(species_ids={"B", "A", "C"}, system_data=np.array([1, 2, 3, 4])) \
-                    == {"A": 1, "B": 2, "C": 3}
-
-    with pytest.raises(Exception):
-        uc.get_conc_dict(species_ids={"B", "A", "C"}, system_data=np.array([1, 2]))
 
 
 

@@ -153,6 +153,9 @@ class ReactionSimulator:
 
 
         if species_ids is not None:
+            assert isinstance(species_ids, (list, tuple, set)), \
+                "ReactionSimulator() instantiation: the argument `species_ids`, if provided, " \
+                "must be a list, tuple or set of strings"
             # Incorporate all the values into the species_registry, if not already there
             for sp_id in species_ids:
                 self.species_registry.add_single_species(species_id=sp_id, skip_duplicates=True)
@@ -165,8 +168,6 @@ class ReactionSimulator:
 
         # Instantiate or expand, as applicable, the species_index_map
         if self.species_index_map is None:  # Index was NOT passed by the calling module
-            #all_rxn_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
-            #self.species_index_map = SpeciesIndexMap(all_rxn_species)
             all_species = self.species_registry.get_all_species_ids()
             self.species_index_map = SpeciesIndexMap(all_species)
 
@@ -331,7 +332,7 @@ class ReactionSimulator:
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
-        data_snapshot = self.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
+        data_snapshot = self.system.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
         '''
            EXAMPLE of data_snapshot:
                 {"A": 1.3, "B": 4.9}        
@@ -352,27 +353,6 @@ class ReactionSimulator:
         """
         self.ensure_synchronized_with_reaction_registry()
         return self.system.get_species_conc(species_id)
-
-        #species_index = self.species_index_map.index_of(species_id)
-        #return self.system[species_index]
-
-
-
-    def get_conc_dict(self, species_ids=None, system_data=None) -> dict:
-        """
-        Retrieve the concentrations of the requested species (by default all),
-        as a dictionary indexed by the species id
-
-        :param species_ids: [OPTIONAL] List, tuple or set of the id's of the species of interest;
-                                by default, return all
-        :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
-                                index of the requested species; by default, use the SYSTEM DATA
-
-        :return:            A dictionary, possibly empty, indexed by the species id's, of the concentration values;
-                                EXAMPLE: {"A": 1.2, "D": 4.67}
-        """
-        self.ensure_synchronized_with_reaction_registry()
-        return self.system.get_conc_dict(species_ids=species_ids, system_data=system_data)
 
 
 
@@ -669,7 +649,7 @@ class ReactionSimulator:
 
                 if self.diagnostics_enabled:
                     # Save up the current time and System State as "diagnostic 'concentration' data"
-                    system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+                    system_data = self.system.get_conc_dict()   # The current System State, as a dict
                     self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
                 t_now = time.perf_counter()
@@ -1440,7 +1420,7 @@ class ReactionSimulator:
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
 
-        return self.get_conc_dict(species_ids=species_ids)
+        return self.system.get_conc_dict(species_ids=species_ids)
 
         
 
@@ -1748,23 +1728,12 @@ class ReactionSimulator:
         else:
             rxn_index = self.reaction_registry.add_reaction(autoregister_species=True, **kwargs)
 
-        species_id_set =  self.reaction_registry.get_species_in_single_reaction(rxn_index)
-        self.system.add_species(species_id_set)
+        #species_id_set = self.reaction_registry.get_species_in_single_reaction(rxn_index)
+        #self.system.add_species(species_id_set)
 
+        self.ensure_synchronized_with_reaction_registry()
         return rxn_index
 
-
-
-
-
-    def add_species_TODO(self) -> None:
-        """
-        TODO: maybe not needed -> species needed by new reactions will get processed as those new reactions
-              get added...
-        :return:
-        """
-        # Will need to update all the indexes
-        pass
 
 
     def describe_reactions(self, **kwargs) -> None:
@@ -2006,7 +1975,7 @@ class ReactionSimulator:
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
-        data_snapshot = self.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
+        data_snapshot = self.system.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
         '''
            EXAMPLE of data_snapshot:
                 {"A": 1.3, "B": 4.9}        
@@ -2533,7 +2502,7 @@ class ReactionSimulator:
         # TODO: optionally display last lines in diagnostic data, if available
 
         if conc is None:
-            conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
+            conc=self.system.get_conc_dict()   # Use the current System concentrations, as a dict.
                                         # EXAMPLE: {'A': 23.9, 'B': 36.1}
             assert conc,  "is_in_equilibrium(): no concentration values provided, " \
                           "nor available as system concentration data"
@@ -2681,7 +2650,7 @@ class ReactionSimulator:
         """
         rxn = self.reaction_registry.get_reaction(rxn_index)                # Look up the requested reaction
         chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
-        return rxn.source_object.find_equilibrium_conc(conc_dict=self.get_conc_dict(species_ids=chem_labels))
+        return rxn.source_object.find_equilibrium_conc(conc_dict=self.system.get_conc_dict(species_ids=chem_labels))
 
 
 
