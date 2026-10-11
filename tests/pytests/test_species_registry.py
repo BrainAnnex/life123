@@ -355,11 +355,11 @@ def test_species_exists():
     with pytest.raises(Exception):
         sr.species_exists(id=123)      # `id` isn't a string
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     assert sr.species_exists("A")
     assert not sr.species_exists("B")
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     assert sr.species_exists("A")
     assert sr.species_exists("B")
 
@@ -375,12 +375,12 @@ def test_get_species():
     with pytest.raises(Exception):
         sr.get_species(id=123)      # id isn't a string
 
-    result = sr.add_species(id="A")
+    result = sr.add_single_species(species_id="A")
     assert result == Species(id='A', name='A', label='A', sort_order=0,
                             diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
                             locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
 
-    result = sr.add_species(id="B", name="B's long name", plot_color='red')
+    result = sr.add_single_species(species_id="B", name="B's long name", plot_color='red')
     assert result == Species(id='B', name="B's long name", label='B', sort_order=1,
                         diffusion_rate=None, charge=0, formula='', ec_number='', cas_number='', chebi='',
                         locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='red')
@@ -392,10 +392,10 @@ def test_get_all_species_ids():
 
     assert sr.get_all_species_ids() == []   # There's nothing yet
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     assert sr.get_all_species_ids() == ["A"]
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     assert sr.get_all_species_ids() == ["A", "B"]
 
 
@@ -406,7 +406,7 @@ def test_get_value():
     with pytest.raises(Exception):
         sr.get_value(species_id="A", field="xyz")  # No such species exist
 
-    sr.add_species(id="A", ec_number="2.5.1.6")
+    sr.add_single_species(species_id="A", ec_number="2.5.1.6")
 
     with pytest.raises(Exception):
         sr.get_value(species_id="A", field="xyz")  # No such field exist
@@ -422,10 +422,10 @@ def test_get_all_values():
 
     assert sr.get_all_values(field="charge") == []
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     assert sr.get_all_values(field="charge") == [0]
 
-    sr.add_species(id="B", ec_number="2.5.1.6", diffusion_rate=123)
+    sr.add_single_species(species_id="B", ec_number="2.5.1.6", diffusion_rate=123)
     assert sr.get_all_values(field="ec_number") == ["", "2.5.1.6"]
     assert sr.get_all_values(field="charge") == [0, 0]
     assert sr.get_all_values(field="diffusion_rate") == [None, 123]
@@ -439,12 +439,12 @@ def test_get_max_value():
         sr.max_value(field="diffusion_rate")       # Empty registry
 
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     sr.set_value(species_id="A", field="diffusion_rate", value=10)
     result = sr.max_value(field="diffusion_rate")
     assert result == 10
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     sr.set_value(species_id="B", field="diffusion_rate", value=3)
     result = sr.max_value(field="diffusion_rate")
     assert result == 10
@@ -453,7 +453,7 @@ def test_get_max_value():
     result = sr.max_value(field="diffusion_rate")
     assert result == 11
 
-    sr.add_species(id="X")      # This won't get the `diffusion_rate` set; its value will be None
+    sr.add_single_species(species_id="X")      # This won't get the `diffusion_rate` set; its value will be None
     with pytest.raises(Exception):
         sr.max_value(field="diffusion_rate")
 
@@ -464,18 +464,18 @@ def test_missing_values_present():
 
     assert not sr.has_missing_values(field="diffusion_rate")
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     sr.set_value(species_id="A", field="diffusion_rate", value=10)
     assert not sr.has_missing_values(field="diffusion_rate")
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     sr.set_value(species_id="B", field="diffusion_rate", value=3)
     assert not sr.has_missing_values(field="diffusion_rate")
 
     sr.set_value(species_id="B", field="diffusion_rate", value=11)
     assert not sr.has_missing_values(field="diffusion_rate")
 
-    sr.add_species(id="X")      # This won't get the `diffusion_rate` set; its value will be None
+    sr.add_single_species(species_id="X")      # This won't get the `diffusion_rate` set; its value will be None
     assert sr.has_missing_values(field="diffusion_rate")
 
 
@@ -484,10 +484,10 @@ def test_number_of_species():
     sr = SpeciesRegistry()
     assert sr.number_of_species() == 0
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     assert sr.number_of_species() == 1
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     assert sr.number_of_species() == 2
 
 
@@ -497,7 +497,7 @@ def test_as_recordset():
     sr = SpeciesRegistry()
     assert sr.as_recordset() == []
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     result = sr.as_recordset()
     assert result == [
                         {   'id': 'A', 'name': 'A', 'label': 'A', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
@@ -506,7 +506,7 @@ def test_as_recordset():
                         }
                      ]
 
-    sr.add_species(id="NAD", cas_number="53-84-9")
+    sr.add_single_species(species_id="NAD", cas_number="53-84-9")
     result = sr.as_recordset()
     assert result == [
                         {   'id': 'A', 'name': 'A', 'label': 'A', 'sort_order': 0, 'diffusion_rate': None, 'charge': 0,
@@ -527,7 +527,7 @@ def test_as_dataframe():
     result = sr.as_dataframe()
     assert result.empty
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     result = sr.as_dataframe()
 
     expected_recordset = [
@@ -541,7 +541,7 @@ def test_as_dataframe():
     assert expected_df.equals(result)       # NOTE: this test will fail if the order of the field definition in Species changes!
 
 
-    sr.add_species(id="NAD", cas_number="53-84-9", categories=["enzyme"])
+    sr.add_single_species(species_id="NAD", cas_number="53-84-9", categories=["enzyme"])
     result = sr.as_dataframe()
 
     expected_recordset = [
@@ -585,9 +585,9 @@ def test_add_species():
     sr = SpeciesRegistry()
 
     with pytest.raises(Exception):
-        sr.add_species(id=123)      # Bad value
+        sr.add_single_species(species_id=123)      # Bad value
 
-    result = sr.add_species(id="A")
+    result = sr.add_single_species(species_id="A")
     assert sr.number_of_species() == 1
     assert sr.count == 1
     assert len(sr.by_id) == 1
@@ -598,7 +598,7 @@ def test_add_species():
     assert result == species_A
 
 
-    result = sr.add_species(id="B", name="B's long name")
+    result = sr.add_single_species(species_id="B", name="B's long name")
     assert sr.number_of_species() == 2
     assert sr.count == 2
     assert len(sr.by_id) == 2
@@ -610,16 +610,16 @@ def test_add_species():
 
 
     with pytest.raises(Exception):
-        sr.add_species(id="B")      # Already exists
+        sr.add_single_species(species_id="B")      # Already exists
 
-    assert sr.add_species(id="B", skip_duplicates=True) is None     # Already exists
+    assert sr.add_single_species(species_id="B", skip_duplicates=True) is None     # Already exists
 
 
 
 def test_set_update():
     sr = SpeciesRegistry()
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     sr.update(species_id="A", diffusion_rate=10)
     assert  sr.get_value(species_id="A", field="diffusion_rate") == 10
 
@@ -630,7 +630,7 @@ def test_set_update():
         sr.update(species_id="A", categories="I'm not a list")    # Bad value
 
 
-    sr.add_species(id="B", plot_color="magenta")
+    sr.add_single_species(species_id="B", plot_color="magenta")
     sr.update(species_id="B", categories=["protein", "enzyme"], plot_color="plum")
 
     assert sr.get_species("A") == Species(id='A', name='A', label='A', sort_order=0, diffusion_rate=10, charge=0, formula='',
@@ -661,7 +661,7 @@ def test_set_update():
 def test_set_value():
     sr = SpeciesRegistry()
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
 
     sr.set_value(species_id="A", field="diffusion_rate", value=10)
     assert  sr.get_value(species_id="A", field="diffusion_rate") == 10
@@ -679,7 +679,7 @@ def test_set_value():
     assert result == 10
 
 
-    sr.add_species(id="B", plot_color="magenta")
+    sr.add_single_species(species_id="B", plot_color="magenta")
     sr.set_value(species_id="B", field="plot_color", value="plum")
     result = sr.get_value(species_id="B", field="plot_color")
     assert result == "plum"
@@ -720,12 +720,12 @@ def test_set_all_values():
     with pytest.raises(Exception):
         sr.set_all_values(field="diffusion_rate", values=[5])  # Mismatch with registry size
 
-    sr.add_species(id="A")
+    sr.add_single_species(species_id="A")
     assert sr.get_value(species_id="A", field="diffusion_rate") is None    # Not yet set
     sr.set_all_values(field="diffusion_rate", values=[5])
     assert sr.get_value(species_id="A", field="diffusion_rate") == 5       # Now set
 
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     assert sr.get_all_values(field="diffusion_rate") == [5, None]
 
     with pytest.raises(Exception):
@@ -781,7 +781,7 @@ def test_assign_colors():
 
     sr = SpeciesRegistry(ids="A")
     sr.set_value(species_id="A", field="plot_color", value="red")
-    sr.add_species(id="B")
+    sr.add_single_species(species_id="B")
     result = sr.assign_colors(["A", "B"])
     assert result == ["red", default_col_1]
     assert sr.get_all_values(field="plot_color") == ["red", default_col_1]
@@ -971,7 +971,7 @@ def test_get_ligand_name():
     mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
     assert mm.get_ligand_name(macromolecule="M1", site_number=1) == "B"
 
-    sr.add_species("C")
+    sr.add_single_species("C")
     mm.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
     assert mm.get_ligand_name(macromolecule="M2", site_number=5) == "C"
 

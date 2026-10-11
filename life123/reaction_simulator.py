@@ -1,15 +1,16 @@
 # Classes:
-#   1) ReactionSimulator
-#   2) AnalyticalReactionSolver
+#   1) ReactionStep
+#   2) ReactionSimulator
 #   3) VariableTimeSteps:
 
 import math
-import cmath
 import numpy as np
 import pandas as pd
 import time
+import plotly.graph_objects as pgo
 from dataclasses import dataclass, field
 from typing import Any
+from life123.species_registry import SpeciesRegistry
 from life123.species_index_map import SpeciesIndexMap
 from life123.reaction_registry import ReactionRegistry
 from life123.diagnostics import Diagnostics
@@ -91,9 +92,9 @@ class ReactionSimulator:
     This might be thought of as a "zero-dimensional system".
     """
     
-    def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=True,
+    def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=False,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
-                 uniform_compartment=None, temp=298.15, species_registry=None, names=None):
+                 uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None):
         """
 
         :param system:
@@ -119,64 +120,68 @@ class ReactionSimulator:
                                     'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
         :param uniform_compartment:
         :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
-        :param names:           [OPTIONAL 2] A single name, or list or tuple of names, of the species.
+        :param species_ids:     [OPTIONAL 2] A single id, or list or tuple of id's, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order.)
                                 If passed, cannot pass `species_data` (both those object contain the chemical names)
         """
-        if species_registry and reaction_registry:
+        self.species_registry :SpeciesRegistry = species_registry       # Object of with data about all the species
+
+        self.reaction_registry :ReactionRegistry = reaction_registry    # Object with data about all the reactions
+
+        self.species_index_map :SpeciesIndexMap = species_index_map     # To map species id's to system-state array indexes
+
+
+        if (species_registry is not None) and (reaction_registry is not None):
             assert reaction_registry.get_species_data() == species_registry, \
                 "ReactionSimulator() instantiation: the argument `reactions` is based " \
                 "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
-        if reaction_registry is not None:
-            #assert species_data is None, \
-                #"UniformCompartment instantiation: Cannot pass both `species_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
-            assert names is None, \
-                "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
-            self.species_registry = reaction_registry.get_species_data()
-            self.reaction_data = reaction_registry
-        else:           # reactions is None
-            if species_registry is None:
-                self.species_registry = SpeciesRegistry(ids=names)      # It's ok if names is None
+        assert (species_ids is None) or (reaction_registry is None), "" \
+                "ReactionSimulator() instantiation: cannot specify both arguments `species_ids` and `reaction_registry`"
+
+
+        # Build up, or expand, self.species_registry as applicable
+        if self.species_registry is None:
+            # Extract from reaction_registry, if available; otherwise, start from scratch
+            if self.reaction_registry is not None:
+                self.species_registry = self.reaction_registry.get_species_data()
             else:
-                assert names is None,\
-                    "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
-                self.species_registry = species_registry
+                self.species_registry = SpeciesRegistry()
 
-            self.reaction_data = ReactionRegistry(species_data=self.species_registry)
-
-        self._reaction_registry_version = self.reaction_data.version    # Used for "lazy synchronization",
-                                                                        # i.e. to check for changes externally made to the registry
-
-        if species_index_map is not None:
-            # Index was passed by the calling module (which will be initiating it)
-            self.species_index_map = species_index_map
-        else:
-            # Index was NOT passed by the calling module
-            if reaction_registry is not None:
-                # Assign an array index to all the species we're dealing with
-                all_species = reaction_registry.get_species_in_any_reaction(sort=True)
-                self.species_index_map = SpeciesIndexMap(all_species)
-            else:
-                # We'll proceed independently, as a top-level module
-                self.species_index_map = SpeciesIndexMap()
-
-            # Build the needed indexes, based on the reactions, and on macromolecules
-            self._synchronize_species()
+            if self.species_index_map is not None:
+                for sp_id in self.species_index_map.index_to_species:   # TODO: turn  .index_to_species into a method
+                    self.species_registry.add_single_species(species_id=sp_id)
 
 
+        if species_ids is not None:
+            # Incorporate all the values into the species_registry, if not already there
+            for sp_id in species_ids:
+                self.species_registry.add_single_species(species_id=sp_id, skip_duplicates=True)
 
-        if uniform_compartment is not None:
-            self.uniform_compartment = uniform_compartment  # Use "UniformCompartment" object to manage the species index
-        else:
-            self.uniform_compartment = UniformCompartment()
 
-        self.system :np.ndarray = system
+        # Instantiate reaction_registry if it wasn't passed
+        if self.reaction_registry is None:
+            self.reaction_registry = ReactionRegistry(species_registry=self.species_registry)
 
-        self.species_index_map :SpeciesIndexMap = species_index_map
-        self.species_registry = species_registry    # Object of type "SpeciesRegistry" (with data about all the species)
 
-        self.reaction_registry = reaction_registry # Object ot type "ReactionRegistry" (with data about all the reactions)
+        # Instantiate or expand, as applicable, the species_index_map
+        if self.species_index_map is None:  # Index was NOT passed by the calling module
+            #all_rxn_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
+            #self.species_index_map = SpeciesIndexMap(all_rxn_species)
+            all_species = self.species_registry.get_all_species_ids()
+            self.species_index_map = SpeciesIndexMap(all_species)
+
+        if species_ids:
+            self.species_index_map.add_species(species_ids)     # No harm if already present
+
+
+
+        self.method :str = method
+
+        self.system_time = 0.       # Global time of the system, from initialization
+        self.previous_system = None # Concentration data of all the species at the previous simulation step
+
+
         self.exact :bool = exact                # If True, use exact analytical solutions whenever possible;
                                                 # if False, always use the "Forward Euler" approximation method
 
@@ -185,19 +190,13 @@ class ReactionSimulator:
 
 
         self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
-        self.diagnostics = diagnostics  # Object of class "Diagnostics"
+        self.diagnostics :Diagnostics = diagnostics
         self.diagnostic_data_snapshot = {}      # TODO: unclear if still needed, now that we have
                                                 #       `self.reaction_step_diagnostics.system_rxn_rates` (maybe merge?)
 
         self.reaction_step_diagnostics = None   # Internal data about a single reaction step
                                                 #   (taken in full OR aborted!)
                                                 #   Object of dataclass "ReactionStep"
-
-
-        self.method :str = method
-
-        self.system_time = 0.       # Global time of the system, from initialization
-        self.previous_system = None # Concentration data of all the species at the previous simulation step
 
 
         self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
@@ -213,26 +212,65 @@ class ReactionSimulator:
                                         #       enzymatic reactions) will have tuples of all the individual rates
                                         # EXAMPLE: {0: 0.42, 1: (4.26, 6.2), 2: -3.7}
 
-        if (species_index_map is None) and (uniform_compartment is None) and (reaction_registry is not None):
-            # Assign an array index to all the species we're dealing with    TODO: use set_system_conc()
-            all_species = reaction_registry.get_species_in_any_reaction(sort=True)
-            self.species_index_map = SpeciesIndexMap(all_species)
-
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
 
         if (self.diagnostics_enabled) and (not self.diagnostics):
-            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.uniform_compartment.species_index_map.species_to_index,
-                                           species_index_map=self.uniform_compartment.species_index_map)
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index,
+                                           species_index_map=self.species_index_map)
 
         if preset:
             self.adaptive_steps.use_adaptive_preset(preset)
 
 
+        if uniform_compartment is not None:
+            self.uniform_compartment = uniform_compartment
+        else:
+            self.uniform_compartment = UniformCompartment(species_index_map=self.species_index_map,
+                                            species_registry=self.species_registry,
+                                            diagnostics=self.diagnostics)
+
+
+        # Build the needed indexes, based on the reactions, and on macromolecules
+        self._synchronize_species()
+        self._reaction_registry_version = self.reaction_registry.version    # Used for "lazy synchronization",
+                                                                            # i.e. to check for changes externally made to the registry
+
+        if system is not None:
+            self.set_system_conc(conc_array=system)
+
+
+
 
 
     #########  MISC. UTILITIES  #########
+
+
+    def _synchronize_species(self) -> None:
+        """
+        Index all the species that participate in any of the reactions
+        in the reaction registry
+
+        :return:
+        """
+        for rxn in self.reaction_registry.get_all_reactions():
+            # rxn is a "SimulationReaction" object
+            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
+            self.uniform_compartment.add_species(species_id_set)
+
+
+
+    def _ensure_synchronized_with_reaction_registry(self) -> None:
+        """
+        For lazy synchronization with external mutation in the reaction registry
+
+        :return:
+        """
+        if self._reaction_registry_version != self.reaction_registry.version:
+            #print("************OUT OF SYNCH DETECTED!")
+            self._synchronize_species()
+            self._reaction_registry_version = self.reaction_registry.version
 
 
 
@@ -321,24 +359,19 @@ class ReactionSimulator:
 
 
         if type(conc_array) is list:
-            self.system = np.array(conc_array)
+            self.uniform_compartment.system = np.array(conc_array)
         else:
-            self.system = conc_array    # TODO: might be good to clone
-
-        if (self.uniform_compartment == self) and (self.reaction_registry is not None) \
-            and (self.species_index_map is None):
-            # Assign an array index to all the species we're dealing with
-            all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
-            self.species_index_map = SpeciesIndexMap(all_species)
+            self.uniform_compartment.system = conc_array    # TODO: might be good to clone
 
 
 
+    """
     def set_system_conc_by_dict(self, conc_dict :dict, snapshot=False) -> None:
-        """
+
 
         :param conc_dict:   EXAMPLE: {"U": 50., "X": 100.}
         :return:            None
-        """
+
         if len(conc_dict) > 0 and (self.system is None):
             # Initialize a Numpy array (TODO: maybe do at instantiation, instead of float)
             self.system = np.zeros(0, dtype='d')   # float64
@@ -363,7 +396,7 @@ class ReactionSimulator:
 
         if snapshot:
             self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
-
+    """
 
 
     def get_species_conc(self, label :str) -> float:
@@ -568,7 +601,7 @@ class ReactionSimulator:
         based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
-        (object attributes self.system and self.system_time)
+        (object attributes self.uniform_compartment.system and self.system_time)
 
         :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
         :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
@@ -602,7 +635,7 @@ class ReactionSimulator:
                                             to inform the user of the current status
 
         :return:                        A dictionary containing the key "recommended_next_step"
-                                        Note: the object attributes self.system and self.system_time get updated
+                                        Note: the object attributes self.uniform_compartment.system and self.system_time get updated
         """
 
         # Default values
@@ -610,8 +643,8 @@ class ReactionSimulator:
         final_step_caption = "last reaction step"
 
         # Validation
-        assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
-                                        "the concentration values of the various chemicals must be set first"
+        #assert self.uniform_compartment.system is not None, "UniformCompartment.single_compartment_react(): " \
+        #                                "the concentration values of the various chemicals must be set first"
 
         if variable_steps and (n_steps is not None):
             raise Exception("UniformCompartment.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
@@ -821,7 +854,7 @@ class ReactionSimulator:
 
         # Update the System State
         self.previous_system = self.system.copy()   # Clone the earlier state (note: this is used for adaptive time steps. TODO: maybe jettison for fixed steps)
-        self.system += delta_concentrations
+        self.uniform_compartment.system += delta_concentrations
         if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
             print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
                   f"upon advancing reactions from system time t={self.system_time:,.5g}")
@@ -883,7 +916,7 @@ class ReactionSimulator:
         :param delta_time:      The requested time duration of the reaction step
         :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order.
-                                    If not provided, self.system is used instead
+                                    If not provided, self.uniform_compartment.system is used instead
         :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
         :return:                The increment vector for the concentrations of ALL the chemical species,
@@ -891,18 +924,18 @@ class ReactionSimulator:
                                     EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
                                         array([7. , -21.])
         """
-        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        # TODO: no longer pass conc_array .  Use the object variable self.uniform_compartment.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
 
         if conc_array is not None:
-            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+            self.uniform_compartment.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
                                         # TODO: maybe it ought to be kept separate in separate instances of the UC object
-            if self.uniform_compartment:
-                self.uniform_compartment.system = self.system   # Re-align
+            #if self.uniform_compartment:
+            #    self.uniform_compartment.system = self.uniform_compartment.system   # Re-align
 
         # Validate the setup
-        assert self.system is not None, "ReactionSimulator.reaction_step_common_fixed_step(): " \
-                                        "the concentration values of the various species must be set first"
+        #assert self.uniform_compartment.system is not None, "ReactionSimulator.reaction_step_common_fixed_step(): " \
+        #                                "the concentration values of the various species must be set first"
 
         #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common_fixed_step() with:")
         #print(f"             delta_time={delta_time}, system={self.system}, ")
@@ -964,7 +997,7 @@ class ReactionSimulator:
         :param delta_time:      The requested time duration of the reaction step
         :param conc_array:      [OPTIONAL] All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the species, in their array index order.
-                                    If not provided, self.system is used instead
+                                    If not provided, self.uniform_compartment.system is used instead
         :param explain_variable_steps:  [OPTIONAL] If provided, it must be a pair of numbers of the form (t_start, t_end);
                                             a brief explanation will be printed about how the variable step sizes were chosen,
                                             when the System time inside that range
@@ -980,18 +1013,18 @@ class ReactionSimulator:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
-        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        # TODO: no longer pass conc_array .  Use the object variable self.uniform_compartment.system instead
         #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
 
         if conc_array is not None:
-            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+            self.uniform_compartment.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
                                         # TODO: maybe it ought to be kept separate in separate instances of the UC object
-            if self.uniform_compartment:
-                self.uniform_compartment.system = self.system   # Re-align
+            #if self.uniform_compartment:
+            #    self.uniform_compartment.system = self.uniform_compartment.system   # Re-align
 
         # Validate arguments
-        assert self.system is not None, "ReactionSimulator.reaction_step_common_variable_step(): " \
-                                        "the concentration values of the various chemicals must be set first"
+        #assert self.uniform_compartment.system is not None, "ReactionSimulator.reaction_step_common_variable_step(): " \
+        #                                "the concentration values of the various chemicals must be set first"
 
 
         if explain_variable_steps:
@@ -1167,7 +1200,7 @@ class ReactionSimulator:
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
         # if so, raise an "ExcessiveTimeStepHard" exception (a custom exception)
-        tentative_updated_system = self.system + delta_concentrations
+        tentative_updated_system = self.uniform_compartment.system + delta_concentrations
         if min(tentative_updated_system) < 0:
             # TODO: maybe this call could wait until the interception of ExcessiveTimeStepHard ?
             self._save_hard_abort_diagnostics_all_rxns(explain_variable_steps=explain_variable_steps, delta_time=delta_time)
@@ -1502,7 +1535,7 @@ class ReactionSimulator:
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
 
-        return self.uniform_compartment.get_conc_dict(chem_labels=species_ids)
+        return self.uniform_compartment.get_conc_dict(species_ids=species_ids)
 
         
 
@@ -1715,13 +1748,13 @@ class ReactionSimulator:
     def react_to_equilibrium(self, initial_step, silent=True, max_cycles=1000) -> None:
         """
         Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.system , until equilibrium is reached,
+        based on the INITIAL concentrations stored in self.uniform_compartment.system , until equilibrium is reached,
         or the specified max number of rounds of simulations is reached (in the latter case, an Exception is raised).
 
         Adaptive variable time steps are automatically picked.
 
         Update the system state and the system time accordingly
-        (object attributes self.system and self.system_time)
+        (object attributes self.uniform_compartment.system and self.system_time)
 
         :param initial_step:The suggested size of the first step (it might be reduced automatically,
                                 in case of "hard" errors resulting from overly-large steps)
@@ -2257,7 +2290,7 @@ class ReactionSimulator:
             else:
                 name = ""
 
-            if self.system is None:
+            if len(self.system) == 0:
                 print(f"  Species {species_index}{name}. No concentrations set yet")
             else:
                 print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
@@ -2273,7 +2306,7 @@ class ReactionSimulator:
                 print(f"     {mm} || {state_str}")
 
         #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Species involved in reactions: {self.reaction_data.get_species_in_any_reaction()}")
+        print(f"Species involved in reactions: {self.reaction_registry.get_species_in_any_reaction()}")
         #else:
             #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.get_species_in_any_reaction()}")
             #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
@@ -2347,15 +2380,15 @@ class ReactionSimulator:
             species = self.species_data.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
-            number_of_rxns = self.reaction_data.number_of_reactions()
+            number_of_rxns = self.reaction_registry.number_of_reactions()
             if number_of_rxns > 2:
                 title = f"Changes in concentrations for {number_of_rxns} reactions"
             elif number_of_rxns == 1:
-                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                rxn_text = self.reaction_registry.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
                 title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
             else:   # Exactly 2 reactions
-                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
+                rxn_text_0 = self.reaction_registry.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.reaction_registry.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if y_label is None:
@@ -2495,7 +2528,7 @@ class ReactionSimulator:
         assert graphic_component == "vue_cytoscape_5", \
             "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
 
-        self.reaction_data.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
+        self.reaction_registry.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
 
 
 
@@ -2606,7 +2639,7 @@ class ReactionSimulator:
         if rxn_index is not None:
             # Check the 1 reaction that was requested
             if explain:
-                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                description = self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
@@ -2616,8 +2649,8 @@ class ReactionSimulator:
         else:
             # Check ALL the reactions
             status = True       # Overall status
-            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
-            for rxn_index in range(self.reaction_data.number_of_reactions()):
+            description_list = self.reaction_registry.multiple_reactions_describe(concise=True)
+            for rxn_index in range(self.reaction_registry.number_of_reactions()):
                 # For each reaction
                 if explain:
                     print(description_list[rxn_index])
@@ -2657,7 +2690,7 @@ class ReactionSimulator:
                                 as allowed by the requested tolerance
         """
         # Look up the "SimulationReaction" object of the requested reaction
-        rxn = self.reaction_data.get_reaction(rxn_index)
+        rxn = self.reaction_registry.get_reaction(rxn_index)
 
         kR = rxn.extract_reverse_rate_constant()
         assert kR is not None, \
@@ -2741,7 +2774,7 @@ class ReactionSimulator:
                                 chemicals involved in the specified reaction
                                 EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        rxn = self.reaction_data.get_reaction(rxn_index)                # Look up the requested reaction
+        rxn = self.reaction_registry.get_reaction(rxn_index)                # Look up the requested reaction
         chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
         return rxn.source_object.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
 
@@ -2830,373 +2863,6 @@ class ReactionSimulator:
         from_values = df.loc[row_from][chem_list]
         to_values = df.loc[row_to][chem_list]
         return (to_values - from_values).astype(float).to_numpy(dtype='float32')
-
-
-
-
-
-####################################################################################################
-
-class AnalyticReactionSolver:
-    """
-    For reactions that have known analytical solutions (exact or approximate)
-    """
-    @staticmethod
-    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the reversible elementary Reaction A <-> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the reactant A
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations is returned,
-                                rather than the final one.  Default: False
-
-        :return:    The concentrations of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-        TOT = A0 + P0
-
-        # Formula is:  A(t) = (A0 - [(kR TOT) / (kF + kR)]) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
-        # In python:          (A0 - (kR * TOT) / (kF + kR)) * math.exp(-(kF + kR) * t) + kR * TOT / (kF + kR)
-
-        sum_rates = kF + kR
-        ratio = (kR * TOT) / sum_rates
-
-        A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
-        P_t = TOT - A_t     # From mass conservation
-
-        if incremental:
-            return P_t - P0
-
-        return P_t
-
-
-    @staticmethod
-    def exact_advance_unimolecular_irreversible(kF, A0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the ir-reversible 1st Order Reaction A -> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
-        :param A0:  Initial concentration of the reactant A
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the change in concentration is returned,
-                                rather than the final ones.  Default: False
-
-        :return:    The concentrations of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-
-        # Formula is:  A(t) = A0 Exp(-kF t)
-
-        if incremental:
-            A_incr = A0 * (np.exp(-kF * t) - 1)
-            P_incr = - A_incr   # From mass conservation
-            return P_incr
-
-
-        TOT = A0 + P0
-        A_t = A0 * np.exp(-kF * t)
-        P_t = TOT - A_t     # From mass conservation
-
-        return P_t
-
-
-
-    @staticmethod
-    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the reversible elementary Reaction A + B <-> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentration of P is returned,
-                                rather than the final ones.  Default: False
-
-        :return:   The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-        if np.allclose(kR, 0):
-            '''
-            Note - the case when KR=0 and A0=B0 cannot be passed to the general solver below,
-                   because in such as case:
-                        T = A0 + P0     # A collapse of the general cases of AP_tot and BP_tot
-                        alpha = kF
-                        beta = 2 * kF * T
-                        gamma = kF * T**2 
-            In this scenario:
-                - beta**2 + 4 * alpha * gamma = - [2 kF T]**2 + 4 kF * (kF * T**2) 
-                                              = - 4 kF**2 T**2 + 4 kF**2 T**2 
-                                              = 0  
-            and the general solution cannot be used, because in it we divide by the square root of that term!       
-            '''
-            #print("****** Switching to IR-reversible version")
-            return  AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
-
-
-        AP_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
-        BP_tot = B0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
-
-        alpha = kF
-        beta = kF * (AP_tot + BP_tot) + kR
-        gamma = kF * AP_tot * BP_tot
-        '''
-        The ODE to solve for P(t) is:
-            P'(t) = kF A(t) B(t) - kR P(t)      # Forward rate minus reverse rate
-            
-        The stoichiometry dictates that the drop in each reagent equals the increase in the product:
-            A(t) = A0 - (P(t) - P0)
-            B(t) = B0 - (P(t) - P0)
-            
-        which can be re-arranged to:
-            P'(t) = kF [A0 - P(t) + P0] [B0 - P(t) + P0] - kR P(t)
-            P'(t) = kF [AC_tot - P(t)] [BC_tot - P(t)] - kR P(t)
-            P'(t) = kF [AC_tot * BC_tot - AC_tot * P(t) - P(t) * BC_tot + P(t)**2] - kR P(t)
-            P'(t) = kF * P(t)**2 
-                    - kF * AC_tot * P(t) - kF * BC_tot * P(t) - kR P(t) 
-                    + kF * AC_tot * BC_tot 
-            P'(t) = kF * P(t)**2 
-                    - (kF * AC_tot + kF * BC_tot + kR) * P(t) 
-                    +  kF * AC_tot * BC_tot 
-            P'(t) = alpha [P(t)]**2 - beta P(t) + gamma
-        
-        The following is based on the answer by Mathematica v.7 to:
-            DSolve[{p'[t] == alpha (p[t])**2 - beta p[t] + gamma, p[0] == P0}, p[t], t]
-            Simplify[%]
-        '''
-        term = - beta**2 + 4 * alpha * gamma
-        #print(f"term = {term}")
-
-        if np.allclose(term, 0):
-            # The term = 0 must be intercepted because we later divide by the square root of that term
-            # TODO: can this scenario ever occur when kR > 0  ?
-            raise Exception("exact_advance_synthesis_reversible(): No provision for this case yet, when beta**2 = 4 * alpha * gamma")
-        else:
-            sqrt_term = cmath.sqrt(term)            # Note: `term` could be negative; hence, the complex square root
-
-            arctan_arg = (beta - 2 * alpha * P0) / sqrt_term    # This will be the argument to pass to the arctan() function, below
-            arctan_value = np.arctan(arctan_arg)
-            #print(f"arctan_value = {arctan_value}")
-
-            # Note that every variable so far is a constant, NOT dependent on time
-
-            tan_arg = (0.5 * sqrt_term * t) - arctan_value     # This will be the argument to pass to the tan() function, below
-
-            result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
-
-            P_t = result.real             # Drop the imaginary components (which ought to be very close to zero)
-
-
-        if incremental:
-            return P_t - P0
-
-        return P_t
-
-
-
-    @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the irreversible elementary Reaction A + B -> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
-                                rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
-        # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
-        '''
-        Start with the ODE:
-            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
-                     
-        Special case - when A0 = B0, the ODE becomes:
-            d P(t) / dt = kF * A(t) * A(t) = kF * ( A0 - (P(t)-P0) )**2
-            which can, for example, be plugged into Mathematica as:
-            DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
-        '''
-        alpha =  P0 + A0
-
-        if np.allclose(A0, B0):
-            # When A0 = B0, the ODE has a special solution:
-            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
-            prod = A0 * kF * t
-            P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
-
-        else:
-            # When A0 != B0, the solution P(t) of the ODE must satisfy:
-            #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
-            #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
-            #   which gets solved for P(t) below
-            #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
-            beta =   P0 + B0
-            try:
-                # Evaluate the exponential on the right-hand size
-                eps = math.exp((B0-A0)* kF * t)
-            except OverflowError:
-                # Overflow occurs if B0 > A0 and t is very large;
-                # in such a case, `A` is the limiting reagent, and fully converts to `P`
-                if incremental:
-                    return A0
-                return alpha    # P0 + A0
-
-            ''' 
-            With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
-                (A0 * (beta - P)) / (B0 * (alpha - P)) = eps 
-                           
-            i.e.:
-                (A0 * (beta - P)) = eps * (B0 * (alpha - P))
-                A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
-                A0 * beta - A0 * P = B0 * alpha * eps - B0 * P * eps
-                B0 * P * eps - A0 * P = B0 * alpha * eps - A0 * beta
-                (B0 * eps - A0) * P   = B0 * alpha * eps - A0 * beta
-            '''
-            #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
-            P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
-
-
-        if incremental:
-            return P_t-P0
-
-        return P_t
-
-
-
-    @staticmethod
-    def approx_solution_synthesis_rxn(kF, kR, A0, B0, P0, t :float|np.ndarray) -> float|np.ndarray:
-        """
-        Return the APPROXIMATE analytical solution, by way of exponentials,
-        of the reversible 2nd Order Reaction A + B <-> P,
-        with the specified parameters, sampled at the given time(s).
-
-        This approximation is relatively coarse; in the pytests, errors of up to about 2% were seen,
-        with the worst errors in the mid-portion between the starting state and the final equilibrium
-
-        :param kF:  Forward reaction rate constant (cannot be zero)
-        :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-                        OR a Numpy array with the desired times at which the solutions are desired
-
-        :return:    A concentration value, or Numpy arrays with the concentrations,
-                        of P at the time - or times - given by the argument `t`
-        """
-        assert not np.allclose(kF, 0), \
-            "approx_solution_synthesis_rxn(): this approximation cannot be used when kF is zero"
-
-        # Calculate the equilibrium concentrations
-        K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
-
-        # The following derive from solving the quadratic equation  (A0 - m) * (B0 - m) / (C0 + m) == K_inv , for m
-        # where m is the Product concentration change ("moles/liter of forward reaction")
-        TOT_reactants = A0+B0
-        r = (K_inv**2 + TOT_reactants**2) / 4 + (K_inv * TOT_reactants / 2) + P0 * K_inv - A0 * B0
-        m = (K_inv + TOT_reactants)/2  - math.sqrt(r)         # Product concentration change
-
-        # The reactants get consumed by m, while the product increases by m
-        A_eq = A0 - m
-        B_eq = B0 - m
-
-        #print(f"\nProduct concentration change: {m} | A_eq: {A_eq}  |  B_eq: {B_eq}")
-
-        l = (kF + kR) * (A_eq + B_eq)  # Relaxation rate constant λ
-
-        AC_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
-
-        A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t)     # Approximate analytical solution
-        P_arr = AC_tot - A_arr
-
-        return P_arr
-
-
-
-    @staticmethod
-    def approx_solution_synthesis_rxn_ALT(kF, kR, A0, B0, P0, t, incremental) -> float:
-        """
-        Provided by ChatGPT.  Not fully tested.
-
-        Closed-form solution for:
-        dp/dt = kf (a0 - p + p0)(b0 - p + p0) - kr p
-        with p(0) = p0
-
-        Parameters
-        ----------
-        t : float or array_like
-            Time(s) at which to evaluate p(t)
-        P0, kF, kR, A0, B0 : float
-            Reaction parameters
-
-        Returns
-        -------
-        p : float or ndarray
-            Value(s) of p(t)
-        """
-
-        # Coefficients of Riccati equation
-        alpha = kF
-        beta  = kF * (A0 + B0 + 2 * P0) + kR
-        gamma = kF * (A0 + P0) * (B0 + P0)
-
-        # Discriminant
-        discr = beta**2 - 4*alpha*gamma
-        if np.any(discr < 0):
-            raise ValueError("Negative discriminant: parameters give complex roots.")
-
-        sqrt_disc = np.sqrt(discr)
-
-        # Equilibria
-        p_plus  = (beta + sqrt_disc) / (2*alpha)
-        p_minus = (beta - sqrt_disc) / (2*alpha)
-
-        # Relaxation rate
-        lam = alpha * (p_plus - p_minus)
-
-        #t = np.asarray(t, dtype=float)
-
-        exp_term = np.exp(-lam * t)
-
-        numerator = (
-                p_plus * (P0 - p_minus)
-                - p_minus * (P0 - p_plus) * exp_term
-        )
-
-        denominator = (
-                (P0 - p_minus)
-                - (P0 - p_plus) * exp_term
-        )
-
-        P_t = numerator / denominator
-
-        if incremental:
-            return P_t - P0
-
-        return P_t
 
 
 

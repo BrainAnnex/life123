@@ -1205,7 +1205,7 @@ def test_reaction_quotient():
     assert formula == '[B] / [A]'
 
     # Reaction : A <-> F
-    sr.add_species("F")
+    sr.add_single_species("F")
     rxn = ReactionDefinition(reactants="A", products="F", species_registry=sr, reaction_model="mass action")
     c = {'A': 3., 'F': 33.}
     assert np.allclose(11., rxn.reaction_quotient(conc=c, explain=False))
@@ -1214,7 +1214,7 @@ def test_reaction_quotient():
     assert formula == '[F] / [A]'
 
     # Reaction :  A + B <-> C
-    sr.add_species("C")
+    sr.add_single_species("C")
     rxn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, reaction_model="mass action")
     c = {'A': 3., 'B': 4., 'C': 12.}
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)

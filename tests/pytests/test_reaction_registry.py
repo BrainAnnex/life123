@@ -83,7 +83,7 @@ def test_get_species_in_single_reaction():
     with pytest.raises(Exception):
         rxns.get_species_in_single_reaction(1)   # There is no reaction 1
 
-    species_registry.add_species("C")
+    species_registry.add_single_species("C")
 
     rxns.add_reaction(reactants=["B"], products=[(2, "C")], reaction_model="mass action")  # Reaction 1 : B <-> 2C
     assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
@@ -94,7 +94,7 @@ def test_get_species_in_single_reaction():
     assert rxns.get_species_in_single_reaction(1) == {"B", "C"}
     assert rxns.get_species_in_single_reaction(2) == {"A", "C"}
 
-    species_registry.add_species("D")
+    species_registry.add_single_species("D")
     rxns.add_reaction(reactants=["A", "B"], products="D", reaction_model="mass action")    # Reaction 3 : A + B <-> D
     assert rxns.get_species_in_single_reaction(0) == {"A", "B"}
     assert rxns.get_species_in_single_reaction(1) == {"B", "C"}

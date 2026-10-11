@@ -53,13 +53,51 @@ def test_number_of_system_species():
 
 
 def test_get_system_conc():
-    pass
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+    assert np.allclose(uc.get_system_conc(), np.array([0, 0, 0]))
+
+    uc.set_conc(conc={"B": 4, "C": 88})
+    assert np.allclose(uc.get_system_conc(), np.array([0, 4, 88]))
+
+
 
 def test_get_species_conc():
-    pass
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+
+    uc.set_conc(conc={"B": 4, "C": 88})
+    assert uc.get_species_conc("A") == 0
+    assert uc.get_species_conc("B") == 4
+    assert uc.get_species_conc("C") == 88
+
+    with pytest.raises(Exception):
+        uc.get_species_conc("UNKNOWN")
+
+
 
 def test_get_conc_dict():
-    pass
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+
+    uc.set_conc(conc={"A": 7, "B": 4, "C": 88})
+
+    assert uc.get_conc_dict() == {"A": 7, "B": 4, "C": 88}
+
+    assert uc.get_conc_dict(species_ids=["B"]) == {"B": 4}
+    assert uc.get_conc_dict(species_ids=("B", "C")) == {"B": 4, "C": 88}
+    assert uc.get_conc_dict(species_ids={"B", "A", "C"}) == {"A": 7, "B": 4, "C": 88}
+
+    assert uc.get_conc_dict(system_data=np.array([1, 2, 3])) == {"A": 1, "B": 2, "C": 3}
+
+    with pytest.raises(Exception):
+        uc.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
+
+    assert uc.get_conc_dict(species_ids={"B", "A", "C"}, system_data=np.array([1, 2, 3, 4])) \
+                    == {"A": 1, "B": 2, "C": 3}
+
+    with pytest.raises(Exception):
+        uc.get_conc_dict(species_ids={"B", "A", "C"}, system_data=np.array([1, 2]))
 
 
 

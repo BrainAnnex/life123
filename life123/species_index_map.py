@@ -95,6 +95,22 @@ class SpeciesIndexMap:
 
 
 
+    def get_all_species_ids(self, sort=False) -> list[str]:
+        """
+        Return a list with the id's of all the species,
+        NOT in any particular order
+
+        :param sort:    [OPTIONAL]
+        :return:        A list of strings with the species id's,
+                            NOT in any particular order (unless `sort` is True)
+        """
+        if sort:
+            return sorted(list(self.index_to_species))
+
+        return list(self.index_to_species)     # The dictionary keys as a list
+
+
+
     def add_species(self, species_ids : str | set[str] | list[str] | tuple[str, ...]) -> int:
         """
         Specify that the given group of species id's should be included in the index management

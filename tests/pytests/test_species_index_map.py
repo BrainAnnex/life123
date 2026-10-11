@@ -14,7 +14,7 @@ def test_CONSTRUCTOR():
     with pytest.raises(Exception):
         SpeciesIndexMap(species_ids={"A"}, species_registry=sp)     # Unknown species id
 
-    sp.add_species("A")
+    sp.add_single_species("A")
     ind = SpeciesIndexMap(species_ids={"A"}, species_registry=sp)
     assert ind.index_to_species == ["A"]
     assert ind.species_to_index == {"A": 0}

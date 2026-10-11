@@ -109,7 +109,7 @@ def test__delta_conc_dict():
 
 def test_save_diagnostic_rxn_data():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
-    rxns = ReactionRegistry(species_data=chem_data)
+    rxns = ReactionRegistry(species_registry=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})        # Rxn 0
@@ -209,7 +209,7 @@ def test_save_diagnostic_rxn_data():
 
 def test_save_diagnostic_aborted_rxns():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
-    rxns = ReactionRegistry(species_data=chem_data)
+    rxns = ReactionRegistry(species_registry=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
@@ -241,7 +241,7 @@ def test_save_diagnostic_aborted_rxns():
 
 def test_get_diagnostic_rxn_data():
     chem_data = SpeciesRegistry(ids=["A", "B", "C", "X"])
-    rxns = ReactionRegistry(species_data=chem_data)
+    rxns = ReactionRegistry(species_registry=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})        # Rxn 0
@@ -344,7 +344,7 @@ def test_get_diagnostic_rxn_data():
 
 def test_stoichiometry_checker():
     species_registry = SpeciesRegistry(ids=["A", "B", "C", "D"])
-    rxns = ReactionRegistry(species_data=species_registry)
+    rxns = ReactionRegistry(species_registry=species_registry)
 
     species_to_index = {"A" :0, "B" :1, "C" :2, "D" :3}     # This states our choice of how we store the concentrations
                                                             # of the various species in the Numpy array below

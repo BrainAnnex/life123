@@ -22,8 +22,8 @@ class UniformCompartment:
     that offer reaction-diffusion (BioSim1D, BioSim2D, BioSim3D)
     """
 
-    def __init__(self, species_index_map, species_registry=None, species_list=None, names=None,
-                 macromolecules=None, diagnostics=None):
+    def __init__(self, species_index_map, species_registry=None,
+                 macromolecules=None, diagnostics=None, species_list=None, names=None):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
 
@@ -62,7 +62,7 @@ class UniformCompartment:
 
         system_state_size = self.species_index_map.number_of_mapped_species()
 
-        self.system = np.zeros(system_state_size, dtype='d')   # float64    SYSTEM STATE    TODO: maybe rename to "system_state
+        self.system :np.ndarray = np.zeros(system_state_size, dtype='d')   # float64    SYSTEM STATE    TODO: maybe rename to "system_state
                             # TODO: allow users to specify the type
                             # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
@@ -149,59 +149,56 @@ class UniformCompartment:
 
 
 
-    def get_species_conc(self, label :str) -> float:
+    def get_species_conc(self, species_id :str) -> float:
         """
         Return the current system concentration of the given species, specified by its id.
-        If no species by that name exists, an Exception is raised
+        If no species with that id exists, an Exception is raised
 
-        :param label:   The label of a chemical species
-        :return:        The current system concentration of the above chemical
+        :param species_id:  The id of a species
+        :return:            The current system concentration of the above species
         """
-        species_index = self.species_index_map.index_of(label)
+        species_index = self.species_index_map.index_of(species_id)
         return self.system[species_index]
 
 
 
-    def get_conc_dict(self, chem_labels=None, system_data=None) -> dict|None:
+    def get_conc_dict(self, species_ids=None, system_data=None) -> dict:
         """
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
 
-        :param chem_labels: [OPTIONAL] List, tuple or set of the id's of the species;
+        :param species_ids: [OPTIONAL] List, tuple or set of the id's of the species of interest;
                                 by default, return all
         :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
-                                index of the chemical species; by default, use the SYSTEM DATA
+                                index of the requested species; by default, use the SYSTEM DATA
 
-        :return:            A dictionary, indexed by the chemical labels, of the concentration values;
-                                or None if no data available
+        :return:            A dictionary, possibly empty, indexed by the species id's, of the concentration values;
                                 EXAMPLE: {"A": 1.2, "D": 4.67}
         """
-        # TODO: probably change the None returns to empty dict's
+        # TODO: maybe drop the `system_data` arg?
+
         if system_data is None:
             system_data = self.system
-        else:
-            assert system_data.size == self.number_of_system_species(), \
-                f"UniformCompartment.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
-                f"as the declared number of chemicals ({self.number_of_system_species()})"
 
 
-        if chem_labels is None:
+        if species_ids is None:
             if system_data is None:
                 return {}
             else:
                 return {self.species_index_map.species_at(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
-            assert isinstance(chem_labels, (list, tuple, set)), \
-                f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
-                f" (it was of type {type(chem_labels)})"
+            assert isinstance(species_ids, (list, tuple, set)), \
+                f"UniformCompartment.get_conc_dict(): the argument `species` must be a list, tuple or set" \
+                f" (it was of type {type(species_ids)})"
 
             conc_dict = {}
-            for name in chem_labels:
-                species_index = self.species_index_map.index_of(name)
-                conc_dict[name] = system_data[species_index]
+            for sp_id in species_ids:
+                species_index = self.species_index_map.index_of(sp_id)
+                conc_dict[sp_id] = system_data[species_index]
 
             return conc_dict
+
 
 
 
@@ -334,31 +331,6 @@ class UniformCompartment:
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
                                                        caption="Set concentration")
 
-
-
-    def _synchronize_species(self) -> None:
-        """
-        Index all the species that participate in any of the reactions
-        in the reaction registry
-
-        :return:
-        """
-        for rxn in self.reaction_data.get_all_reactions():
-            # rxn is a "SimulationReaction" object
-            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
-            self.add_species(species_id_set)
-
-
-    def _ensure_synchronized_with_reaction_registry(self) -> None:
-        """
-        For lazy synchronization with external mutation in the reaction registry
-
-        :return:
-        """
-        if self._reaction_registry_version != self.reaction_data.version:
-            #print("************OUT OF SYNCH DETECTED!")
-            self._synchronize_species()
-            self._reaction_registry_version = self.reaction_data.version
 
 
 

@@ -299,7 +299,7 @@ class SpeciesRegistry:
                     f"SpeciesRegistry() instantiation: the `id` argument, if provided, must be a string, list or tuple"
 
             for species_id in ids:
-                self.add_species(id=species_id)
+                self.add_single_species(species_id=species_id)
 
 
         # `species` argument
@@ -327,7 +327,7 @@ class SpeciesRegistry:
             ids = self._generate_generic_names(n_species)     # Generates the strings "A", "B", ..., "Z", "Z2", "Z3", ...
 
             for species_id in ids:
-                self.add_species(id=species_id)
+                self.add_single_species(species_id=species_id)
 
 
         # Process any other named arguments that might be present
@@ -420,15 +420,18 @@ class SpeciesRegistry:
 
 
 
-    def get_all_species_ids(self) -> list[str]:
+    def get_all_species_ids(self, sort=False) -> list[str]:
         """
         Return a list with the id's of all the species,
         NOT in any particular order
 
-        :return:    A list of strings with the species id's,
-                        NOT in any particular order
+        :param sort:    [OPTIONAL]
+        :return:        A list of strings with the species id's,
+                            NOT in any particular order (unless `sort` is True)
         """
-        # TODO: offer the option to sort by some criteria
+        if sort:
+            return sorted(list(self.by_id))
+
         return list(self.by_id)     # The dictionary keys as a list
 
 
@@ -597,9 +600,9 @@ class SpeciesRegistry:
     #####################################################################################################
 
 
-    def add_species(self, id :str, skip_duplicates=False, **kwargs) -> Species|None:
+    def add_single_species(self, species_id :str, skip_duplicates=False, **kwargs) -> Species | None:
         """
-        Register a new species, with an `id`
+        Register a single new species, with an `id`
         and (optionally) any of the parameters listed for the class Species,
         such as name, label, annotation, diffusion_rate, ec_number, etc.
 
@@ -610,7 +613,7 @@ class SpeciesRegistry:
                               annotation = "my note about this substrate",
                               cas_number = "53-84-9", plot_color="paleturquoise")
 
-        :param id:              String with a unique value to identify this species being added.
+        :param species_id:              String with a unique value to identify this species being added.
                                     If `name` or `label` aren't passed as arguments, they will be
                                     made equal to the id
         :param skip_duplicates: [OPTIONAL] Normally, duplicate labels or duplicate names raise Exception;
@@ -620,19 +623,19 @@ class SpeciesRegistry:
         :return:                An object of class `Species`, representing the newly-registered species;
                                     however, if it already exists (and skip_duplicates=True), None is returned
         """
-        assert type(id) == str, \
-            f"add_species(): the argument `id` must be a string; it is of type {type(id)}"
+        assert type(species_id) == str, \
+            f"add_species(): the argument `id` must be a string; it is of type {type(species_id)}"
 
-        if id in self.by_id:
+        if species_id in self.by_id:
             # Duplicate `id` is detected
             if skip_duplicates:
                 return None
             else:
-                raise Exception(f"add_species(): the requested species id (`{id}`) ALREADY exists")
+                raise Exception(f"add_species(): the requested species id (`{species_id}`) ALREADY exists")
 
 
-        s = Species(id=id, sort_order=self.count, **kwargs)
-        self.by_id[id] = s
+        s = Species(id=species_id, sort_order=self.count, **kwargs)
+        self.by_id[species_id] = s
         self.count += 1
 
         return s

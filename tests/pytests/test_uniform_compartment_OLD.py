@@ -144,14 +144,14 @@ def test_get_conc_dict():
     result = uc.get_conc_dict()
     assert result == {"A": 100, "B": 200, "C": 300, "D": 400}
 
-    result = uc.get_conc_dict(chem_labels=["D", "A"])
+    result = uc.get_conc_dict(species_ids=["D", "A"])
     assert result == {"A": 100, "D": 400}
 
-    result = uc.get_conc_dict(chem_labels=("C",))      # Tuple with 1 element
+    result = uc.get_conc_dict(species_ids=("C",))      # Tuple with 1 element
     assert result == {"C": 300}
 
     with pytest.raises(Exception):
-        uc.get_conc_dict(chem_labels="C")                      # Wrong data type
+        uc.get_conc_dict(species_ids="C")                      # Wrong data type
 
     with pytest.raises(Exception):
         uc.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
@@ -159,7 +159,7 @@ def test_get_conc_dict():
     result = uc.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
     assert result == {"A": 1, "B": 2, "C": 3, "D": 4}
 
-    result = uc.get_conc_dict(chem_labels=["B"], system_data=np.array([1, 2, 3, 4]))
+    result = uc.get_conc_dict(species_ids=["B"], system_data=np.array([1, 2, 3, 4]))
     assert result == {"B": 2}
 
 
@@ -406,7 +406,7 @@ def test_set_macromolecules():
     with pytest.raises(Exception):
         uc.set_macromolecules({"M999": 2})        # Unknown macromolecule
 
-    sr.add_species("M999")
+    sr.add_single_species("M999")
 
     # Over-write the previous settings
     uc.set_macromolecules({"M999": 2})

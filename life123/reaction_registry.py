@@ -19,12 +19,12 @@ class ReactionRegistry:
     all make use of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """
 
-    def __init__(self, species_data=None):
+    def __init__(self, species_registry=None):
 
         """
-        :param species_data:    [OPTIONAL] Object of type "SpeciesRegistry";
-                                    if not passed, it will get instantiated automatically -
-                                    and then it can be obtained by means of the method get_species_data()
+        :param species_registry:    [OPTIONAL] Object of type "SpeciesRegistry";
+                                        if not passed, it will get instantiated automatically -
+                                        and then it can be obtained by means of the method get_species_data()
         """
 
         # TODO: consider adding to argument   "=species=None"
@@ -47,10 +47,10 @@ class ReactionRegistry:
                                 #   its `version` number gets increased;
                                 #   clients of this module can inspect changes when they need to interact with this registry
 
-        if species_data is None:
+        if species_registry is None:
             self.species_data = SpeciesRegistry()
         else:
-            self.species_data = species_data
+            self.species_data = species_registry
 
 
         self.reaction_defn_list = []    # List of "ReactionDefinition" objects
@@ -444,11 +444,13 @@ class ReactionRegistry:
 
     def register_reaction(self, rxn_defn :ReactionDefinition) -> int:
         """
-        Register a SINGLE chemical reaction from its "ReactionDefinition" object,
-        and set all its kinetic and/or thermodynamic data from the available information,
-        including the value of the temperature (stored in object variable.)
+        Register one or more chemical reactions
+        that derive from the given "ReactionDefinition" object.
 
-        Update the object variable `self.active_chemicals`
+        Update the following object variables:
+            - self.reaction_defn_list   (the "ReactionDefinition" objects)
+            - self.reaction_list        (the "SimulationReaction" objects)
+            - self.active_chemicals
 
         :param rxn_defn:    Object of type "ReactionDefinition"
 
@@ -462,6 +464,11 @@ class ReactionRegistry:
         self.reaction_defn_list.append(rxn_defn)
 
         sim_rxn_tuple = rxn_defn.sim_reactions
+        assert len(sim_rxn_tuple) > 0, \
+            f"register_reaction(): no active reaction was added " \
+            f"(typically caused by not passing a `reaction_model` argument " \
+            f"when you added the reaction {rxn_defn.describe(concise=True)})"
+
         for sim_rxn in sim_rxn_tuple:
             self.reaction_list.append(sim_rxn)
             involved_chemicals = sim_rxn.stoichiometry.get_all_species_ids()    # Set of species ID's

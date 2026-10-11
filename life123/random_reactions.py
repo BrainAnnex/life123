@@ -65,7 +65,7 @@ class RandomReactionNetwork:
         self.species_data = SpeciesRegistry(n_species=n_species)        # Object of type "SpeciesRegistry", with info on the individual chemical species
 
 
-        self.reaction_data = ReactionRegistry(species_data=self.species_data)   # Object of type ReactionRegistry,
+        self.reaction_data = ReactionRegistry(species_registry=self.species_data)   # Object of type ReactionRegistry,
                                                                                 # to manage a list of reactions, and the reaction-specific objects
 
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, asdict
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
-from life123.reaction_simulator import AnalyticReactionSolver
+from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
 from life123.kinetics import MassAction_Model, MichaelisMenten_Model, Custom_Model
 from life123.units import show_standard_units, convert, K, C
@@ -569,8 +569,8 @@ class ReactionCompiler_SingleSubstrateMechanism:
         E = stoichiometry.catalysts[0]
 
         ES = E + S + "*"
-        species_registry.add_species(id= ES,
-                                     annotation="reaction intermediary from single substrate mechanism")
+        species_registry.add_single_species(species_id= ES,
+                                            annotation="reaction intermediary from single substrate mechanism")
 
         # Reaction 1: S + E <-> ES
         st = Stoichiometry(vector={S: -1, E: -1, ES: 1})
@@ -873,7 +873,7 @@ class ReactionDefinition:
         for species_id in stoich_obj.get_all_species_ids():
             if not self.species_registry.species_exists(species_id):
                 if autoregister_species:
-                    self.species_registry.add_species(id=species_id)
+                    self.species_registry.add_single_species(species_id=species_id)
                 else:
                     raise Exception(f'ReactionDefinition instantiation: No species with id "{species_id}" exists in the given species registry.  '
                                     f'To automatically add new species to the registy, use the argument:  autoregister_species=True')
