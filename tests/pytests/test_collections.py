@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import CollectionTabular, CollectionArray, Collection
+from life123.collections import CollectionTabular, CollectionArray, Collection
 from tests.utilities.comparisons import *
 
 

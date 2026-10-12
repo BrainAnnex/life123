@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import Numerical as num
+from life123.numerical import Numerical as num
 import pandas as pd
 
 

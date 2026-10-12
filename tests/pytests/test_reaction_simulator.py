@@ -880,9 +880,10 @@ DETAILS:
                                                         # because the initial concentrations of X and Y are 0
 
     with pytest.raises(Exception):
-        sim.system.set_system_state([10., 50., 0, 0])       # Trying to set 4 values, but the updated index is 5 value
+        sim.system.set_system_state([10., 50., 0, 0])       # Trying to set 4 values, but the specie index is 3 values
 
-     # Check the expanded index
+    sim.system.set_conc({"A": 10, "B": 50})             # This will trigger a synchronization
+    # Check the expanded index
     assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
     assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2, "X": 3, "Y": 4}
 
@@ -1026,7 +1027,7 @@ def test_reaction_step_common_variable_step_2(capsys):
     sim = ReactionSimulator(system=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")
 
-    sim.system = initial_system
+    sim.system.set_system_state(initial_system)
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.04, explain_variable_steps=[-1,1])
     captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
 

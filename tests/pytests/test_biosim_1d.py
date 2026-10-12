@@ -2,7 +2,10 @@
 
 import pytest
 import numpy as np
-from life123 import BioSim1D, ReactionRegistry, UniformCompartment, SpeciesRegistry
+from life123.bio_sim_1d import BioSim1D
+from life123.reaction_registry import ReactionRegistry
+from life123.uniform_compartment import UniformCompartment
+from life123.species_registry import SpeciesRegistry
 
 
 

@@ -2,8 +2,10 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import SpeciesRegistry, CollectionTabular
+
 from life123.diagnostics import Diagnostics
+from life123.species_registry import SpeciesRegistry
+from life123.collections import CollectionTabular
 from life123.reaction_registry import ReactionRegistry
 from life123.species_index_map import SpeciesIndexMap
 

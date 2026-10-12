@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from life123 import HistoryBinConcentration, HistoryReactionRate, HistoryUniformConcentration
+from life123.history import HistoryBinConcentration, HistoryReactionRate, HistoryUniformConcentration
 
 
 

@@ -332,7 +332,7 @@ class ReactionSimulator:
                                 decision about saving it, but a check will be performed
                                 to make sure it's not a duplicate of the earlier capture
 
-        :return:                    None
+        :return:            None
         """
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
@@ -766,7 +766,9 @@ class ReactionSimulator:
 
         # Preserve the RATES data, as requested ("part1", BEFORE updating the System Time, because reaction rates are
         # based on the *start* time of the simulation step)
+        print("********step_count is: ", step_count)
         if step_count == 0:
+            print("       BRANCH step_count is zero")
             self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
         else:
             self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
@@ -1921,72 +1923,6 @@ class ReactionSimulator:
             self.rate_history.enable_history(frequency=frequency, chem_labels=chem_labels)
             if take_snapshot:
                 self.capture_rate_snapshot()
-
-
-
-    def capture_rate_snapshot(self, step_count=None, caption=None,
-                             force=False, system_time=None) -> None:
-        """
-        Take the reaction rates for the last (current) step of all reactions,
-        stored as a dict in the object property `self.system_rxn_rates`,
-        and save them in the ongoing table storing the "rate history".
-
-        Note: reaction rate history is regarded as akin to concentration history - something to periodically
-              sample and record, separate from diagnostics
-
-        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
-        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
-        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
-        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
-        :return:            None
-        """
-        if not force and not self.rate_history.to_capture(step_count):
-            return
-
-        if system_time is None:
-            system_time = self.system_time
-
-        data_snapshot = {}     # rxn_rates_snapshot
-        for k, v in self.system_rxn_rates.items():
-            if type(v) == tuple:
-                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
-                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
-                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
-            else:
-                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-        '''
-           EXAMPLE of data_snapshot:
-                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
-        '''
-        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
-
-
-
-    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
-        """
-
-        :param step_count:
-        :param caption:
-        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
-                                the capture frequency will NOT considered in the
-                                decision about saving it, but an extra check will be performed
-                                to make sure it's not a duplicate of the earlier capture
-
-        :return:                    None
-        """
-        if not self.conc_history.to_capture(step_count, extra=extra):
-            return
-
-        data_snapshot = self.system.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
-        '''
-           EXAMPLE of data_snapshot:
-                {"A": 1.3, "B": 4.9}        
-        '''
-        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
 
 
 

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import ThermoDynamics
+from life123.thermodynamics import ThermoDynamics
 from life123.units import K, C, J_PER_MOL
 
 
