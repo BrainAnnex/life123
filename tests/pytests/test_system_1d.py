@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from life123 import SpeciesRegistry, System1D
+from life123.species_registry import SpeciesRegistry
+from life123.bio_sim_1d import System1D
 
 
 

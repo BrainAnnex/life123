@@ -239,7 +239,7 @@ def test_CONSTRUCTOR_5():
 
 def test_single_compartment_react():
 
-    # Test based on experiment "cycles_1"
+    # Test based on experiment "cycles_1"  (with 3 reactions)
     species_registry = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
     rxns = ReactionRegistry(species_registry=species_registry)
 
@@ -257,49 +257,33 @@ def test_single_compartment_react():
                       reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
 
 
-    # Assign an array index to all the species we're dealing with
-    all_species = rxns.get_species_in_any_reaction(sort=True)
+    sim = ReactionSimulator(reaction_registry=rxns, diagnostics_enabled=True)
 
-    ind = SpeciesIndexMap(all_species)
-    assert ind.index_to_species == ['A', 'B', 'C', 'E_high', 'E_low']
-
-
-    # START of special bundling of "UniformCompartment" and "ReactionSimulator"
-    uc = UniformCompartment(species_index_map=ind, species_registry=species_registry)
-
-    """
-    sim = ReactionSimulator(uniform_compartment=uc, species_index_map=ind,
-                            reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)
-
-    uc.reaction_simulator = sim
-    """
-    sim = uc.reaction_simulator
-    #sim.reaction_registry=rxns
-    #sim.enable_diagnostics()
-    #uc.diagnostics = sim.diagnostics
-    #uc.diagnostics_enabled = sim.diagnostics_enabled
-
-    #uc.diagnostics = sim.diagnostics
-    #uc.diagnostics_enabled = sim.diagnostics_enabled
-    # END of special bundling
+    assert sim.species_index_map.get_all_species_ids(sort=True) == ['A', 'B', 'C', 'E_high', 'E_low']
+    assert sim.reaction_registry.number_of_reactions() == 3
+    assert sim.system_time == 0
 
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
-    uc.set_conc(conc=initial_conc, snapshot=True)
+    sim.system.set_conc(conc=initial_conc, snapshot=sim.capture_conc_snapshot, system_time=sim.system_time)
 
-    assert np.allclose(uc.system_state, [100., 0., 0., 1000. , 0.])
-    assert np.allclose(sim.system_state, [100., 0., 0., 1000. , 0.])
+    assert np.allclose(sim.system.system_state, [100., 0., 0., 1000. , 0.])
+    assert np.allclose(sim.system.system_state, [100., 0., 0., 1000. , 0.])
 
 
     sim.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
-    assert np.allclose(sim.system_state, uc.system_state)
+    assert np.allclose(sim.system.system_state, sim.system.system_state)
 
-    run1 = uc.get_system_conc()
+    run1 = sim.system.get_system_conc()
 
     assert np.allclose(sim.system_time, 0.0035)
-    assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
-    #print(uc.diagnostics.get_diagnostic_conc_data())
+    assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])  # Line 7, below
+
+    df = sim.diagnostics.get_diagnostic_conc_data()
+    row_0 = df.iloc[0]      # Line 0, below
+    expected_row = pd.Series([0.0, 100.0, 0.0, 0.0, 1000.0, 0.0, "Set concentration"],
+                             index =['TIME', 'A', 'B', 'C', 'E_high', 'E_low', 'caption'])
+    assert row_0.equals(other=expected_row)
     """
          TIME           A         B  ...       E_high     E_low            caption
     0  0.0000  100.000000  0.000000  ...  1000.000000  0.000000  Set concentration
@@ -317,24 +301,30 @@ def test_single_compartment_react():
 
 
     # Now repeat the process, step-by-step
+    #print("\n\nNEW RUN:")
+    sim2 = ReactionSimulator(reaction_registry=rxns, diagnostics_enabled=True)
+    assert sim2.system_time == 0
 
-    uc2 = UniformCompartment(species_index_map=ind, species_registry=species_registry)
-    sim2 = uc2.reaction_simulator
+    sim2.system.set_conc(conc=initial_conc, snapshot=sim2.capture_conc_snapshot, system_time=sim2.system_time)
 
-    uc2.set_conc(conc=initial_conc, snapshot=True)
+    assert np.allclose(sim2.system.system_state, [100., 0., 0., 1000. , 0.])
 
-    assert np.allclose(uc2.system_state, [100., 0., 0., 1000. , 0.])
-    assert np.allclose(sim2.system_state, [100., 0., 0., 1000. , 0.])
-
-    for _ in range(7):
+    for i in range(7):
         sim2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
+        assert math.isclose(sim2.system_time, 0.0005*(i+1))
+        #print("   SYSTEM TIME NOW: ", sim2.system_time, "\n")
 
-    run2 = uc2.get_system_conc()
-    assert np.allclose(run2, run1)      # Same result as before
-    assert np.allclose(sim2.system_time, 0.0035)
 
-    print(uc2.diagnostics.explain_time_advance(return_times=True))
-    assert uc2.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+    run2 = sim2.system.get_system_conc()
+    assert np.allclose(run2, run1)                  # Same result as before
+    assert np.allclose(sim2.system_time, 0.0035)    # Same as before
+
+    df2 = sim2.diagnostics.get_diagnostic_conc_data()
+    row_0 = df2.iloc[0]      # The initial row
+    assert row_0.equals(other=expected_row)     # expected_row is the same as for the first run
+
+    #print(sim2.diagnostics.explain_time_advance(return_times=True))
+    assert sim2.diagnostics.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.0035], [0.0005])
 
 
@@ -358,7 +348,7 @@ def test_single_compartment_react__catch_neg_conc():
     rxns.add_reaction(reactants="S", products="X",
                       reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
 
-    sim.system.set_conc(conc_dict={"U": 50., "X": 100., "S": 0.})
+    sim.system.set_conc(conc={"U": 50., "X": 100., "S": 0.})
     assert sim.species_index_map.index_to_species == ['S', 'U', 'X']
     assert sim.species_index_map.species_to_index == {'S': 0, 'U': 1, 'X': 2}
 
@@ -421,7 +411,7 @@ def test_single_compartment_react__variable_steps():
     rxns.add_reaction(reactants="S", products="X",
                       reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
 
-    sim.system.set_conc(conc_dict={"U": 50., "X": 100., "S": 0.}, snapshot=True)
+    sim.system.set_conc(conc={"U": 50., "X": 100., "S": 0.}, snapshot=sim.capture_conc_snapshot)
     assert sim.species_index_map.index_to_species == ['S', 'U', 'X']
     assert sim.species_index_map.species_to_index == {'S': 0, 'U': 1, 'X': 2}
 

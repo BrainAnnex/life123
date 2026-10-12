@@ -3,9 +3,9 @@
 
 
 import numpy as np
-from life123 import BioSim2D
-from life123 import SpeciesRegistry
-from life123 import Numerical as num
+from life123.bio_sim_2d import BioSim2D
+from life123.species_registry import SpeciesRegistry
+from life123.numerical import Numerical as num
 
 
 

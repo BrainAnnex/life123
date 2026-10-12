@@ -16,7 +16,7 @@ class BioSim3D:
 
     n_species = 1       # The number of (non-water) chemical species
 
-    system = None       # NumPy array of dimension (n_species x n_cells_x x n_cells_y x n_cells_z)
+    system_state = None # NumPy array of dimension (n_species x n_cells_x x n_cells_y x n_cells_z)
                         # Each block represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species

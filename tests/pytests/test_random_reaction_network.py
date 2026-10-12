@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import RandomReactionNetwork
+from life123.random_reactions import RandomReactionNetwork
 
 
 
@@ -128,7 +128,7 @@ def test_already_used():
 
     assert not net._already_used(reactants=["A", "C"], products="B")
 
-    net.reaction_data.species_registry.add_single_species(species_id="D")
+    net.reaction_data.species_data.add_single_species(species_id="D")
     assert not net._already_used(reactants=["C", "D"], products="B")
 
     net.reaction_data.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B

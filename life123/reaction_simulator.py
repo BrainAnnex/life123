@@ -766,9 +766,7 @@ class ReactionSimulator:
 
         # Preserve the RATES data, as requested ("part1", BEFORE updating the System Time, because reaction rates are
         # based on the *start* time of the simulation step)
-        print("********step_count is: ", step_count)
         if step_count == 0:
-            print("       BRANCH step_count is zero")
             self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
         else:
             self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)

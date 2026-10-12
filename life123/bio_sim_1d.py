@@ -44,7 +44,7 @@ class System1D:
                                     # from the middle of the leftmost bin to the middle of the rightmost one.
                                     #  The de-facto default value, though not used, is (n_bins-1)
 
-        self.system = None      # Concentration data in the System we're simulating, for all the chemicals:
+        self.system_state = None    # Concentration data in the System we're simulating, for all the chemicals:
                                 #   NumPy array of floats, of dimension: (n_species) x (n_bins)
                                 #   Each row represents a species;
                                 #   For example, self.system[0] is the linear sequence of bin concentrations
@@ -87,7 +87,7 @@ class System1D:
             "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
         # Initialize all bin concentrations to zero, for all the chemical species
-        self.system = np.zeros((self.n_species, n_bins), dtype=float)
+        self.system_state = np.zeros((self.n_species, n_bins), dtype=float)
 
 
         self.membranes_obj = Membranes1D(n_bins=n_bins)
@@ -160,7 +160,7 @@ class System1D:
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         if concise:             # A minimalist printout...
-            print(self.system)   # ...only showing the concentration data (a Numpy array)
+            print(self.system_state)   # ...only showing the concentration data (a Numpy array)
             if self.membranes_obj.uses_membranes():
                 print("Membranes: ", self.membranes_obj.membrane_list)
             return
@@ -173,7 +173,7 @@ class System1D:
             print("Membranes present: ", self.membranes_obj.membrane_list)
 
 
-        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
+        df = pd.DataFrame(self.system_state, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
         df.insert(0, "Species", self.species_data.get_all_species_ids())
         df.insert(1, "Diff rate", self.species_data.get_all_values(field="diffusion_rate")) # Missing values will show up as None
@@ -266,9 +266,9 @@ class System1D:
         """
         # TODO: deal with membranes, and anything else needed to later restore the complete system state
         if copy:
-            conc = self.system.copy()
+            conc = self.system_state.copy()
         else:
-            conc = self.system
+            conc = self.system_state
 
         return {"system_time": self.system_time, "concentrations": conc}
 
@@ -285,8 +285,8 @@ class System1D:
         #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified.
         #      If membranes will later be included, this functions needs to be taken to a derived class
 
-        self.system = new_state["system"]
-        self.n_species, self.n_bins = self.system.shape     # Extract from the new state
+        self.system_state = new_state["system"]
+        self.n_species, self.n_bins = self.system_state.shape     # Extract from the new state
         assert self.n_species == self.species_data.number_of_species(), \
             f"restore_system(): inconsistency in the number of chemical species in the specified new state ({self.n_species}) " \
             f"vs. what's stored in the `Chemicals` object ({self.species_data.number_of_species()})"
@@ -304,7 +304,7 @@ class System1D:
         :param new_state:   Numpy array containing the desired new System's internal state
         :return:            None
         """
-        self.system = new_state
+        self.system_state = new_state
         self.n_species, self.n_bins = new_state.shape     # Extract from the new state
         assert self.n_species == self.species_data.number_of_species(), \
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
@@ -397,7 +397,7 @@ class System1D:
         :return:        None
         """
         assert type(factor) == int, "The argument `factor` must be an integer"
-        new_state = np.repeat(self.system, factor, axis=1)
+        new_state = np.repeat(self.system_state, factor, axis=1)
         self.replace_system(new_state)
 
 
@@ -426,7 +426,7 @@ class System1D:
         #print(new_state)
 
         for i in range(self.n_bins-1):
-            two_col = self.system[ : , i:i+2 ]
+            two_col = self.system_state[: , i:i + 2]
             avg_col = two_col.mean(axis=1)
 
             #print("two_col: ", two_col)
@@ -435,7 +435,7 @@ class System1D:
             new_state[ : , 2*i] = two_col[ : , 0]
             new_state[ : , 2*i+1] = avg_col
 
-        new_state[ : , -1] = self.system[ : , -1]
+        new_state[ : , -1] = self.system_state[: , -1]
 
         self.replace_system(new_state)
 
@@ -468,7 +468,7 @@ class System1D:
 
         for i in range(reduced_n_bins):
             start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
-            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
+            col_group = self.system_state[: , start_col:start_col + factor] # Extract a submatrix containing the number of columns specified by "factor",
                                                                     # starting with the column specified by start_col
             compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
             new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
@@ -493,15 +493,15 @@ class System1D:
         new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
 
         for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
-            col_group = self.system[ : , start_col:start_col+2]     # Extract a submatrix containing 2 columns,
+            col_group = self.system_state[: , start_col:start_col + 2]     # Extract a submatrix containing 2 columns,
                                                                     # starting with the one in position start_col
             avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
 
-            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
+            new_state[:, [2*start_col]] = self.system_state[: , start_col:start_col + 1]   # Set one column, from the first column in the group
             new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
 
 
-        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
+        new_state[ : , -1:] = self.system_state[: , -1:]                 # Set the last column of result to the last column of self.system
 
         self.replace_system(new_state)
 
@@ -536,7 +536,7 @@ class System1D:
         assert conc >= 0., \
             f"set_uniform_concentration(): the concentration must be a positive number or zero (the requested value was {conc})"
 
-        self.system[chem_index] = np.full(self.n_bins, conc, dtype=float)
+        self.system_state[chem_index] = np.full(self.n_bins, conc, dtype=float)
 
 
 
@@ -594,7 +594,7 @@ class System1D:
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
-        self.system[chem_index, bin_address] = conc
+        self.system_state[chem_index, bin_address] = conc
 
 
 
@@ -631,7 +631,7 @@ class System1D:
             f"System1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
 
         # Update the system state
-        self.system[chem_index] = conc_list
+        self.system_state[chem_index] = conc_list
 
 
 
@@ -660,16 +660,16 @@ class System1D:
             self.species_data.assert_valid_species_index(chem_index)
 
 
-        if (self.system[chem_index, bin_address] + delta_conc) < 0. :
+        if (self.system_state[chem_index, bin_address] + delta_conc) < 0. :
             # Take special action if the requested change would make the bin concentration negative
             if zero_clip:
-                self.system[chem_index, bin_address] = 0
+                self.system_state[chem_index, bin_address] = 0
                 return
             else:
                 raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        self.system[chem_index, bin_address] += delta_conc
+        self.system_state[chem_index, bin_address] += delta_conc
 
 
 
@@ -697,7 +697,7 @@ class System1D:
 
         # Update the concentrations across all bins, for the requested chemical species
         # Note: all the values we're adding are non-negative; so, no danger of creating negative concentrations
-        self.system[species_index] += increments_arr
+        self.system_state[species_index] += increments_arr
 
 
 
@@ -819,7 +819,7 @@ class System1D:
             # Zero out after right
             increments_arr[right+1:] = 0
 
-        self.system[species_index] += increments_arr
+        self.system_state[species_index] += increments_arr
 
 
 
@@ -865,7 +865,7 @@ class System1D:
         else:
             self.species_data.assert_valid_species_index(chem_index)
 
-        species_conc = self.system[chem_index]
+        species_conc = self.system_state[chem_index]
 
         if copy:
             return species_conc.copy()
@@ -897,7 +897,7 @@ class System1D:
             assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
 
-        arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
+        arr = self.system_state[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
 
         return arr
 
@@ -914,10 +914,10 @@ class System1D:
         """
         #TODO: rename snapshot_concentrations()
         all_chem_names = self.species_data.get_all_species_ids()
-        if self.system is None:
+        if self.system_state is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
 
-        matrix = self.system.T
+        matrix = self.system_state.T
 
         df = pd.DataFrame(matrix, columns = all_chem_names)
 
@@ -939,7 +939,7 @@ class System1D:
 
         self.species_data.assert_valid_species_index(chem_index)
 
-        return self.system[chem_index, bin_address]
+        return self.system_state[chem_index, bin_address]
 
 
 
@@ -975,7 +975,7 @@ class System1D:
         """
         self.assert_valid_bin(bin_address)
 
-        return self.system[: , bin_address]
+        return self.system_state[: , bin_address]
 
 
 
@@ -1280,7 +1280,7 @@ class System1D:
             colors = self.species_data.assign_colors(chem_labels)
 
 
-        conc_matrix = self.system
+        conc_matrix = self.system_state
 
         if self.membranes_obj.membrane_list == []:
             flattened_list = None

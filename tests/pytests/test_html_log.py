@@ -1,5 +1,4 @@
-import pytest
-from life123 import HtmlLog as log
+from life123.html_log import HtmlLog as log
 import os
 
 

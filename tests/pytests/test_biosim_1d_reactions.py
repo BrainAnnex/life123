@@ -2,8 +2,8 @@
 # for general tests of 1D system, see "test_biosim_1d.py"
 
 import numpy as np
-from life123 import SpeciesRegistry
-from life123 import BioSim1D
+from life123.species_registry import SpeciesRegistry
+from life123.bio_sim_1d import BioSim1D
 from life123.kinetics import Custom_Model
 
 

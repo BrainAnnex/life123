@@ -45,7 +45,7 @@ class BioSim2D:
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
 
-        self.system = None      # Concentration data in the System we're simulating, for all the chemicals:
+        self.system_state = None      # Concentration data in the System we're simulating, for all the chemicals:
                                 #   NumPy array of dimension (n_species) x (n_bins_x) x (n_bins_y)
                                 #   Each plane (sub-array along the 0-th axis) represents a chemical species;
                                 #   e.g, self.system[0] is the matrix for the 0-th chemical.

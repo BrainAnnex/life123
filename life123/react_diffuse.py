@@ -2,8 +2,11 @@ import numpy as np
 from life123.species_index_map import SpeciesIndexMap
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_simulator import ReactionSimulator
-from life123 import BioSim1D, BioSim2D, BioSim3D
-from life123 import SpeciesRegistry
+from life123.species_registry import SpeciesRegistry
+from life123.bio_sim_1d import BioSim1D
+from life123.bio_sim_2d import BioSim2D
+from life123.bio_sim_3d import BioSim3D
+
 
 
 class ConcentrationState:
@@ -58,11 +61,10 @@ class ReactDiffuse:
 
         match type:
             case "uniform":
-                uc = UniformCompartment(species_index_map=self.index_species)
-                self.module = uc
-                self.sim = ReactionSimulator(system=uc.system_state, species_index_map=self.index_species,
-                                             reaction_registry=uc.reaction_data, method="forward_euler",
+                sim = ReactionSimulator(species_index_map=self.index_species,
+                                            method="forward_euler",
                                              diagnostics_enabled=False)
+                self.module = sim
 
 
             case "1d":

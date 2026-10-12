@@ -5,7 +5,8 @@
 import pytest
 import numpy as np
 from scipy.ndimage import shift
-from life123 import SpeciesRegistry, Diffusion1D, Membranes1D, System1D
+from life123.species_registry import SpeciesRegistry
+from life123.bio_sim_1d import Diffusion1D, Membranes1D, System1D
 
 
 

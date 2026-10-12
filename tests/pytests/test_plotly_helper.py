@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import PlotlyHelper
+from life123.visualization.plotly_helper import PlotlyHelper
 import plotly
 
 

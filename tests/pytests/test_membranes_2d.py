@@ -1,5 +1,5 @@
 import pytest
-from life123 import Membranes2D
+from life123.bio_sim_2d import Membranes2D
 
 
 

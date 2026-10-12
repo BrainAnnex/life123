@@ -1,6 +1,5 @@
 import pytest
-import numpy as np
-from life123 import SpeciesRegistry, Membranes1D
+from life123.bio_sim_1d import Membranes1D
 
 
 

@@ -1,14 +1,17 @@
-from life123 import SpeciesRegistry, UniformCompartment
+from life123.species_registry import SpeciesRegistry
+from life123.reaction_simulator import ReactionSimulator
 from life123.react_diffuse import ReactDiffuse
 from life123.species_index_map import SpeciesIndexMap
-from life123 import BioSim1D, BioSim2D, BioSim3D
+from life123.bio_sim_1d import BioSim1D
+from life123.bio_sim_2d import BioSim2D
+from life123.bio_sim_3d import BioSim3D
 
 
 
 def test_constructor():
     rd0 = ReactDiffuse(type="uniform")
 
-    assert type(rd0.module) == UniformCompartment
+    assert type(rd0.module) == ReactionSimulator
     assert type(rd0.species_registry) == SpeciesRegistry
     assert type(rd0.index_species) == SpeciesIndexMap
 
