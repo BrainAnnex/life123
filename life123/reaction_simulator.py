@@ -16,6 +16,7 @@ from life123.reaction_registry import ReactionRegistry
 from life123.diagnostics import Diagnostics
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.uniform_compartment import UniformCompartment
+from life123.analytic_reaction_solver import AnalyticReactionSolver
 
 
 
@@ -129,14 +130,14 @@ class ReactionSimulator:
 
         self.species_index_map :SpeciesIndexMap = species_index_map     # To map species id's to system-state array indexes
 
-
+        # Check for some argument incompatibilities
         if (species_registry is not None) and (reaction_registry is not None):
-            assert reaction_registry.get_species_data() == species_registry, \
-                "ReactionSimulator() instantiation: the argument `reactions` is based " \
-                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
+            assert reaction_registry.get_species_registry() == species_registry, \
+                "ReactionSimulator() instantiation: the argument `reaction_registry` is based " \
+                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `species_registry`"
 
         assert (species_ids is None) or (reaction_registry is None), "" \
-                "ReactionSimulator() instantiation: cannot specify both arguments `species_ids` and `reaction_registry`"
+                "ReactionSimulator() instantiation: cannot specify both arguments `species_ids` and `reaction_registry`"    # TODO: is that really so?
 
 
         # Build up, or expand, self.species_registry as applicable
@@ -148,8 +149,8 @@ class ReactionSimulator:
                 self.species_registry = SpeciesRegistry()
 
             if self.species_index_map is not None:
-                for sp_id in self.species_index_map.index_to_species:   # TODO: turn  .index_to_species into a method
-                    self.species_registry.add_single_species(species_id=sp_id)
+                for sp_id in self.species_index_map.get_all_species_ids():
+                    self.species_registry.add_single_species(species_id=sp_id, skip_duplicates=True)
 
 
         if species_ids is not None:
@@ -168,7 +169,11 @@ class ReactionSimulator:
 
         # Instantiate or expand, as applicable, the species_index_map
         if self.species_index_map is None:  # Index was NOT passed by the calling module
-            all_species = self.species_registry.get_all_species_ids()
+            if reaction_registry is not None:   # If the ARGUMENT `reaction_registry` was passed
+                all_species = self.reaction_registry.get_species_in_any_reaction(sort=True)
+            else:
+                all_species = self.species_registry.get_all_species_ids(sort=True)
+
             self.species_index_map = SpeciesIndexMap(all_species)
 
         if species_ids:
@@ -1323,7 +1328,7 @@ class ReactionSimulator:
             # for any of the proposed concentration changes for this reaction.
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
-            self._validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
+            self._validate_increment(delta_conc=delta_conc, baseline_conc=self.system.system_state[species_index],
                                      rxn=rxn, rxn_index=rxn_index, species_id=species_id, rxn_rate=rxn_rate)
 
             # Accumulate the increment vector from the species in this reaction
@@ -1419,7 +1424,6 @@ class ReactionSimulator:
         """
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
-
         return self.system.get_conc_dict(species_ids=species_ids)
 
         
@@ -2167,7 +2171,7 @@ class ReactionSimulator:
             if len(self.system) == 0:
                 print(f"  Species {species_index}{name}. No concentrations set yet")
             else:
-                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
+                print(f"  Species {species_index}{name}. Conc: {self.system.system_state[species_index]}")
 
         if self.macro_system != {}:
             print("Macro-molecules, with their counts: ", self.macro_system)

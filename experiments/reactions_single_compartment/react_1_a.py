@@ -55,7 +55,7 @@ uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR":
 uc.describe_reactions()
 
 # %%
-uc.get_species_data().as_dataframe()   # Show all the species and their data
+uc.get_species_registry().as_dataframe()   # Show all the species and their data
 
 # %%
 # Set the initial concentrations of all the chemicals

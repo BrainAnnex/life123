@@ -129,7 +129,7 @@ uc.is_in_equilibrium()
 
 # %%
 # Notice that the plot colors that we assigned got saved with the species data
-uc.get_species_data().as_dataframe()
+uc.get_species_registry().as_dataframe()
 
 # %%
 
@@ -200,7 +200,7 @@ uc.is_in_equilibrium()
 
 # %%
 # Start with new UniformCompartment object, but re-use the earlier species data
-species_data = uc.get_species_data()
+species_data = uc.get_species_registry()
 
 species_data.as_dataframe()
 # Notice that the new color that we assigned for the species `S`, in the last plot, got saved with its species data

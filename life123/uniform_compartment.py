@@ -22,7 +22,7 @@ class UniformCompartment:
     that offer reaction-diffusion (BioSim1D, BioSim2D, BioSim3D)
     """
 
-    def __init__(self, species_index_map, species_registry=None,
+    def __init__(self, species_index_map=None, species_registry=None,
                  macromolecules=None, diagnostics=None, sync_func=None, species_list=None, names=None):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
@@ -45,17 +45,30 @@ class UniformCompartment:
         self.species_index_map = species_index_map  # Indexes to reconcile the species id's
                                                     # to their index position in the system state array
 
+        assert (species_index_map is not None) or (species_registry), \
+            "UniformCompartment() instantiation: at least one " \
+            "of the arguments `species_index_map` or `species_registry` must be passed"
 
         if self.species_registry is None:
+            # Use the species registry in the object species_index_map
             self.species_registry = self.species_index_map.species_registry
         else:
             # If both `species_registry` and `species_index_map` were passed, check for compatibility
-            if self.species_index_map.species_registry:
+            if self.species_index_map and self.species_index_map.species_registry:
                 assert species_registry == self.species_index_map.species_registry,\
                     "incompatibility between objects passed by arguments `species_registry` and `species_index_map`"
 
+        if self.species_index_map is None:
+            self.species_index_map = SpeciesIndexMap(species_registry=self.species_registry)
+            # Index all the species found in the species registry
+            all_species = self.species_registry.get_all_species_ids()
+            self.species_index_map.add_species(all_species)
 
-        system_state_size = self.species_index_map.number_of_mapped_species()
+        if self.species_index_map is None:
+
+            system_state_size = 0
+        else:
+            system_state_size = self.species_index_map.number_of_mapped_species()
 
         self.system_state :np.ndarray = np.zeros(system_state_size, dtype='d')   # float64    CONCENTRATION SYSTEM STATE
                             # TODO: allow users to specify the type
@@ -107,7 +120,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def get_species_data(self) -> SpeciesRegistry:
+    def get_species_registry(self) -> SpeciesRegistry:
         """
         Return the "SpeciesRegistry" object being used
 
@@ -357,7 +370,7 @@ class UniformCompartment:
 
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
-            system_data = self.get_conc_dict(system_data=self.system_state)   # The current System State, as a dict
+            system_data = self.get_conc_dict()   # The current System State, as a dict
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
                                                        caption="Set concentration")
 

@@ -423,7 +423,7 @@ class SpeciesRegistry:
     def get_all_species_ids(self, sort=False) -> list[str]:
         """
         Return a list with the id's of all the species,
-        NOT in any particular order
+        NOT in any particular order (unless `sort` is True)
 
         :param sort:    [OPTIONAL]
         :return:        A list of strings with the species id's,
