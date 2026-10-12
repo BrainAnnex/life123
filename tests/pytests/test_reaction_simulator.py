@@ -265,7 +265,7 @@ def test_single_compartment_react():
 
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
-    sim.system.set_conc(conc=initial_conc, snapshot=sim.capture_conc_snapshot, system_time=sim.system_time)
+    sim.set_conc(conc=initial_conc, snapshot=True)
 
     assert np.allclose(sim.system.system_state, [100., 0., 0., 1000. , 0.])
     assert np.allclose(sim.system.system_state, [100., 0., 0., 1000. , 0.])
@@ -305,7 +305,7 @@ def test_single_compartment_react():
     sim2 = ReactionSimulator(reaction_registry=rxns, diagnostics_enabled=True)
     assert sim2.system_time == 0
 
-    sim2.system.set_conc(conc=initial_conc, snapshot=sim2.capture_conc_snapshot, system_time=sim2.system_time)
+    sim2.set_conc(conc=initial_conc, snapshot=True)
 
     assert np.allclose(sim2.system.system_state, [100., 0., 0., 1000. , 0.])
 

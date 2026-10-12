@@ -234,7 +234,6 @@ class ReactionSimulator:
         else:
             self.system = UniformCompartment(species_index_map=self.species_index_map,
                                             species_registry=self.species_registry,
-                                            diagnostics=self.diagnostics,
                                             sync_func=self.ensure_synchronized_with_reaction_registry)
 
 
@@ -361,6 +360,27 @@ class ReactionSimulator:
 
 
 
+    def set_conc(self, conc :dict, snapshot=False) -> None:
+        """
+
+        :param conc:
+        :param snapshot:
+        :return:
+        """
+        if snapshot:
+            self.system.set_conc(conc=conc, system_time=self.system_time,
+                                 snapshot=self.capture_conc_snapshot)
+        else:
+            self.system.set_conc(conc=conc, system_time=self.system_time)
+
+
+        if self.diagnostics:
+            # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
+            system_data = self.system.get_conc_dict()   # The current System State, as a dict
+            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
+                                                       caption="Set concentration")
+
+
     def _save_soft_abort_diagnostics(self, delta_concentrations):
         # TODO: maybe this call could wait until the interception of ExcessiveTimeStepSoft?
 
@@ -464,11 +484,11 @@ class ReactionSimulator:
         DEFAULT_N_STEPS = 10
 
         assert (not duration or not initial_step or not n_steps), \
-            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: " \
+            "ReactionSimulator.specify_steps(): cannot specify all 3 arguments: " \
             "`duration`, `initial_step`, `n_steps` (specify at most 2 of them)"
 
         assert (duration or initial_step), \
-            "UniformCompartment.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
+            "ReactionSimulator.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
 
         if (not initial_step) and (not n_steps):    # If only `duration` is provided
             n_steps = DEFAULT_N_STEPS
@@ -547,20 +567,20 @@ class ReactionSimulator:
         final_step_caption = "last reaction step"
 
         # Validation
-        #assert self.system.system is not None, "UniformCompartment.single_compartment_react(): " \
+        #assert self.system.system is not None, "ReactionSimulator.single_compartment_react(): " \
         #                                "the concentration values of the various chemicals must be set first"
 
         if variable_steps and (n_steps is not None):
-            raise Exception("UniformCompartment.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
+            raise Exception("ReactionSimulator.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
                             "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
 
         if stop is not None:
             assert type(stop) == tuple and len(stop) == 2, \
-                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, " \
+                f"ReactionSimulator.single_compartment_react(): the argument `stop`, if passed, " \
                 f"must be a pair of values, of the form (termination_keyword, termination_parameter)"
 
         assert self.reaction_registry.number_of_reactions() > 0, \
-            f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
+            f"ReactionSimulator.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
 
 
         self.conc_history.initial_caption = initial_step_caption     # TODO: turn into method
@@ -869,8 +889,6 @@ class ReactionSimulator:
     def reaction_step_common_variable_step(self, delta_time: float, conc_array=None,
                                            explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
-        TODO: corresponds to reaction_step_common() in UniformCompartment -> to phase out
-
         This is the common entry point for VARIABLE-step simulations,
         both for single-compartment reactions,
         and for the reaction component of reaction-diffusions in 1D, 2D and 3D.
@@ -1232,8 +1250,6 @@ class ReactionSimulator:
 
     def single_step_all_rxns(self, delta_time: float, rxn_list=None) -> np.array:
         """
-        TODO: this corresponds to UniformCompartment._reaction_elemental_step() , to eventually ditch
-
         Using the system concentration data,
         do the specified SINGLE TIME STEP
         for ONLY the requested reactions (by default all).
@@ -2361,7 +2377,7 @@ class ReactionSimulator:
 
         CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
                  You might consider using the argument  enable_diagnostics=True
-                 when first instantiating UniformCompartment.
+                 when first instantiating ReactionSimulator.
 
         :return: None
         """
@@ -2722,8 +2738,6 @@ class VariableTimeSteps:
         # Zero the number of times that each norm got involved in step-size decision
         self.norm_usage = {}
         self.reset_norm_usage_stats()
-
-        #self.uc = uc    # Object of type "UniformCompartment"  TODO: NOT USED
 
 
 

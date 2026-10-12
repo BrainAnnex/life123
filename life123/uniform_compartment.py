@@ -23,7 +23,7 @@ class UniformCompartment:
     """
 
     def __init__(self, species_index_map=None, species_registry=None,
-                 macromolecules=None, diagnostics=None, sync_func=None, species_list=None, names=None):
+                 macromolecules=None, sync_func=None, species_list=None, names=None):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
 
@@ -103,7 +103,7 @@ class UniformCompartment:
 
         # ***  FOR optional DIAGNOSTICS  ***
 
-        self.diagnostics = diagnostics
+        #self.diagnostics = diagnostics
 
 
 
@@ -367,13 +367,13 @@ class UniformCompartment:
         if snapshot is not None:
             # Invoke a passed external function
             snapshot(caption="Set concentration")
-
+        """
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
             system_data = self.get_conc_dict()   # The current System State, as a dict
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
                                                        caption="Set concentration")
-
+        """
 
 
 
