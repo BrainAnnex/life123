@@ -100,7 +100,7 @@ rxns.plot_reaction_network(log_file=log_file)
 # %%
 dynamics = UniformCompartment(reactions=rxns, preset="fast", enable_diagnostics=True)   # To save diagnostic information 
 
-dynamics.set_conc({"A": 50.}, snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot_funct=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%

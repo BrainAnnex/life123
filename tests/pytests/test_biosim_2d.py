@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from life123.bio_sim_2d import BioSim2D
 from life123.reaction_registry import ReactionRegistry
-from life123.uniform_compartment import UniformCompartment
+from life123.reaction_simulator import ReactionSimulator
 from life123.species_registry import SpeciesRegistry
 
 
@@ -52,17 +52,17 @@ def test_constructor():
     expected = np.zeros((4, 3, 5), dtype=float)
     assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
-    assert type(bio.reaction_dynamics) == UniformCompartment
+    assert type(bio.reaction_dynamics) == ReactionSimulator
 
 
     # New test
-    rxn = UniformCompartment()
+    rxn = ReactionSimulator()
     with pytest.raises(Exception):
         BioSim2D(x_bins=4, y_bins=2, reaction_handler=rxn)    # No chemicals yet registered
 
 
     # New test
-    rxn = UniformCompartment(names=["A", "B", "C"])
+    rxn = ReactionSimulator(species_ids=["A", "B", "C"])
     bio = BioSim2D(x_bins=4, y_bins=2, reaction_handler=rxn)
     #bio.describe_state()
     assert bio.n_bins_x == 4
@@ -73,7 +73,7 @@ def test_constructor():
     expected = np.zeros((3, 4, 2), dtype=float)
     assert np.allclose(bio.system_state, expected)
     assert type(bio.reactions) == ReactionRegistry
-    assert type(bio.reaction_dynamics) == UniformCompartment
+    assert type(bio.reaction_dynamics) == ReactionSimulator
     assert type(bio.species_data) == SpeciesRegistry
 
 
@@ -235,7 +235,7 @@ def test_reaction_step():
     assert bio.get_reactions().number_of_reactions() == 1
     #print("ReactionRegistry version: ", bio.reactions.version)
     #print(bio.reaction_dynamics.reaction_simulator.reaction_registry)
-    print(bio.reaction_dynamics.reaction_simulator.species_index_map)
+    print(bio.reaction_dynamics.species_index_map)
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])

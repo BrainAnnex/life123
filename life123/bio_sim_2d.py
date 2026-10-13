@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
-from life123.uniform_compartment import UniformCompartment
+from life123.reaction_simulator import ReactionSimulator
 from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -48,7 +48,7 @@ class BioSim2D:
         self.system_state = None      # Concentration data in the System we're simulating, for all the chemicals:
                                 #   NumPy array of dimension (n_species) x (n_bins_x) x (n_bins_y)
                                 #   Each plane (sub-array along the 0-th axis) represents a chemical species;
-                                #   e.g, self.system[0] is the matrix for the 0-th chemical.
+                                #   e.g, self.system_state[0] is the matrix for the 0-th chemical.
                                 #   IMPORTANT: the x-dimension and y-dimension values are stored as, respectively,
                                 #              rows and columns in that matrix.  That means that the matrix is the TRANSPOSE
                                 #              of the xy grid layout.  Visualization methods will need to make the transformation!
@@ -92,7 +92,7 @@ class BioSim2D:
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
         :param chem_data:   (OPTIONAL) Object of class "SpeciesRegistry";
                                 if not specified, it will get extracted from the "Reactions" class
-        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
+        :param reaction_handler:   (OPTIONAL) Object of class "ReactionSimulator";
                                 if not specified, it'll get instantiated here
 
         :return:            None
@@ -114,7 +114,7 @@ class BioSim2D:
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(species_registry=self.species_data)
+            self.reaction_dynamics = ReactionSimulator(species_registry=self.species_data)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
@@ -146,7 +146,7 @@ class BioSim2D:
             "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
         # Initialize all bin concentrations to zero
-        self.system = np.zeros((self.n_species, x_bins, y_bins), dtype=float)
+        self.system_state = np.zeros((self.n_species, x_bins, y_bins), dtype=float)
 
         self.system_time = 0             # "Start the clock"
 
@@ -225,7 +225,7 @@ class BioSim2D:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
             self.species_data.assert_valid_species_index(chem_index)
 
-        matrix = self.system[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
+        matrix = self.system_state[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
 
         return matrix
 
@@ -274,7 +274,7 @@ class BioSim2D:
 
         xbin, ybin = bin_address
 
-        return self.system[species_index, xbin, ybin]
+        return self.system_state[species_index, xbin, ybin]
 
 
 
@@ -321,7 +321,7 @@ class BioSim2D:
         else:
             self.species_data.assert_valid_species_index(species_index)
 
-        species_conc = self.system[species_index]
+        species_conc = self.system_state[species_index]
 
         if copy:
             return species_conc.copy()
@@ -341,7 +341,7 @@ class BioSim2D:
         """
         bin_x, bin_y = bin_address      # Unpack the bin address
 
-        return self.system[:, bin_x, bin_y]
+        return self.system_state[:, bin_x, bin_y]
 
 
 
@@ -451,7 +451,7 @@ class BioSim2D:
             f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
 
         species_index = self.index_species.index_of(chem_label)
-        self.system[species_index, bin_x, bin_y] = conc
+        self.system_state[species_index, bin_x, bin_y] = conc
 
 
 
@@ -471,16 +471,16 @@ class BioSim2D:
 
         bin_x, bin_y = bin_address  # Unpack the bin address
 
-        if (self.system[chem_index, bin_x, bin_y] + delta_conc) < 0. :
+        if (self.system_state[chem_index, bin_x, bin_y] + delta_conc) < 0. :
             # Take special action if the requested change would make the bin concentration negative
             if zero_clip:
-                self.system[chem_index, bin_x, bin_y] = 0
+                self.system_state[chem_index, bin_x, bin_y] = 0
                 return
             else:
                 raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        self.system[chem_index, bin_x, bin_y] += delta_conc
+        self.system_state[chem_index, bin_x, bin_y] += delta_conc
 
 
 
@@ -499,7 +499,7 @@ class BioSim2D:
 
         for i, conc in enumerate(conc_list):
             assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
-            self.system[i, bin_x, bin_y] = conc
+            self.system_state[i, bin_x, bin_y] = conc
 
 
 
@@ -551,7 +551,7 @@ class BioSim2D:
             f"BioSim2D.set_species_conc(): concentrations cannot be negative (values like {conc_data.min()} aren't permissible)"
 
         # Update the system state
-        self.system[species_index] = conc_data
+        self.system_state[species_index] = conc_data
 
 
 
@@ -692,7 +692,7 @@ class BioSim2D:
                     print("    ...")
 
             self.diffuse_step(time_step, h=h, algorithm=algorithm)
-            self.system += self.delta_diffusion     # Array operation to update all the concentrations
+            self.system_state += self.delta_diffusion     # Array operation to update all the concentrations
             self.system_time += time_step
             self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
@@ -759,7 +759,7 @@ class BioSim2D:
 
         :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
-        assert self.system is not None, \
+        assert self.system_state is not None, \
                 "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
         assert not self.species_data.has_missing_values(field="diffusion_rate"), \
                 "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
@@ -799,7 +799,7 @@ class BioSim2D:
         :param effective_diff:
         :return:                None (increment_matrix gets modified)
         """
-        #TODO: maybe pass self.system[species_index] as argument
+        #TODO: maybe pass self.system_state[species_index] as argument
         #TODO: move the multiplication by effective_diff to the calling function
 
         max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
@@ -807,30 +807,30 @@ class BioSim2D:
 
         for i in range(self.n_bins_x):          # From 0 to max_bin_x, inclusive
             for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive
-                C_ij = self.system[species_index, i, j]     # Concentration in the center of the convolution tile
+                C_ij = self.system_state[species_index, i, j]     # Concentration in the center of the convolution tile
 
                 # The boundary conditions state that the flux is zero across boundaries;
                 # we can attain that by giving identical concentrations to the hypothetical neighboring bins
                 # across boundaries, both up/down and left/right (diagonals values are not used in this algorithm)
                 if i == 0:
-                    C_left = self.system[species_index, 0, j]
+                    C_left = self.system_state[species_index, 0, j]
                 else:
-                    C_left = self.system[species_index, i-1, j]
+                    C_left = self.system_state[species_index, i-1, j]
 
                 if i == max_bin_x:
-                    C_right = self.system[species_index, max_bin_x, j]
+                    C_right = self.system_state[species_index, max_bin_x, j]
                 else:
-                    C_right = self.system[species_index, i+1, j]
+                    C_right = self.system_state[species_index, i+1, j]
 
                 if j == 0:
-                    C_above = self.system[species_index, i, 0]
+                    C_above = self.system_state[species_index, i, 0]
                 else:
-                    C_above = self.system[species_index, i, j-1]
+                    C_above = self.system_state[species_index, i, j-1]
 
                 if j == max_bin_y:
-                    C_below = self.system[species_index, i, max_bin_y]
+                    C_below = self.system_state[species_index, i, max_bin_y]
                 else:
-                    C_below = self.system[species_index, i, j+1]
+                    C_below = self.system_state[species_index, i, j+1]
 
 
                 # Convolution with a 5-point stencil
@@ -864,7 +864,7 @@ class BioSim2D:
 
         for i in range(n_steps):
             self.reaction_step(time_step)         # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            self.system += self.delta_reactions   # Matrix operation to update all the concentrations
+            self.system_state += self.delta_reactions   # Matrix operation to update all the concentrations
             self.system_time += time_step
 
             self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
@@ -910,7 +910,7 @@ class BioSim2D:
 
                 # Obtain the Delta-conc for each species, for the the reactions in the current bin
                 increment_vector = \
-                    self.reaction_dynamics.reaction_simulator.reaction_step_common_fixed_step(delta_time=delta_time,
+                    self.reaction_dynamics.reaction_step_common_fixed_step(delta_time=delta_time,
                                                                                               conc_array=conc_array)
 
                 # Replace the appropriate column of the self.delta_reactions matrix
@@ -944,9 +944,9 @@ class BioSim2D:
             self.diffuse_step(time_step, h=h)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            self.system += self.delta_reactions     # Matrix operation to update all the concentrations
+            self.system_state += self.delta_reactions     # Matrix operation to update all the concentrations
                                                     #   from the reactions
-            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+            self.system_state += self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
 

@@ -89,7 +89,7 @@ initial_conc
 
 # %%
 dynamics = UniformCompartment(species_registry=chem_data)
-dynamics.set_conc(conc=initial_conc, snapshot=True)
+dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
 # %%
@@ -173,7 +173,7 @@ dynamics.is_in_equilibrium()
 
 # %%
 dynamics = UniformCompartment(species_registry=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
-dynamics.set_conc(conc=initial_conc, snapshot=True) 
+dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
 # %%
@@ -237,7 +237,7 @@ run2
 
 # %%
 dynamics = UniformCompartment(species_registry=chem_data)   # Note: OVER-WRITING the "dynamics" object
-dynamics.set_conc(conc=initial_conc, snapshot=True) 
+dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
 # %%

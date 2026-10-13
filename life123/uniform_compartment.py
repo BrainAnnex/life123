@@ -101,14 +101,6 @@ class UniformCompartment:
 
 
 
-        # ***  FOR optional DIAGNOSTICS  ***
-
-        #self.diagnostics = diagnostics
-
-
-
-
-
 
 
     #####################################################################################################
@@ -343,19 +335,19 @@ class UniformCompartment:
 
 
 
-    def set_conc(self, conc :dict, snapshot=None, system_time=None) -> None:
+    def set_conc(self, conc :dict, snapshot_funct=None) -> None:
         """
         Set the concentrations of a group of species
 
-        :param conc:        A dict indexed by the species id, for some or all of the species of interest.
-                                Anything not specified will be left undisturbed
-                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
+        :param conc:            A dict indexed by the species id, for the species of interest.
+                                    Anything not specified will be left undisturbed
+                                    EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
-                            Note: any previous values will get over-written
+                                Note: any previous values will get over-written
 
-        :param snapshot:    [OPTIONAL] A function that accepts an argument called "caption"
-        :param system_time: [OPTIONAL] Only used for inclusion into diagnostic data, if applicable
-        :return:            None
+        :param snapshot_funct:  [OPTIONAL] A function that accepts an argument called "caption"
+
+        :return:                None
         """
         assert type(conc) is dict, \
             "set_conc(): argument `conc` must be a dict"
@@ -364,16 +356,10 @@ class UniformCompartment:
             self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot=None)  # This function will also take care
                                                                                     # of optional synchronization
 
-        if snapshot is not None:
+        if snapshot_funct is not None:
             # Invoke a passed external function
-            snapshot(caption="Set concentration")
-        """
-        if self.diagnostics:
-            # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
-            system_data = self.get_conc_dict()   # The current System State, as a dict
-            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=system_time,
-                                                       caption="Set concentration")
-        """
+            snapshot_funct(caption="Set concentration")
+
 
 
 

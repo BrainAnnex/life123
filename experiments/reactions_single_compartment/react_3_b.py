@@ -122,7 +122,7 @@ uc_exact = UniformCompartment(preset="slow", reactions=uc_fast.get_reactions(),
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_exact.set_conc({"A": 10., "B": 50., "C": 20.}, snapshot=True)
+uc_exact.set_conc({"A": 10., "B": 50., "C": 20.}, snapshot_funct=True)
 
 # %%
 uc_exact.single_compartment_react(initial_step=0.004, duration=0.06, variable_steps=True)

@@ -61,7 +61,7 @@ chem1.describe_reactions()
 dynamics1 = UniformCompartment(species_registry=chem1, preset="fast")
 
 dynamics1.set_conc(conc={"A": 100., "B": 20.},
-                  snapshot=True)
+                   snapshot_funct=True)
 
 dynamics1.describe_state()
 
@@ -137,7 +137,7 @@ chem2.describe_reactions()
 
 dynamics2 = UniformCompartment(species_registry=chem2, preset="fast")
 dynamics2.set_conc(conc={"A": 100., "B": 20.},
-                  snapshot=True)      # The macromolecule ligand L is absent
+                   snapshot_funct=True)      # The macromolecule ligand L is absent
 
 dynamics2.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules
 

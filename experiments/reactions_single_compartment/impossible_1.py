@@ -94,7 +94,7 @@ initial_conc
 
 # %%
 dynamics = UniformCompartment(species_registry=chem_data)
-dynamics.set_conc(conc=initial_conc, snapshot=True)
+dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
 # %%

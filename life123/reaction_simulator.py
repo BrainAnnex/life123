@@ -368,10 +368,10 @@ class ReactionSimulator:
         :return:
         """
         if snapshot:
-            self.system.set_conc(conc=conc, system_time=self.system_time,
-                                 snapshot=self.capture_conc_snapshot)
+            self.system.set_conc(conc=conc,
+                                 snapshot_funct=self.capture_conc_snapshot)
         else:
-            self.system.set_conc(conc=conc, system_time=self.system_time)
+            self.system.set_conc(conc=conc)
 
 
         if self.diagnostics:

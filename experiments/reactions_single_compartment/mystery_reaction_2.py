@@ -71,7 +71,7 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 40., "B": 20.,  "C": 5.}, snapshot=True)  # Set the initial concentrations
+dynamics.set_conc({"A": 40., "B": 20.,  "C": 5.}, snapshot_funct=True)  # Set the initial concentrations
 dynamics.describe_state()
 
 # %%

@@ -411,7 +411,7 @@ def test_single_compartment_react__variable_steps():
     rxns.add_reaction(reactants="S", products="X",
                       reaction_model="mass action", kinetic_parameters={"kF": 6., "kR": 3.})
 
-    sim.system.set_conc(conc={"U": 50., "X": 100., "S": 0.}, snapshot=sim.capture_conc_snapshot)
+    sim.system.set_conc(conc={"U": 50., "X": 100., "S": 0.}, snapshot_funct=sim.capture_conc_snapshot)
     assert sim.species_index_map.index_to_species == ['S', 'U', 'X']
     assert sim.species_index_map.species_to_index == {'S': 0, 'U': 1, 'X': 2}
 

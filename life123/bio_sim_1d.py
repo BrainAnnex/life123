@@ -5,7 +5,7 @@ from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract fre
 from scipy.stats import norm
 from typing import Union, List
 from life123.collections import CollectionTabular
-from life123.uniform_compartment import UniformCompartment
+from life123.reaction_simulator import ReactionSimulator
 from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryBinConcentration
 import plotly.express as px
@@ -1465,7 +1465,7 @@ class BioSim1D(System1D):
         :param species_data:       [OPTIONAL] Object of class "SpeciesRegistry";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
-        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
+        :param reaction_handler:[OPTIONAL] Object of class "ReactionSimulator";
                                     if not specified, it'll get instantiated here
         :param reactions:       [OPTIONAL] Object of type "Reactions", with data about the reactions and the chemicals
         :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
@@ -1522,7 +1522,7 @@ class BioSim1D(System1D):
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(species_registry=species_data, reactions=reactions)
+            self.reaction_dynamics = ReactionSimulator(species_registry=species_data, reaction_registry=reactions)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
@@ -1617,7 +1617,7 @@ class BioSim1D(System1D):
         :return:    None
         """
         # TODO: expand, or drop (not sure if really needed anymore)
-        self.system = None
+        self.system_state= None
         self.system_earlier = None
         self.species_data = None
         self.reaction_dynamics = None
@@ -1741,7 +1741,7 @@ class BioSim1D(System1D):
                     print("    ...")
 
             self.diffuse_step(time_step, delta_x=delta_x, algorithm=algorithm)
-            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+            self.system_state+= self.delta_diffusion     # Matrix operation to update all the concentrations
             self.system_time += time_step
             self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
@@ -1776,7 +1776,7 @@ class BioSim1D(System1D):
         """
         # TODO: parallelize the independent computations for each chemical
 
-        assert self.system is not None, \
+        assert self.system_state is not None, \
             "diffuse_step(): Must first initialize the system"
 
         assert not self.species_data.has_missing_values(field="diffusion_rate"), \
@@ -1862,7 +1862,7 @@ class BioSim1D(System1D):
         for i in range(n_steps):
             self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             # Update the state of the system
-            self.system += self.delta_reactions           # Matrix operation to update all the concentrations
+            self.system_state+= self.delta_reactions           # Matrix operation to update all the concentrations
 
             self.system_time += time_step
 
@@ -1914,8 +1914,8 @@ class BioSim1D(System1D):
             # Obtain the Delta-conc for each species, for the reactions in bin number bin_n (a NumPy array)
             # A fixed time step is being used for now
             increment_vector = \
-                self.reaction_dynamics.reaction_simulator.reaction_step_common_fixed_step(delta_time=delta_time,
-                                                                                          conc_array=conc_array)
+                self.reaction_dynamics.reaction_step_common_fixed_step(delta_time=delta_time,
+                                                                       conc_array=conc_array)
 
             # Replace the "bin_n"-th column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1974,9 +1974,9 @@ class BioSim1D(System1D):
             self.diffuse_step(time_step, delta_x=delta_x)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            self.system += self.delta_reactions     # Matrix operation to update all the concentrations
+            self.system_state+= self.delta_reactions     # Matrix operation to update all the concentrations
                                                     #   from the reactions
-            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+            self.system_state+= self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
 

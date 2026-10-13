@@ -206,7 +206,7 @@ def test_set_conc():
     def foo_2(caption :str, arg=l):   # Use a mutable argument, to affect the passed variable l
         l.append(caption)
 
-    uc.set_conc(conc={"P": 1, "A": 55}, snapshot=foo_2)
+    uc.set_conc(conc={"P": 1, "A": 55}, snapshot_funct=foo_2)
     assert l[0] == "Set concentration"
     assert np.allclose(uc.system_state, np.array([55, 4, 88, 1, 999]))
 

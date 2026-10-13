@@ -65,7 +65,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # %%
 dynamics = UniformCompartment(species_registry=chem_data, preset="fast")
 dynamics.set_conc(conc={"A": 5., "B": 100.},
-                  snapshot=True)      # A is scarce, B is plentiful, Y is absent
+                  snapshot_funct=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
 
 # %%

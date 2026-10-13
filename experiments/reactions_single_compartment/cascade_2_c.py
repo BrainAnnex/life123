@@ -62,7 +62,7 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 50.}, snapshot=True)
+dynamics.set_conc({"A": 50.}, snapshot_funct=True)
 dynamics.describe_state()
 
 # %%
