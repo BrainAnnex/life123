@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 from life123.reaction_simulator import ReactionSimulator, VariableTimeSteps, ReactionStep
-from life123.species_registry import SpeciesRegistry
+from life123.species_registry import SpeciesRegistry, MacroMolecules
 from life123.reaction_registry import ReactionRegistry
 from life123.species_index_map import SpeciesIndexMap
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
@@ -1973,11 +1973,232 @@ def test_heun_single_rxn_1():
 
 
 
+#########    Reactions    #########
+
+
+def test_add_reaction():
+    sim = ReactionSimulator()
+
+    sim.add_reaction(reactants="X", products="Y", reaction_model="mass action")
+    sim.add_reaction(reactants="C", products=["B", "A"], reaction_model="mass action")
+
+    assert sim.species_index_map.index_to_species == ['X', 'Y', 'A', 'B', 'C']  # Notice the reaction-wise sorting
+    assert sim.species_index_map.species_to_index == {'X': 0, 'Y': 1, 'A': 2, 'B': 3, 'C': 4}
+
+    assert sim.species_index_map.index_of('X') == 0
+    assert sim.species_index_map.index_of('Y') == 1
+    assert sim.species_index_map.index_of('A') == 2
+    assert sim.species_index_map.index_of('B') == 3
+    assert sim.species_index_map.index_of('C') == 4
+
+    with pytest.raises(Exception):
+        sim.species_index_map.index_of('UNKNOWN')
+
+
+    assert sim.species_index_map.species_at(0) == 'X'
+    assert sim.species_index_map.species_at(1) == 'Y'
+    assert sim.species_index_map.species_at(2) == 'A'
+    assert sim.species_index_map.species_at(3) == 'B'
+    assert sim.species_index_map.species_at(4) == 'C'
+
+    with pytest.raises(Exception):
+        sim.species_index_map.locate_species_id(5)
+
+
+
+def test_indexes_of_active_species():
+    sim = ReactionSimulator()
+
+    assert sim.indexes_of_active_species() == []                 # No reactions yet
+
+    sim.add_reaction(reactants="A", products="B", reaction_model="mass action")
+
+    assert sim.species_index_map.index_to_species == ['A', 'B']
+    assert sim.species_index_map.species_to_index == {'A': 0, 'B': 1}
+    assert sim.indexes_of_active_species() == [0, 1]
+
+    sim.add_reaction(reactants=["B", "X"], products=["C", "X"], reaction_model="mass action")
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X']              # Notice the newly-added names got sorted alphabetically
+    assert sim.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3}
+    assert sim.indexes_of_active_species() == [0, 1, 2, 3]
+
+    sim.add_reaction(reactants="X", products="Y", reaction_model="mass action")
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
+    assert sim.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4}
+    assert sim.indexes_of_active_species() == [0, 1, 2, 3, 4]
+
+    sim.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"], reaction_model="mass action")
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y', 'Z']
+    assert sim.species_index_map.species_to_index == {'A': 0, 'B': 1, 'C': 2, 'X': 3, 'Y': 4, 'Z': 5}
+    assert sim.indexes_of_active_species() == [0, 1, 2, 3, 4, 5]   # All
+
+
+
+
+
+#############    Macromolecules    #############
+
+
+def test_update_occupancy():
+    sr = SpeciesRegistry(ids=["A", "B", "C", "M1", "M2"])
+    mm_data = MacroMolecules(sr)
+
+    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)
+    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=20)
+    mm_data.set_binding_site_affinity(macromolecule="M1", site_number=3, ligand="C", Kd=30)
+
+    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="C", Kd=3)
+    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=2, ligand="C", Kd=30)
+    mm_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="C", Kd=300)
+
+    assert mm_data.get_ligands() == {"A", "B", "C"}
+
+
+    sim = ReactionSimulator( species_ids=mm_data.get_ligands() )
+    sim.system.macromolecules = mm_data
+
+    # Verify that the ligands got added to the system state
+    assert sim.species_index_map.index_to_species == ['A', 'B', 'C']
+    assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2}
+
+    sim.system.set_macromolecules()
+    assert sim.system.macro_system == {"M1": 1, "M2": 1}
+
+    sim.set_conc({"A": 10, "B": 20, "C": 30})
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=1) , 0.)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=2) , 0.)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.)
+
+    sim.update_occupancy()
+
+    # All fractional occupancies will be 1/2, because the concentrations of the ligands below
+    # exactly match their binding affinities
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=1) , 0.5)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=2) , 0.5)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.5)
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
+
+
+    # Vary the concentration of ligand C, starting with zero
+    sim.system.set_single_conc(conc=0, species_id="C")     # No ligand C
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=1) , 0.5)  # Unaffected (different ligand)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=2) , 0.5)  # Unaffected (different ligand)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0)    # No occupancy in absence of ligand
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0)    # No occupancy in absence of ligand
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0)    # No occupancy in absence of ligand
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0)    # No occupancy in absence of ligand
+
+
+    # Very low concentration of ligand C
+    sim.system.set_single_conc(conc=0.3, species_id="C")
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=1) , 0.5)      # Unaffected (different ligand)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=2) , 0.5)      # Unaffected (different ligand)
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.1)      # Ligand conc is 1/10 binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.012195) # Ligand conc is 1/100 binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.00136986)  # Ligand conc is 1/1000 binding affinity
+
+
+    # Low concentration of ligand C
+    sim.system.set_single_conc(conc=3, species_id="C")
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.1)      # Ligand conc is 1/10 binding affinity
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.5)      # Ligand conc = binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.1)      # Ligand conc is 1/10 binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
+
+
+    # Mid concentration of ligand C
+    sim.system.set_single_conc(conc=30, species_id="C")
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.5)  # Ligand conc = binding affinity
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
+
+
+    # High concentration of ligand C
+    sim.system.set_single_conc(conc=300, species_id="C")
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.9)       # Ligand conc is 10x binding affinity
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.9878049)    # Ligand conc is 100x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.9)          # Ligand conc is 10x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.5)          # Ligand conc = binding affinity
+
+
+    # Very High concentration of ligand C
+    sim.system.set_single_conc(conc=3000, species_id="C")
+    sim.update_occupancy()
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M1", site_number=3) , 0.9878049)    # Ligand conc is 100x binding affinity
+
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=1) , 0.99863)      # Ligand conc is 1000x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=2) , 0.9878049)    # Ligand conc is 100x binding affinity
+    assert np.allclose(sim.system.get_occupancy(macromolecule="M2", site_number=3) , 0.9)          # Ligand conc is 10x binding affinity
+
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=1))
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=2))
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=3))
+
+
+
+def test_sigmoid():
+    sim = ReactionSimulator()
+
+    # When the concentration matches Kd, the occupancy is 1/2 by definition
+    assert np.allclose(sim.sigmoid(conc=1., Kd=1.), 0.5)
+    assert np.allclose(sim.sigmoid(conc=0.1, Kd=0.1), 0.5)
+    assert np.allclose(sim.sigmoid(conc=10., Kd=10.), 0.5)
+
+    # When the concentration is 10% of Kd, the occupancy is about 0.1 ;
+    # when the concentration is 10 times Kd, the occupancy is about 0.9
+    assert np.allclose(sim.sigmoid(conc=0.1, Kd=1.), 0.1)
+    assert np.allclose(sim.sigmoid(conc=10., Kd=1.), 0.9)
+
+    assert np.allclose(sim.sigmoid(conc=10., Kd=100.), 0.1)
+    assert np.allclose(sim.sigmoid(conc=1000., Kd=100.), 0.9)
+
+    assert np.allclose(sim.sigmoid(conc=0.001, Kd=0.01), 0.1)
+    assert np.allclose(sim.sigmoid(conc=0.1, Kd=0.01), 0.9)
+
+    #print(rxn.sigmoid(conc=0.1, Kd=1.))
+
+
+
+def test_logistic():
+    sim = ReactionSimulator()
+
+    #print(rxn.logistic(-10))
+    assert np.allclose(sim.logistic(-100), 0)
+    assert np.allclose(sim.logistic(-10), 0.00004539786)
+    assert np.allclose(sim.logistic(0), 0.5)
+    assert np.allclose(sim.logistic(10), 0.99995460213)
+    assert np.allclose(sim.logistic(100), 1)
+
+
+
+
 
 
 ########    class VariableTimeSteps    ###########################################################################
 
-def test_set_thresholds():
+def test_set_thresholds__VARIABLE_TIMESTEPS():
     rd = VariableTimeSteps()
     assert rd.thresholds == []
 

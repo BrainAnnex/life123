@@ -1052,7 +1052,7 @@ class ReactionSimulator:
 
         if variable_steps:
             decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.system.number_of_system_species(),
-                                                                indexes_of_active_chemicals= self.indexes_of_active_chemicals(),
+                                                                indexes_of_active_chemicals= self.indexes_of_active_species(),
                                                                 delta_conc=delta_concentrations,
                                                                 baseline_conc=self.system.system_state, prev_conc=self.previous_system)
             #print("decision_data: ", decision_data)
@@ -1165,7 +1165,7 @@ class ReactionSimulator:
 
             if len(self.reaction_registry.active_chemicals) < self.system.number_of_system_species():
                 print(f"    Restricting adaptive time step analysis to {len(self.reaction_registry.active_chemicals)} "
-                f"species only: {self.reaction_registry.get_species_in_any_reaction()} , with indexes: {self.indexes_of_active_chemicals()}")
+                f"species only: {self.reaction_registry.get_species_in_any_reaction()} , with indexes: {self.indexes_of_active_species()}")
 
             self.adaptive_steps.display_overview(action=action, operation=operation, step_factor=step_factor, all_norms=all_norms)
 
@@ -1779,7 +1779,7 @@ class ReactionSimulator:
 
 
 
-    def indexes_of_active_chemicals(self) -> list[int]:
+    def indexes_of_active_species(self) -> list[int]:
         """
         Return the ordered list (numerically SORTED) of the INDEX numbers of all the species
         involved in ANY of the registered reactions,
@@ -1793,7 +1793,7 @@ class ReactionSimulator:
         CAUTION: the concept of "active species" might change in future versions, where only SOME of
                  the reactions are simulated
         """
-        set_active_species = self.get_reactions().active_chemicals
+        set_active_species = self.get_reactions().active_chemicals  # A (possibly empty) set
 
         index_list = list(
                             map(lambda species_id: self.species_index_map.index_of(species_id), set_active_species)
@@ -1838,15 +1838,15 @@ class ReactionSimulator:
 
         :return:    None
         """
-        for mm in self.macromolecules.get_macromolecules():
+        for mm in self.system.macromolecules.get_macromolecules():
             # For each macromolecule
-            d = self.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
+            d = self.system.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
             for (site_number, ligand) in d.items():
-                aff_data = self.macromolecules.get_binding_site_affinity(mm, site_number)
+                aff_data = self.system.macromolecules.get_binding_site_affinity(mm, site_number)
                 conc = self.get_species_conc(ligand)
                 fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
 
-                self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
+                self.system.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
 
 
 

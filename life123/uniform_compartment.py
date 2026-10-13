@@ -23,20 +23,21 @@ class UniformCompartment:
     """
 
     def __init__(self, species_index_map=None, species_registry=None,
-                 macromolecules=None, sync_func=None, species_list=None, names=None):
+                 macromolecules=None, sync_func=None):
         """
-        Note: AT MOST 1 of the following 2 arguments can be passed
+        Note: At least 1 of the following 2 arguments must be passed
 
-        :param species_registry:[OPTIONAL 1] Object of type "SpeciesRegistry" (with data about the species).
-                                If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
-                                nor `names` (names are contained in the `species_data` object)
+        :param species_index_map:   [OPTIONAL 1] Object of type "IndexSpecies"
+        :param species_registry:    [OPTIONAL 2] Object of type "SpeciesRegistry" (with data about the species)
 
+        :param macromolecules:      [OPTIONAL] Object of class "Macromolecule"
+        :param sync_func:           [OPTIONAL] External function to invoke for "lazy synchronization"
+        """
+        # TODO: look into removed args, `species_list=None, names=None`   (names cannot be passed if `species_registry` is)
+        """
         :param names:           [OPTIONAL 2] A single name, or list or tuple of names, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order.)
                                 If passed, cannot pass `species_data` (both those object contain the chemical names)
-
-        :param macromolecules:      [OPTIONAL] Object of class "Macromolecule"
-        :param species_index_map:   [OPTIONAL] Object of type "IndexSpecies"
         """
         self.sync_func = sync_func                  # Optional external function to invoke for "lazy synchronization"
 
