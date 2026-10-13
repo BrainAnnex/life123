@@ -1444,7 +1444,7 @@ def test_single_step_all_rxns_6():
 
 
 
-def test_single_step_single_rxn():
+def test_single_step_single_rxn_1():
 
     species_registry = SpeciesRegistry()
 

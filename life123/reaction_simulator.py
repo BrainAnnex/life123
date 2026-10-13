@@ -243,7 +243,7 @@ class ReactionSimulator:
                                                                             # i.e. to check for changes externally made to the registry
 
         if system is not None:
-            self.system.set_system_state(conc_array=system)
+            self.system.set_system_state(conc=system)
 
 
 

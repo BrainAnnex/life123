@@ -241,7 +241,7 @@ class UniformCompartment:
 
 
 
-    def set_system_state(self, conc_array : np.ndarray | list | tuple) -> None:
+    def set_system_state(self, conc : np.ndarray | list | tuple) -> None:
         """
         Completely set the entire system state, from the given concentration array or list/tuple.
         The array indexes must be present in `self.species_index_map` (i.e. have an assigned
@@ -249,21 +249,26 @@ class UniformCompartment:
         IMPORTANT: make sure that the array is in the right order, according to the current species index map.
                    A safer function to use is set_conc(), where species id's are used, instead of their array indexes
 
-        :param conc_array:  Numpy array or list/tuple of concentration values
+        :param conc:  Numpy array or list/tuple of concentration values
         :return:            None
         """
-        assert len(conc_array) <= self.species_index_map.number_of_mapped_species(), \
-            f"set_system_state(): the number of the passed concentration values ({len(conc_array)}) " \
+        assert len(conc) <= self.species_index_map.number_of_mapped_species(), \
+            f"set_system_state(): the number of the passed concentration values ({len(conc)}) " \
             f"exceeds the size of the species index ({self.species_index_map.number_of_mapped_species()});\n" \
             f"try using set_conc() instead"
 
         if self.sync_func:
             self.sync_func()
 
-        if isinstance(conc_array, (list, tuple)):
-            self.system_state = np.array(conc_array)
+        assert min(conc) >= 0, \
+            f"UniformCompartment.set_system_state(): values meant to be species concentrations cannot be negative " \
+            f"(such as the passed value {min(conc)})"
+
+        if isinstance(conc, (list, tuple)):
+            self.system_state = np.array(conc)
         else:
-            self.system_state = conc_array.copy()    # Clone
+
+            self.system_state = conc.copy()    # Clone
 
 
 

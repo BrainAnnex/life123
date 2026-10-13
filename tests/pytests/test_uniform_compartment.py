@@ -16,6 +16,7 @@ def test_CONSTRUCTOR():
     uc = UniformCompartment(species_index_map=ind)
     assert np.allclose(uc.system_state, np.array([0, 0, 0]))
     assert uc.species_registry == sp
+    assert uc.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C"]
 
     uc = UniformCompartment(species_index_map=ind, species_registry=sp)
     assert np.allclose(uc.system_state, np.array([0, 0, 0]))
@@ -124,7 +125,17 @@ def test_add_species():
 
 
 def test_set_system_state():
-    pass    # TODO
+    ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
+    uc = UniformCompartment(species_index_map=ind)
+
+    uc.set_system_state([1, 2, 3])
+    assert np.allclose(uc.system_state, np.array([1, 2, 3]))
+
+    with pytest.raises(Exception):
+        uc.set_system_state([1, 2, 3, 4])       # Too many entries
+
+    with pytest.raises(Exception):
+        uc.set_system_state([1, -2, 3])         # Negative
 
 
 
@@ -191,11 +202,15 @@ def test_set_conc():
     with pytest.raises(Exception):
         uc.set_conc(conc={"UNKNOWN": 666})
 
+    with pytest.raises(Exception):
+        uc.set_conc(conc={"A": -0.01})          # Negative
+
+
     uc.set_conc(conc={"B": 123})
     assert np.allclose(uc.system_state, np.array([0, 123, 0]))
 
     uc.set_conc(conc={"B": 4, "C": 88})
-    assert np.allclose(uc.system_state, np.array([0, 4, 88]))
+    assert np.allclose(uc.system_state, np.array([0, 4, 88]))   # `B` got over-written
 
     uc.species_index_map.add_species({"P", "Q"})
     uc.set_conc(conc={"Q": 999})
