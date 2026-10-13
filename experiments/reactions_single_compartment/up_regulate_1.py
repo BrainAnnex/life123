@@ -57,7 +57,7 @@ GraphicLog.config(filename=log_file,
 chem_data = SpeciesRegistry(ids=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
 
 # %%
-uc = UniformCompartment(species_registry=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
+uc = ReactionSimulator(species_registry=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
 
 # %%
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species

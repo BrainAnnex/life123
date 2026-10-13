@@ -98,7 +98,7 @@ aff.Kd
 # ## Start setting up the dynamical system
 
 # %%
-uc = UniformCompartment(species_registry=sr, macromolecules=mm)
+uc = ReactionSimulator(species_registry=sr, macromolecules=mm)
 
 # %%
 uc.set_macromolecules()      # By default, set counts to 1 for all the species that have binding-site data

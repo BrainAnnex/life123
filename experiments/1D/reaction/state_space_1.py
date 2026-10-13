@@ -55,7 +55,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system.  NOTE: Diffusion not applicable (just 1 bin)
-uc = UniformCompartment(names=["A", "B"])
+uc = ReactionSimulator(names=["A", "B"])
 
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions

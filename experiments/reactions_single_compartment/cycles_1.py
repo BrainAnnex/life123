@@ -88,7 +88,7 @@ initial_conc
 # note: fixed time resolution is generelly NOT recommended, except for double-checks and error analysis)
 
 # %%
-dynamics = UniformCompartment(species_registry=chem_data)
+dynamics = ReactionSimulator(species_registry=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
@@ -172,7 +172,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(species_registry=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
+dynamics = ReactionSimulator(species_registry=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
 dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 
@@ -236,7 +236,7 @@ run2
 # # Run # 3. FIXED time resolution, using FINER fixed resolution than in run #1 
 
 # %%
-dynamics = UniformCompartment(species_registry=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = ReactionSimulator(species_registry=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot_funct=True)
 dynamics.describe_state()
 

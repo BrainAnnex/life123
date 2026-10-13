@@ -70,7 +70,7 @@ rxns.describe_reactions()
 # we'll note that number, and in Part 2 we'll do exactly that same number of fixed steps
 
 # %%
-dynamics_variable = UniformCompartment(reactions=rxns, preset="mid")
+dynamics_variable = ReactionSimulator(reactions=rxns, preset="mid")
 
 # Initial concentrations of all the chemicals
 dynamics_variable.set_conc({"A": 10., "B": 50.})
@@ -111,7 +111,7 @@ dynamics_variable.plot_history(colors=['darkturquoise', 'green'], show_intervals
 # The fixed time step is chosen to attain the same total number of data points (i.e. 19) as obtained with the variable time steps of part 1
 
 # %%
-dynamics_fixed = UniformCompartment(reactions=rxns)   # Re-use the chemicals and reactions of part 1
+dynamics_fixed = ReactionSimulator(reactions=rxns)   # Re-use the chemicals and reactions of part 1
 
 # %%
 # Initial concentrations of all the chemicals
@@ -144,7 +144,7 @@ dynamics_fixed.plot_history(colors=['darkturquoise', 'green'], show_intervals=Tr
 # # PART 3 - EXACT Solution (same fixed steps as in Part 2)
 
 # %%
-dynamics_exact = UniformCompartment(reactions=rxns, exact=True)   
+dynamics_exact = ReactionSimulator(reactions=rxns, exact=True)
 # Re-use the chemicals and reactions of part 1 .  Note the `exact` flag
 
 # %%

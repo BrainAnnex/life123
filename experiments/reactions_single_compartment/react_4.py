@@ -63,7 +63,7 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 # %%
 # Instantiate the simulator and specify the chemicals
 # The diagnostics will be give insight into the inner workings of the simulation
-uc = UniformCompartment(names=["A", "C"], preset="fast", enable_diagnostics=True)
+uc = ReactionSimulator(species_ids=["A", "C"], preset="fast", enable_diagnostics=True)
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
 uc.add_reaction(reactants=[(2, "A")], products="C", kF=3., kR=2.)

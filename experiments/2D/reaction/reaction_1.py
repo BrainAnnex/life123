@@ -46,7 +46,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system.  NOTE: Diffusion not done
-uc = UniformCompartment(names=["A", "B"])
+uc = ReactionSimulator(species_ids=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)

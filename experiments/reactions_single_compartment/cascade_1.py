@@ -98,7 +98,7 @@ rxns.plot_reaction_network(log_file=log_file)
 # ## Run the simulation
 
 # %%
-dynamics = UniformCompartment(reactions=rxns, preset="fast", enable_diagnostics=True)   # To save diagnostic information 
+dynamics = ReactionSimulator(reactions=rxns, preset="fast", enable_diagnostics=True)   # To save diagnostic information
 
 dynamics.set_conc({"A": 50.}, snapshot_funct=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
@@ -198,7 +198,7 @@ dynamics.diagnostics.get_rxn_data(rxn_index=1)
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = UniformCompartment(reactions=rxns)  # Re-use the same chemicals and reactions of the previous simulation
+dynamics2 = ReactionSimulator(reactions=rxns)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %%
 dynamics2.set_conc({"A": 50.})

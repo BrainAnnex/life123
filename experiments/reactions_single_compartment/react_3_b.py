@@ -50,7 +50,7 @@ check_version(LIFE123_VERSION)
 # %%
 # Instantiate the simulator and specify the chemicals
 # Here we use the "fast" preset for the variable steps, which leads to fewer steps, but generally less-accurate results
-uc_fast = UniformCompartment(preset="fast")    
+uc_fast = ReactionSimulator(preset="fast")
 
 # %%
 # Elementary reaction A + B <-> C
@@ -89,7 +89,7 @@ uc_fast.plot_history(show_intervals=True)
 
 # %%
 # Instantiate the simulator and specify the chemicals
-uc_slow = UniformCompartment(reactions=uc_fast.get_reactions(), preset="slow")
+uc_slow = ReactionSimulator(reactions=uc_fast.get_reactions(), preset="slow")
 # Re-use the chemicals and reactions of part 1, but now with the "slow" preset
 
 # %%
@@ -114,7 +114,7 @@ uc_slow.get_history()
 
 # %%
 # Instantiate the simulator and specify the chemicals
-uc_exact = UniformCompartment(preset="slow", reactions=uc_fast.get_reactions(),
+uc_exact = ReactionSimulator(preset="slow", reactions=uc_fast.get_reactions(),
                               exact=True)
 # Re-use the chemicals and reactions of part 1; 
 # the "slow" preset doesn't particularly matter now because it's just 1 reaction, and we'll be getting the analytical solutin.  

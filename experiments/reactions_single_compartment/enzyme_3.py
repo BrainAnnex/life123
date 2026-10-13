@@ -83,7 +83,7 @@ chem_data.all_chemicals()
 
 # %%
 # Here we use the "slow" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(species_registry=chem_data, preset="slow")
+uc = ReactionSimulator(species_registry=chem_data, preset="slow")
 
 # %%
 # Enzymatic reaction `E + S <-> ES -> E + P` 

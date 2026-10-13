@@ -44,7 +44,7 @@ from life123 import UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B", "C"], preset="mid")
+dynamics = ReactionSimulator(species_ids=["A", "B", "C"], preset="mid")
 
 # Reaction A <-> B (much slower, and with a much smaller K)
 dynamics.add_reaction(reactants="A", products="B",

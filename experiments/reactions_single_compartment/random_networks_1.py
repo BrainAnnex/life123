@@ -109,7 +109,7 @@ G_list   # kJ/mol
 
 # %%
 # Instantiate the simulator with our chemicals and reactions
-uc = UniformCompartment(reactions=rxns)
+uc = ReactionSimulator(reactions=rxns)
 
 # %%
 

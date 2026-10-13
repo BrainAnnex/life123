@@ -63,7 +63,7 @@ log_file
 
 # %%
 # Instantiate the simulator and specify the chemicals
-uc = UniformCompartment()
+uc = ReactionSimulator()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR": 2.})

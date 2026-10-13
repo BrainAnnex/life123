@@ -63,7 +63,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_registry=chem_data, preset="fast")
+dynamics = ReactionSimulator(species_registry=chem_data, preset="fast")
 dynamics.set_conc(conc={"A": 5., "B": 100.},
                   snapshot_funct=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()

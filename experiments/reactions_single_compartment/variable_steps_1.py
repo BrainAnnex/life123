@@ -72,7 +72,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_registry=chem_data, preset=None)
+dynamics = ReactionSimulator(species_registry=chem_data, preset=None)
 dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 

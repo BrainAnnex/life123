@@ -52,7 +52,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # Instantiate the simulator and specify the chemicals
 # Here we use the "fast" preset for the variable steps, 
 # trying to push the envelope on speed
-uc_approx = UniformCompartment(preset="fast")
+uc_approx = ReactionSimulator(preset="fast")
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc_approx.add_reaction(reactants="A", products="B", 
@@ -110,7 +110,7 @@ uc_approx.plot_step_sizes(show_intervals=True)        #  To see the sizes of the
 # # PART 2 - Exact analytical solution
 
 # %%
-uc_exact = UniformCompartment(reactions=uc_approx.get_reactions(), 
+uc_exact = ReactionSimulator(reactions=uc_approx.get_reactions(),
                               preset="fast", exact=True)   
 # Re-use the chemicals and reactions of part 1 , and again employ the "fast" preset.  
 # Note the `exact` flag

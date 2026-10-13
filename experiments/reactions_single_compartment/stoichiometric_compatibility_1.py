@@ -62,7 +62,7 @@ rxns.describe_reactions()
 
 # %%
 # Instantiate the simulator with the predefined chemical species and set of reactions
-uc = UniformCompartment(reactions=rxns, preset="mid")
+uc = ReactionSimulator(reactions=rxns, preset="mid")
 
 # Initial concentrations of all the chemicals
 uc.set_conc({"A": 40., "B": 0.})
@@ -142,7 +142,7 @@ all_plots = [plot]
 # %%
 for i, A0 in enumerate([10, 20, 30, 50, 60, 70, 80]):    # Skipping 40, which we already did  
     # Instantiate the simulator with the predefined chemical species and set of reactions
-    uc = UniformCompartment(reactions=rxns, preset="mid")
+    uc = ReactionSimulator(reactions=rxns, preset="mid")
 
     # Initial concentrations of all the chemicals
     uc.set_conc({"A": A0, "B": 0.})

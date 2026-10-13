@@ -118,7 +118,7 @@ rxns.describe_reactions()
 
 # %%
 # Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(reactions=rxns, preset="slower")
+uc = ReactionSimulator(reactions=rxns, preset="slower")
 
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
@@ -189,7 +189,7 @@ rxns_underest.describe_reactions()
 
 # %%
 # Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(reactions=rxns_underest, preset="slower")
+uc = ReactionSimulator(reactions=rxns_underest, preset="slower")
 
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
@@ -253,7 +253,7 @@ rxns_overest.describe_reactions()
 
 # %%
 # Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(reactions=rxns_overest, preset="slower")
+uc = ReactionSimulator(reactions=rxns_overest, preset="slower")
 
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()

@@ -32,7 +32,7 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 
 
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B"])
+dynamics = ReactionSimulator(species_ids=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants=["A"], products=["B"],

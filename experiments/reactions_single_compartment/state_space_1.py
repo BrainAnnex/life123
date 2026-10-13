@@ -39,7 +39,7 @@ from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyH
 # ### Initialize the system
 
 # %%
-uc = UniformCompartment(names=["A", "B"])
+uc = ReactionSimulator(names=["A", "B"])
 uc.set_conc(conc={"A": 40., "B": 0.})
 
 # %%

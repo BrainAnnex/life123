@@ -63,7 +63,7 @@ log_file
 # %%
 # Instantiate the simulator and specify the chemicals
 # The diagnostics will be give insight into the inner workings of the simulation
-uc = UniformCompartment(names=["A", "B"], preset="mid", enable_diagnostics=True)
+uc = ReactionSimulator(species_ids=["A", "B"], preset="mid", enable_diagnostics=True)
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)

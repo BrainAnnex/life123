@@ -99,7 +99,7 @@ rxns.plot_reaction_network("vue_cytoscape_2")
 # # PART 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="mid")
+uc = ReactionSimulator(reactions=rxns, preset="mid")
 uc.set_conc(conc={"S": 20.})      # Initially, no enzyme `E`
 uc.describe_state()
 
@@ -152,7 +152,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 0.2     # A tiny bit of enzyme `E`: 1/100 of the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})
 uc.describe_state()
@@ -228,7 +228,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 1.0
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -294,7 +294,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 2.0      # 1/10 of the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -360,7 +360,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 10.0      # 1/2 of the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -429,7 +429,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 20.0      # Same as the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -497,7 +497,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 30.0      # 50% higher than the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -565,7 +565,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 60.0      # Triple the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -624,7 +624,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 100.0      # Quintuple the initial [S]
 
 # %%
-uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = ReactionSimulator(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()

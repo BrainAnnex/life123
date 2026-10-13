@@ -58,7 +58,7 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the accuracy preset
-uc = UniformCompartment(preset="mid", enable_diagnostics=True)
+uc = ReactionSimulator(preset="mid", enable_diagnostics=True)
 
 # Reaction A <-> B (mostly in the forward direction)
 uc.add_reaction(reactants="A", products="B",

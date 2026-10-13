@@ -81,7 +81,7 @@ log_file
 # %%
 # Instantiate the simulator and specify the chemicals.
 # The diagnostics will be give insight into the inner workings of the simulation
-uc = UniformCompartment(names=["A", "B"], preset="fast", enable_diagnostics=True)
+uc = ReactionSimulator(species_ids=["A", "B"], preset="fast", enable_diagnostics=True)
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc.add_reaction(reactants="A", products="B", kF=30., kR=5.)
@@ -160,7 +160,7 @@ IFrame(log_file, width=1000, height=600)         # You may also open the log fil
 reaction_data = uc.get_reactions()
 
 # %%
-uc = UniformCompartment(reactions=reaction_data, preset="mid", enable_diagnostics=True)   
+uc = ReactionSimulator(reactions=reaction_data, preset="mid", enable_diagnostics=True)
 # Notice we're over-writing the earlier "uc" object, and re-using the reaction data
 
 uc.set_conc(conc={"A": 50.})
@@ -206,7 +206,7 @@ species_data.as_dataframe()
 # Notice that the new color that we assigned for the species `S`, in the last plot, got saved with its species data
 
 # %%
-uc_new = UniformCompartment(species_registry=species_data, preset="small_rel_change",
+uc_new = ReactionSimulator(species_registry=species_data, preset="small_rel_change",
                             enable_diagnostics=True)
 
 # Reaction A <-> B (just as before)
