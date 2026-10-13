@@ -173,7 +173,7 @@ class UniformCompartment:
 
 
 
-    def get_conc_dict(self, species_ids=None) -> dict:
+    def get_conc_as_dict(self, species_ids=None) -> dict:
         """
         Retrieve the concentrations of the requested species (by default all),
         as a dictionary indexed by the species id
@@ -191,7 +191,7 @@ class UniformCompartment:
                     for index, conc in enumerate(self.system_state)}
         else:
             assert isinstance(species_ids, (list, tuple, set)), \
-                f"UniformCompartment.get_conc_dict(): the argument `species` must be a list, tuple or set" \
+                f"UniformCompartment.get_conc_as_dict(): the argument `species` must be a list, tuple or set" \
                 f" (it was of type {type(species_ids)})"
 
             conc_dict = {}

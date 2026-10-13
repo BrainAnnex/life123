@@ -82,19 +82,19 @@ def test_get_species_conc():
 
 
 
-def test_get_conc_dict():
+def test_get_conc_as_dict():
     ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
     uc = UniformCompartment(species_index_map=ind)
 
     uc.set_conc(conc={"A": 7, "B": 4, "C": 88})
-    assert uc.get_conc_dict() == {"A": 7, "B": 4, "C": 88}
+    assert uc.get_conc_as_dict() == {"A": 7, "B": 4, "C": 88}
 
-    assert uc.get_conc_dict(species_ids=["B"]) == {"B": 4}
-    assert uc.get_conc_dict(species_ids=("B", "C")) == {"B": 4, "C": 88}
-    assert uc.get_conc_dict(species_ids={"B", "A", "C"}) == {"A": 7, "B": 4, "C": 88}
+    assert uc.get_conc_as_dict(species_ids=["B"]) == {"B": 4}
+    assert uc.get_conc_as_dict(species_ids=("B", "C")) == {"B": 4, "C": 88}
+    assert uc.get_conc_as_dict(species_ids={"B", "A", "C"}) == {"A": 7, "B": 4, "C": 88}
 
     with pytest.raises(Exception):
-        uc.get_conc_dict(species_ids=["UNKNOWN"])
+        uc.get_conc_as_dict(species_ids=["UNKNOWN"])
 
 
 

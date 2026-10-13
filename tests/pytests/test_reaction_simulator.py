@@ -375,7 +375,7 @@ def test_single_compartment_react__catch_neg_conc():
 
     assert np.allclose(sim.system_time, 0.25)
     assert np.allclose(sim.system.system_state, [ 125., 25.,  25. ])   # "S", "U", "X"
-    assert sim.system.get_conc_dict() == {'S': 125, 'U': 25, 'X': 25}
+    assert sim.system.get_conc_as_dict() == {'S': 125, 'U': 25, 'X': 25}
 
 
     # Attempt a second reaction step
@@ -768,7 +768,7 @@ def test_reaction_step_common_fixed_step_1():
     system = np.array([10, 50])      # 10. goes to "A" and 50. to "B"
     sim = ReactionSimulator(system=system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler")
-    assert sim.system.get_conc_dict() == {"A": 10, "B": 50}
+    assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50}
 
     result = sim.reaction_step_common_fixed_step(delta_time=0.1)
     assert np.allclose(result, [7, -7])     # The increment vector
@@ -841,7 +841,7 @@ def test_reaction_step_common_fixed_step_2():
     system = np.array([10, 50, 20])
     sim = ReactionSimulator(system=system,
                             reaction_registry=rxns, method="forward_euler")
-    assert sim.system.get_conc_dict() == {"A": 10, "B": 50, "C": 20}
+    assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50, "C": 20}
 
     # The species index was automatically created
     assert sim.species_index_map.index_to_species == ['A', 'B', 'C']
@@ -900,7 +900,7 @@ DETAILS:
     assert sim.species_index_map.index_to_species == ['A', 'B', 'C', 'X', 'Y']
     assert sim.species_index_map.species_to_index == {"A": 0, "B": 1, "C": 2, "X": 3, "Y": 4}
 
-    assert sim.system.get_conc_dict() == {"A": 10, "B": 50, "C": 0, "X": 0, "Y": 0}
+    assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50, "C": 0, "X": 0, "Y": 0}
 
 
     result = sim.reaction_step_common_fixed_step(delta_time=0.002)
@@ -918,7 +918,7 @@ DETAILS:
 
 
     sim.system.set_system_state([10, 50, 20, 0, 0])
-    assert sim.system.get_conc_dict() == {"A": 10, "B": 50, "C": 20, "X": 0, "Y": 0}    # The reaction X <-> Y will continue to remain irrelevant
+    assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50, "C": 20, "X": 0, "Y": 0}    # The reaction X <-> Y will continue to remain irrelevant
 
     # We saw in earlier runs, with our initial concentrations, that
     # over a delta_time=0.02, one reaction causes a change in [A] of -4.92,
@@ -2064,9 +2064,93 @@ def test_set_temp():
 
 
 
+##################   RESULT ANALYSIS   ##################
 
 
-##################    Macromolecules    ##################
+def test_is_in_equilibrium():
+    sim = ReactionSimulator()
+
+    with pytest.raises(Exception):
+        assert sim.is_in_equilibrium(explain=False, tolerance=2.3)   # We're failing to provide concentrations, either as argument
+                                                                     #   or as system concentrations
+
+    # Reaction 0 : A <-> B
+    sim.add_reaction(reactants="A", products="B",
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+
+    c = {'A': 23.9931640625, 'B': 36.0068359375}
+    assert sim.is_in_equilibrium(rxn_index=0, conc=c, explain=False, tolerance=1)
+    assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=1)      # Testing ALL reactions
+
+    # Reaction 1 : A <-> F
+    sim.add_reaction(reactants=["A"], products=["F"],
+                      reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
+
+    c = {'A': 3, 'F': 32.999}
+    assert sim.is_in_equilibrium(rxn_index=1, conc=c, explain=False, tolerance=10)   # The deviation is just below the 10% tolerance
+
+    with pytest.raises(Exception):
+        assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=10) # Testing ALL reactions, but neglected to provide [B]
+
+    c = {'A': 3, 'B': 4.6, 'F': 33.001}   # We're now including all the concentrations we need for both reactions
+    assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=10) \
+           == {False: [1]}    # The deviation for reaction 1 is just above the 10% tolerance
+
+    assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=2.2) \
+           == {False: [0, 1]}      # With a tolerance so low, not reaction meets the criteria
+
+    assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
+           == {False: [1]}                # Reaction 0 barely passes with this tolerance (it deviates by 2.222 %)
+
+
+    sim.system.set_system_state(conc=[3, 4.6, 33.001])    # "A", "B", "F"
+    assert sim.get_species_conc('A') == 3
+    assert sim.get_species_conc('B') == 4.6
+    assert sim.get_species_conc('F') == 33.001
+
+    assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
+           == {False: [1]}        # Now using the System concentrations
+
+
+
+def test_reaction_in_equilibrium():
+    sim = ReactionSimulator()
+
+    # Reaction 0 : A <-> B
+    sim.add_reaction(reactants=["A"], products=["B"],
+                    reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    c = {'A': 23.9931640625, 'B': 36.0068359375}
+    assert sim.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
+
+    # Reaction 1 : A <-> F
+    sim.add_reaction(reactants=["A"], products=["F"],
+                    reaction_model="mass action", kinetic_parameters={"kF": 20., "kR": 2.})
+    c = {'A': 3, 'F': 32.999}
+    assert sim.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)   # Just below the 10% tolerance
+    c = {'A': 3, 'F': 33.001}
+    assert not sim.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)  # Just above the 10% tolerance
+
+    # Reaction 2:  A + B <-> C , with 1st-order kinetics for each species
+    sim.add_reaction(reactants=["A" , "B"], products="C",
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
+    assert sim.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
+
+
+    sim.clear_reactions()   # This will reset the reaction count to 0
+
+    # Reaction 0:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction (i.e. regular mass-action kinetics)
+    sim.add_reaction(reactants=[(2, "A")], products=["B"],
+                    reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    c = {'A': 1.51554944, 'B': 5.74222528}
+    assert sim.reaction_in_equilibrium(rxn_index = 0, conc=c, tolerance=1, explain=False)
+
+
+
+
+
+
+#######################    Macromolecules    #######################
 
 
 def test_update_occupancy():

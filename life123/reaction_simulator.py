@@ -338,7 +338,7 @@ class ReactionSimulator:
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
-        data_snapshot = self.system.get_conc_dict(species_ids=self.conc_history.restrict_chemicals)
+        data_snapshot = self.system.get_conc_as_dict(species_ids=self.conc_history.restrict_chemicals)
         '''
            EXAMPLE of data_snapshot:
                 {"A": 1.3, "B": 4.9}        
@@ -378,7 +378,7 @@ class ReactionSimulator:
 
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
-            system_data = self.system.get_conc_dict()   # The current System State, as a dict
+            system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
             self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
                                                        caption="Set concentration")
 
@@ -676,7 +676,7 @@ class ReactionSimulator:
 
                 if self.diagnostics_enabled:
                     # Save up the current time and System State as "diagnostic 'concentration' data"
-                    system_data = self.system.get_conc_dict()   # The current System State, as a dict
+                    system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
                     self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
                 t_now = time.perf_counter()
@@ -1442,7 +1442,7 @@ class ReactionSimulator:
         """
         # Get the SET of the id's of ALL the species appearing in this reaction
         species_ids = rxn.stoichiometry.get_all_species_ids()   # EXAMPLE: {"B", "F", "D"}
-        return self.system.get_conc_dict(species_ids=species_ids)
+        return self.system.get_conc_as_dict(species_ids=species_ids)
 
         
 
@@ -2458,10 +2458,11 @@ class ReactionSimulator:
         # TODO: optionally display last lines in diagnostic data, if available
 
         if conc is None:
-            conc=self.system.get_conc_dict()   # Use the current System concentrations, as a dict.
+            conc=self.system.get_conc_as_dict()   # Use the current System concentrations, as a dict.
                                         # EXAMPLE: {'A': 23.9, 'B': 36.1}
-            assert conc,  "is_in_equilibrium(): no concentration values provided, " \
-                          "nor available as system concentration data"
+            assert len(conc) > 0, \
+                "is_in_equilibrium(): no concentration values provided, " \
+                "nor available as system concentration data"
 
         failures_dict = {False: []}     # 1-element dict whose value is
                                         # a list of reactions that fail to meet the criterion for equilibrium
@@ -2606,7 +2607,7 @@ class ReactionSimulator:
         """
         rxn = self.reaction_registry.get_reaction(rxn_index)                # Look up the requested reaction
         chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
-        return rxn.source_object.find_equilibrium_conc(conc_dict=self.system.get_conc_dict(species_ids=chem_labels))
+        return rxn.source_object.find_equilibrium_conc(conc_dict=self.system.get_conc_as_dict(species_ids=chem_labels))
 
 
 
