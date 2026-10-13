@@ -95,7 +95,8 @@ class ReactionSimulator:
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=False,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
-                 uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None):
+                 uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None,
+                 macromolecules=None):
         """
 
         :param system:
@@ -234,7 +235,8 @@ class ReactionSimulator:
         else:
             self.system = UniformCompartment(species_index_map=self.species_index_map,
                                             species_registry=self.species_registry,
-                                            sync_func=self.ensure_synchronized_with_reaction_registry)
+                                            sync_func=self.ensure_synchronized_with_reaction_registry,
+                                            macromolecules=macromolecules)
 
 
         # Build the needed indexes, based on the reactions, and on macromolecules

@@ -236,6 +236,23 @@ def test_CONSTRUCTOR_5():
 
 
 
+def test_specify_steps():
+    sim = ReactionSimulator()
+
+    with pytest.raises(Exception):
+        # Too few arguments
+        sim.specify_steps()
+        sim.specify_steps(duration=15.1)
+        sim.specify_steps(initial_step=0.2)
+        sim.specify_steps(n_steps=30)
+        # Too many arguments
+        sim.specify_steps(duration=15.1, initial_step=0.2, n_steps=30)
+
+    assert sim.specify_steps(initial_step=0.5, n_steps=24) == (0.5, 24)
+    assert sim.specify_steps(duration=12.0, initial_step=0.5) == (0.5, 24)
+    assert sim.specify_steps(duration=12.0, n_steps=24) == (0.5, 24)
+
+
 
 def test_single_compartment_react():
 
@@ -1973,7 +1990,7 @@ def test_heun_single_rxn_1():
 
 
 
-#########    Reactions    #########
+############    Reactions    ############
 
 
 def test_add_reaction():
@@ -2034,9 +2051,22 @@ def test_indexes_of_active_species():
 
 
 
+def test_set_temp():
+    sim = ReactionSimulator()
+
+    sim.set_temp(123)
+    assert sim.temp == 123
+
+    sim.set_temp(0, "C")
+    assert np.allclose(sim.temp, 273.15)
 
 
-#############    Macromolecules    #############
+
+
+
+
+
+##################    Macromolecules    ##################
 
 
 def test_update_occupancy():
@@ -2054,8 +2084,7 @@ def test_update_occupancy():
     assert mm_data.get_ligands() == {"A", "B", "C"}
 
 
-    sim = ReactionSimulator( species_ids=mm_data.get_ligands() )
-    sim.system.macromolecules = mm_data
+    sim = ReactionSimulator(macromolecules=mm_data)
 
     # Verify that the ligands got added to the system state
     assert sim.species_index_map.index_to_species == ['A', 'B', 'C']

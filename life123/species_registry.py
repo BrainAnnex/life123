@@ -970,7 +970,7 @@ class MacroMolecules():
     def set_binding_site_affinity(self, macromolecule :str, site_number :int, ligand :str, Kd :float) -> None:
         """
         Set the values of the binding affinity of the given macromolecule, at the indicated site on it,
-        for the specified chemical species.
+        for the specified ligand species.
 
         Any previously-set value (for that macromolecule/site_number/chemical) will get over-written.
 
@@ -981,18 +981,23 @@ class MacroMolecules():
         NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
               to chemical "X" then its affinity of "Y" might be different than in the absence of "X"
 
-        :param macromolecule:   Id of a species that represents a large molecule
+        :param macromolecule:   Id of a species that represents a large molecule;
+                                    it must already be present in the species registry
         :param site_number:     Unique integer to identify a binding site on the macromolecule
-        :param ligand:          Id of a previously-declared species (small molecule)
+        :param ligand:          Id of a previously-declared species (small molecule);
+                                    it must already be present in the species registry
         :param Kd:              Dissociation constant, in units of concentration (typically microMolar).
                                     Note that the dissociation constant is inversely proportional to the binding affinity
         :return:                None
         """
+
+        # TODO: possibly auto-update the species registry, if the macromolecule or the ligand aren't in it already
         assert macromolecule in self.species_registry.get_all_species_ids(), \
             f"set_binding_site_affinity(): no species (large molecule) with an ID of `{macromolecule}` found; use add_species() first"
 
         assert ligand in self.species_registry.get_all_species_ids(), \
             f"set_binding_site_affinity(): no species (small molecule) with an ID of `{ligand}` found; use add_species() first"
+
 
         assert type(site_number) == int, \
             f"set_binding_site_affinity(): the argument `site_number` must be an integer"
