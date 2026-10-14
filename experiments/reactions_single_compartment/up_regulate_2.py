@@ -86,7 +86,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=0.5,
 dynamics.get_history()
 
 # %%
-dynamics.explain_time_advance()
+dynamics.conc_data.explain_time_advance()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time

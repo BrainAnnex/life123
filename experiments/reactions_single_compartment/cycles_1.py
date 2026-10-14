@@ -119,7 +119,7 @@ dynamics.get_history()
 # ### Notice we created 5,609 data points, in 3 hand-picked segments at different time resolutions
 
 # %%
-dynamics.explain_time_advance()
+dynamics.conc_data.explain_time_advance()
 
 # %% [markdown]
 # ## Plots of changes of concentration with time
@@ -205,7 +205,7 @@ dynamics.plot_history(species=["A", "B", "C"])
 dynamics.plot_history(species=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
 
 # %%
-dynamics.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
+dynamics.conc_data.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
 
 # %% [markdown]
 # ### Just like we saw in the earlier run, the two plots have 4 distinctive intersections among them; locate and save them:
@@ -259,7 +259,7 @@ dynamics.get_history()
 # ### Notice we created 11,215 data points, A LOT MORE than in runs #1 and #2
 
 # %%
-dynamics.explain_time_advance()
+dynamics.conc_data.explain_time_advance()
 
 # %% [markdown]
 # ## Plots of changes of concentration with time

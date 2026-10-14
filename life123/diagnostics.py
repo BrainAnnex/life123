@@ -1,40 +1,30 @@
 import numpy as np
 import pandas as pd
+from dataclasses import dataclass
 from life123.collections import CollectionTabular
+from life123.reaction_registry import ReactionRegistry
+from life123.species_index_map import SpeciesIndexMap
+from life123.species_registry import SpeciesRegistry
 
 
 
-class Diagnostics:
+class ConcData:
     """
     For the management of :
-        1) diagnostic conc data
-        2) diagnostic reaction data
-        3) diagnostic decisions data
+        * diagnostic conc data
     """
 
-    def __init__(self, reactions, species_to_index=None, species_index_map=None):
+    def __init__(self, species_data, species_to_index, species_index_map):
         """
-        
-        :param reactions:           Object of type "ReactionRegistry"
+
         :param species_to_index:    [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
                                         TODO: being phased out in favor of new arg `species_index_map`
 
         :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
         """
-        # TODO: maybe split this all-encompassing "Diagnostics" class into individual ones:
-        #           - diagnostic_rxn_data
-        #           - diagnostic_conc_data
-        #           - diagnostic_rxn_step_decision_data
-        #           - [possible future other classes (for example, for 1D, etc)]
 
-        assert reactions is not None, \
-            "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`, " \
-            "which must be an object of type 'ReactionRegistry'"
-
-        self.reactions = reactions                          # Object of type "ReactionRegistry"
-
-        self.species_data = reactions.get_species_data()    # Object of type "SpeciesRegistry"
-
+        self.species_data = species_data                    # Object of type "SpeciesRegistry"
+        #print("self.species_data", self.species_data)
         self.species_index_map = species_index_map
         self.species_to_index = species_to_index            # TODO: BEING PHASED OUT in favor of self.species_index_map!
                                                             # A dict mapping species ID to their array index
@@ -50,6 +40,252 @@ class Diagnostics:
                                         #         (this convention DIFFERS from that of other diagnostic data)
 
 
+
+
+
+    #####################################################################################################
+
+    '''                             ~   diagnostic_conc_data   ~                                 '''
+
+    def ______DIAGNOSTIC_CONC_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def save_diagnostic_conc_data(self, system_data, system_time, caption="") -> None:
+        """
+        Save the diagnostic concentration data during the run, indexed by the current System Time.
+        Note: if an interval run is aborted, by convention NO entry is created here
+
+        :return: None
+        """
+        self.diagnostic_conc_data.store(par=system_time,
+                                        data_snapshot=system_data, caption=caption)
+
+
+
+    def get_diagnostic_conc_data(self) -> pd.DataFrame:
+        """
+        Return the diagnostic concentration data saved during the run.
+        This will be a complete set of simulation steps,
+        even if the user elected to only save part of the history during the run.
+
+        Note: if the run of an interval step is aborted,
+              by convention NO entry is created here
+
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired concentration data history may be missing
+
+        :return: A Pandas dataframe, with the columns:
+                    'TIME' 	'A' 'B' ... 'caption'
+                    where 'A', 'B', ... are the labels of all the chemicals
+        """
+        return self.diagnostic_conc_data.get_dataframe(return_copy=True)
+
+
+
+
+
+
+    ##################  EXPLAIN THINGS  ##################
+
+
+
+
+    def explain_time_advance(self, return_times=False, silent=False, sys_history=None) -> None|tuple:
+        """
+        Use the saved-up diagnostic concentration data,
+        to print out details of the varying steps of the reaction run.
+
+        If diagnostics weren't enabled prior to calling this function, an Exception is raised.
+
+        EXAMPLE of printed output:
+            From time 0 to 0.03, in 3 steps of 0.01
+            From time 0.03 to 0.23, in 2 steps of 0.1
+            (5 steps total)
+
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired diagnostic data may be missing
+
+        :param return_times:    [OPTIONAL] If True, all the critical times (times where the interval steps change)
+                                    are saved and returned as a list
+        :param silent:          [OPTIONAL] If True, nothing gets printed out
+        :param sys_history:     [OPTIONAL] The system history.
+                                    If passed, use it in lieu of the diagnostic data;
+                                    a consideration is the fact that the user might only have asked
+                                    for PART of the history to be saved
+        :return:                Depending on the argument "return_times", it returns either None, or a pair with 2 lists:
+                                        1 - list of time values
+                                        2 - list of step sizes  (will have one less element than the first list)
+        """
+        if sys_history:
+            df = sys_history
+            assert not df.empty , \
+                "Diagnostics.explain_time_advance(): no history data found.  " \
+                "Did you run the reaction simulation prior to calling this function?"
+        else:
+            # Make use of historical diagnostic concentration data
+            df = self.get_diagnostic_conc_data()
+            assert not df.empty , \
+                "Diagnostics.explain_time_advance(): no diagnostic data found.  " \
+                "Did you run the reaction simulation prior to calling this function?"
+
+        n_entries = len(df)
+        if sys_history:
+            t = list(df["SYSTEM TIME"])     # List of times (simulation step points)
+        else:
+            t = list(df["TIME"])            # List of times (simulation step points)
+
+        if n_entries == 1:
+            print(f"Diagnostics.ConcData.explain_time_advance(): no time advance found. "
+                  f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
+                  f"did you run the reaction simulation prior to calling this function?")
+            return
+
+
+        # If we get thus far, we have at least 2 entries in the list "t" of times
+        grad = np.diff(t)
+        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting down the array)
+        #print(grad)
+        #print(grad_shifted)
+        start_interval = t[0]
+
+        critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
+        step_sizes = []
+
+        total_number_full_steps = 0
+        for i in range(1, n_entries-1):
+            #print(i)
+            if not np.allclose(grad[i], grad_shifted[i]):
+                #print (f"   Detection at element {i} : time={t[i]}")
+                #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
+                n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
+                                                                       delta_baseline=grad_shifted[i], silent=silent)
+
+                start_interval = t[i]
+                if n_full_steps_taken > 0:
+                    total_number_full_steps += n_full_steps_taken
+                    critical_times.append(t[i])
+                    step_sizes.append(grad_shifted[i])
+
+
+        # Final wrap-up of the interval's endpoint
+        n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
+                                                               delta_baseline=grad_shifted[-1], silent=silent)
+
+        if n_full_steps_taken > 0:
+            total_number_full_steps += n_full_steps_taken
+            critical_times.append(t[-1])
+            step_sizes.append(grad_shifted[-1])
+
+        if not silent:
+            print(f"({total_number_full_steps} steps total)")
+
+        if return_times:
+            assert len(critical_times) == len(step_sizes) + 1, \
+                "explain_time_advance(): validation error in the values to return"
+            return (critical_times, step_sizes)
+
+
+
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, silent: bool) -> int|float:
+        """
+        Using the provided data, about a group of same-size steps, create and print a description of it for the user
+
+        :param t_start:
+        :param t_end:
+        :param delta_baseline:
+        :param silent:          If True, nothing gets printed; otherwise, a line is printed out
+        :return:                The corresponding number of FULL steps taken
+        """
+        if np.allclose(t_start, t_end):
+            #print(f"   [Ignoring interval starting and ending at same time {t_start:.3g}]")
+            return 0
+
+        n_steps = round((t_end - t_start) / delta_baseline)
+        step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
+        if not silent:
+            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} {step_s} of {delta_baseline:.3g}")
+        return n_steps
+
+
+
+    def _delta_names_REDUNDANT(self) -> [str]:
+        """
+        Return a list of strings, with the names of ALL the registered chemicals,
+        in their index order, each prefixed by the string "Delta "
+        EXAMPLE: ["Delta A", "Delta B", "Delta X"]
+
+        :return:    A list of strings
+        """
+        chemical_list = self.species_data.get_all_species_ids()      # EXAMPLE: ["A", "B", "X"]
+        chemical_delta_list = ["Delta " + name
+                               for name in chemical_list]
+        return chemical_delta_list
+
+
+
+    def _delta_conc_array_to_dict_REDUNDANT(self, delta_conc_arr :np.ndarray) -> dict:
+        """
+        Convert a Numpy array into a dict, based on all the registered chemicals.
+        The keys are the species id's, prefixed by "Delta "
+
+        :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
+        :return:                A dictionary such as {"Delta A": 1.23, "Delta X": 52.2}
+        """
+        if self.species_index_map:
+            # NEW system
+            index_to_delta_species = ["Delta " + species_id
+                                            for species_id in self.species_index_map.index_to_species]
+            # EXAMPLE:  ['Delta A', 'Delta X']
+
+            return dict(zip(index_to_delta_species, delta_conc_arr, strict=True))
+
+
+        # OLD system, being phased out
+        chemical_delta_list = self._delta_names()    # EXAMPLE: ["Delta A", "Delta X"]
+        assert len(chemical_delta_list) == len(delta_conc_arr), \
+            f"_delta_conc_dict(): mismatch in number of chemicals ({len(chemical_delta_list)} " \
+            f"vs. {len(delta_conc_arr)})"
+
+        delta_conc_dict = {}
+        for i, delta_name in enumerate(chemical_delta_list):
+            delta_conc_dict[delta_name] = delta_conc_arr[i]
+
+        return delta_conc_dict
+
+
+
+
+####################################################################################################
+
+class RxnData:
+    """
+    For the management of :
+        * diagnostic reaction data
+    """
+
+    def __init__(self, reactions, species_data, species_to_index, species_index_map):
+        """
+        
+        :param reactions:           Object of type "ReactionRegistry"
+        :param species_to_index:    [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
+                                        TODO: being phased out in favor of new arg `species_index_map`
+
+        :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
+        """
+        assert reactions is not None, \
+            "Diagnostics 'RxnData' class cannot be instantiated with a missing value for the argument `reactions`, " \
+            "which must be an object of type 'ReactionRegistry'"
+
+        self.reactions = reactions                          # Object of type "ReactionRegistry"
+
+        self.species_data = species_data                    # Object of type "SpeciesRegistry"
+
+        self.species_index_map = species_index_map
+        self.species_to_index = species_to_index            # TODO: BEING PHASED OUT in favor of self.species_index_map!
+                                                            # A dict mapping species ID to their array index
+                                                            # EXAMPLE: {"Species A": 0, "Species X": 1}
+
         self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER SINGLE REACTION: a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are objects of type "CollectionTabular",
                                         #   which contain Pandas dataframes with the following columns
@@ -61,35 +297,6 @@ class Diagnostics:
                                         #             over the time interval that *STARTS* at the value in the "START TIME" column
 
 
-        self.diagnostic_decisions_data = CollectionTabular(parameter_name="START_TIME")
-                                        #   Columns of the dataframes:
-                                        #       'START_TIME' 	'Delta A' 'Delta B' ...
-                                        #               [plus, if applicable, other fields such as
-                                        #               'action', 'norm_A', 'norm_B', 'step_factors']
-                                        #
-                                        #   Note:   - entries are always added, even if an interval run is aborted
-                                        #           - these values are for ALL participating reactions, COMBINED
-
-
-
-
-    def __str__(self) -> str:
-        s = "3 diagnostic collections:"
-        s += "\n    1) diagnostic_conc_data (object of type 'CollectionTabular'): "
-        s += "  " + self.diagnostic_conc_data.__str__()
-
-        s += f"\n    2) diagnostic_rxn_data: a dictionary of length {len(self.diagnostic_rxn_data)} ;"
-        s += "  the keys are the reaction indices"
-
-        s += f"\n    3) diagnostic_decisions_data (object of type 'CollectionTabular'): "
-        s += "  " + self.diagnostic_decisions_data.__str__()
-
-        return s
-
-
-
-
-
 
     #####################################################################################################
 
@@ -98,8 +305,6 @@ class Diagnostics:
     def ______DIAGNOSTIC_RXN_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
-
-    #####  1. diagnostic_rxn_data  #####
 
     def save_rxn_data(self, rxn_index :int, system_time, time_step,
                       increment_dict_single_rxn=None,
@@ -219,6 +424,7 @@ class Diagnostics:
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A Pandas dataframe with times and their corresponding reaction rates
         """
+        # TODO: doesn't appear to be currently used
         rxn_df = self.get_rxn_data(rxn_index=rxn_index)
         if rxn_df is None:
             return None
@@ -295,309 +501,8 @@ class Diagnostics:
 
 
 
-    #####################################################################################################
-
-    '''                             ~   diagnostic_conc_data   ~                                 '''
-
-    def ______DIAGNOSTIC_CONC_DATA________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    #####  2. diagnostic_conc_data  #####
-
-    def save_diagnostic_conc_data(self, system_data, system_time, caption="") -> None:
-        """
-        Save the diagnostic concentration data during the run, indexed by the current System Time.
-        Note: if an interval run is aborted, by convention NO entry is created here
-
-        :return: None
-        """
-        self.diagnostic_conc_data.store(par=system_time,
-                                        data_snapshot=system_data, caption=caption)
-
-
-
-    def get_diagnostic_conc_data(self) -> pd.DataFrame:
-        """
-        Return the diagnostic concentration data saved during the run.
-        This will be a complete set of simulation steps,
-        even if the user elected to only save part of the history during the run.
-
-        Note: if the run of an interval step is aborted,
-              by convention NO entry is created here
-
-        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
-                 some desired concentration data history may be missing
-
-        :return: A Pandas dataframe, with the columns:
-                    'TIME' 	'A' 'B' ... 'caption'
-                    where 'A', 'B', ... are the labels of all the chemicals
-        """
-        return self.diagnostic_conc_data.get_dataframe(return_copy=True)
-
-
-
-
-    #####################################################################################################
-
-    '''                             ~   diagnostic_decisions_data   ~                                 '''
-
-    def ______DIAGNOSTIC_DECISION_DATA________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    #####  3. diagnostic_decisions_data  #####
-
-    def save_diagnostic_decisions_data(self, system_time, delta_conc_arr=None, data=None, caption="") -> None:
-        """
-        Used to save the concentration changes,
-        and/or other data (typically, about variable-steps variables, if applicable),
-        during steps of the simulation run, indexed by the given System Time.
-
-        Note:   - entries are always added, even if an interval run is aborted
-                - these values are for ALL participating reactions, COMBINED
-
-        :param system_time:
-        :param delta_conc_arr:  [OPTIONAL] A Numpy array of "delta concentrations", mapped to the same index positions
-                                    as their concentration counterparts.  EXAMPLE: array[1.23, 52.2]
-        :param data:            [OPTIONAL] Typically, extra data about variable-steps variables, if applicable
-        :param caption:         [OPTIONAL] String with a caption for this record
-        :return:                None
-        """
-        delta_conc_dict = {}
-        if delta_conc_arr is not None:
-            delta_conc_dict = self._delta_conc_array_to_dict(delta_conc_arr)
-            #print(delta_conc_dict)
-            # EXAMPLE:  {"Delta A": 1.23, "Delta X": 52.2}
-
-        if data is not None:
-            delta_conc_dict.update(data)        # Merge the data dict (containing misc. data typically about variable steps)
-                                                # into `delta_conc_dict` (containing concentration increments)
-
-        self.diagnostic_decisions_data.store(par=system_time,
-                                             data_snapshot=delta_conc_dict, caption=caption)
-
-
-
-    def get_decisions_data(self) -> pd.DataFrame:
-        """
-        Determine and return the diagnostic data about concentration changes at every step - by convention,
-        EVEN aborted ones
-    
-        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
-        """
-        return self.diagnostic_decisions_data.get_dataframe(return_copy=True)
-
-
-
 
     ##################  EXPLAIN THINGS  ##################
-
-
-    def explain_reactions(self) -> bool:
-        """
-        Provide a detailed explanation of all the steps of the reactions,
-        from the saved diagnostic data
-
-        WARNING: Currently designed only for exactly 2 reactions!  TODO: generalize to any number of reactions
-
-        TODO: test and validate usefulness, now that substeps got eliminated
-        TODO: allow arguments to specify the min and max reaction times during which to display the explanatory data
-
-        :return:    True if the diagnostic data is consistent for all the steps of all the reactions,
-                    or False otherwise
-        """
-        number_reactions = self.reactions.number_of_reactions()
-
-        assert number_reactions == 2, \
-            "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
-            "Future versions will lift this restriction"
-
-        row_baseline = 0
-        row_list = [0, 0]       # TODO: generalize
-        active_list = [0, 1]    # ALL the reactions.  TODO: generalize
-
-        self._explain_reactions_helper(active_list=active_list,
-                                       row_baseline=row_baseline, row_list=row_list)
-
-
-        while row_baseline < len(self.get_diagnostic_conc_data()) - 2:
-            row_baseline += 1
-
-            print("Advance a single-step across all tables")
-
-            for i in active_list:
-                row_list[i] += 1
-
-            status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list) # TODO: generalize
-
-
-            if not status:
-                return False    # Error termination
-
-        # END while
-
-        return True             # Successful termination
-
-
-
-    def _explain_reactions_helper(self, active_list, row_baseline, row_list) -> bool:
-        """
-        Helper function for explain_reactions()
-
-        :param active_list:
-        :param row_baseline:
-        :param row_list:
-        :return:            True is the diagnostic data is consistent for this step, or False otherwise
-        """
-        print("-----------")
-        print("ROW of baseline data: ", row_baseline)
-
-        current_time = self.get_diagnostic_conc_data().loc[row_baseline]['TIME']
-        print(f"TIME = {current_time:.5g}")
-
-        print("row_list: ", row_list)
-        print("active_list: ", active_list)
-
-        chemical_list = self.species_data.get_all_species_ids()
-        chemical_delta_list = self._delta_names()
-
-        conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
-        print("baseline concentrations: ", conc_arr_before)
-
-        delta_cumulative = np.zeros(self.species_data.number_of_species(),
-                                    dtype=float)  # One element per chemical species
-
-        # For each reaction
-        for rxn_index in range(self.reactions.number_of_reactions()):
-            if (rxn_index in active_list):  # If reaction is tagged as "fast"
-                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
-                print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
-            else:                           # If reaction is tagged as "slow"
-                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
-                #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
-                #                     dtype=float)   # This is the way it was in release beta 19
-                print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn}")
-
-
-            delta_cumulative += delta_rxn
-        # END for
-
-        print("delta_cumulative: ", delta_cumulative)
-
-        conc_after = conc_arr_before + delta_cumulative
-        print("updated concentrations: ", conc_after)
-
-        next_system_state = self.get_diagnostic_conc_data().loc[row_baseline + 1][chemical_list].to_numpy(dtype='float16')
-        print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
-
-        status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
-        if status:
-            print("Match OK")
-        else:
-            print("****************************************   MISMATCH!!!  ****************************************")
-
-        print("-----------")
-
-        return status
-
-
-
-    def explain_time_advance(self, return_times=False, silent=False, sys_history=None) -> None|tuple:
-        """
-        Use the saved-up diagnostic concentration data,
-        to print out details of the varying steps of the reaction run.
-
-        If diagnostics weren't enabled prior to calling this function, an Exception is raised.
-
-        EXAMPLE of printed output:
-            From time 0 to 0.03, in 3 steps of 0.01
-            From time 0.03 to 0.23, in 2 steps of 0.1
-            (5 steps total)
-
-        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
-                 some desired diagnostic data may be missing
-
-        :param return_times:    [OPTIONAL] If True, all the critical times (times where the interval steps change)
-                                    are saved and returned as a list
-        :param silent:          [OPTIONAL] If True, nothing gets printed out
-        :param sys_history:     [OPTIONAL] The system history.
-                                    If passed, use it in lieu of the diagnostic data;
-                                    a consideration is the fact that the user might only have asked
-                                    for PART of the history to be saved
-        :return:                Depending on the argument "return_times", it returns either None, or a pair with 2 lists:
-                                        1 - list of time values
-                                        2 - list of step sizes  (will have one less element than the first list)
-        """
-        if sys_history:
-            df = sys_history
-            assert not df.empty , \
-                "Diagnostics.explain_time_advance(): no history data found.  " \
-                "Did you run the reaction simulation prior to calling this function?"
-        else:
-            # Make use of historical diagnostic concentration data
-            df = self.get_diagnostic_conc_data()
-            assert not df.empty , \
-                "Diagnostics.explain_time_advance(): no diagnostic data found.  " \
-                "Did you run the reaction simulation prior to calling this function?"
-
-        n_entries = len(df)
-        if sys_history:
-            t = list(df["SYSTEM TIME"])     # List of times (simulation step points)
-        else:
-            t = list(df["TIME"])            # List of times (simulation step points)
-
-        if n_entries == 1:
-            print(f"Diagnostics.explain_time_advance(): no time advance found. "
-                  f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
-                  f"did you run the reaction simulation prior to calling this function?")
-            return
-
-
-        # If we get thus far, we have at least 2 entries in the list "t" of times
-        grad = np.diff(t)
-        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting down the array)
-        #print(grad)
-        #print(grad_shifted)
-        start_interval = t[0]
-
-        critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
-        step_sizes = []
-
-        total_number_full_steps = 0
-        for i in range(1, n_entries-1):
-            #print(i)
-            if not np.allclose(grad[i], grad_shifted[i]):
-                #print (f"   Detection at element {i} : time={t[i]}")
-                #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
-                n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
-                                                                       delta_baseline=grad_shifted[i], silent=silent)
-
-                start_interval = t[i]
-                if n_full_steps_taken > 0:
-                    total_number_full_steps += n_full_steps_taken
-                    critical_times.append(t[i])
-                    step_sizes.append(grad_shifted[i])
-
-
-        # Final wrap-up of the interval's endpoint
-        n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
-                                                               delta_baseline=grad_shifted[-1], silent=silent)
-
-        if n_full_steps_taken > 0:
-            total_number_full_steps += n_full_steps_taken
-            critical_times.append(t[-1])
-            step_sizes.append(grad_shifted[-1])
-
-        if not silent:
-            print(f"({total_number_full_steps} steps total)")
-
-        if return_times:
-            assert len(critical_times) == len(step_sizes) + 1, \
-                "explain_time_advance(): validation error in the values to return"
-            return (critical_times, step_sizes)
 
 
 
@@ -782,7 +687,250 @@ class Diagnostics:
 
 
 
+
+
+#####################################################################################
+
+class StepDecisionData:
+    """
+    For the management of :
+        * diagnostic reaction-step decisions data
+    """
+
+    def __init__(self, reactions, species_data, species_to_index, species_index_map):
+        """
+
+        :param reactions:           Object of type "ReactionRegistry"
+        :param species_to_index:    [OPTIONAL] Dictionary mapping species id's to their index position in the system state array
+                                        TODO: being phased out in favor of new arg `species_index_map`
+
+        :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
+        """
+
+        assert reactions is not None, \
+            "Diagnostics 'StepDecisionData' class cannot be instantiated with a missing value for the argument `reactions`, " \
+            "which must be an object of type 'ReactionRegistry'"
+
+        self.reactions = reactions                          # Object of type "ReactionRegistry"
+
+        self.species_data = species_data                    # Object of type "SpeciesRegistry"
+
+        self.species_index_map = species_index_map
+        self.species_to_index = species_to_index            # TODO: BEING PHASED OUT in favor of self.species_index_map!
+                                                            # A dict mapping species ID to their array index
+                                                            # EXAMPLE: {"Species A": 0, "Species X": 1}
+
+
+
+        self.diagnostic_decisions_data = CollectionTabular(parameter_name="START_TIME")
+                                        #   Columns of the dataframes:
+                                        #       'START_TIME' 	'Delta A' 'Delta B' ...
+                                        #               [plus, if applicable, other fields such as
+                                        #               'action', 'norm_A', 'norm_B', 'step_factors']
+                                        #
+                                        #   Note:   - entries are always added, even if an interval run is aborted
+                                        #           - these values are for ALL participating reactions, COMBINED
+
+
+
+
+
+    #####################################################################################################
+
+    '''                             ~   step_decisions_data   ~                                 '''
+
+    def ______STEP_DECISION_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def save_diagnostic_decisions_data(self, system_time, delta_conc_arr=None, data=None, caption="") -> None:
+        """
+        Used to save the concentration changes,
+        and/or other data (typically, about variable-steps variables, if applicable),
+        during steps of the simulation run, indexed by the given System Time.
+
+        Note:   - entries are always added, even if an interval run is aborted
+                - these values are for ALL participating reactions, COMBINED
+
+        :param system_time:
+        :param delta_conc_arr:  [OPTIONAL] A Numpy array of "delta concentrations", mapped to the same index positions
+                                    as their concentration counterparts.  EXAMPLE: array[1.23, 52.2]
+        :param data:            [OPTIONAL] Typically, extra data about variable-steps variables, if applicable
+        :param caption:         [OPTIONAL] String with a caption for this record
+        :return:                None
+        """
+        delta_conc_dict = {}
+        if delta_conc_arr is not None:
+            delta_conc_dict = self._delta_conc_array_to_dict(delta_conc_arr)
+            #print(delta_conc_dict)
+            # EXAMPLE:  {"Delta A": 1.23, "Delta X": 52.2}
+
+        if data is not None:
+            delta_conc_dict.update(data)        # Merge the data dict (containing misc. data typically about variable steps)
+                                                # into `delta_conc_dict` (containing concentration increments)
+
+        self.diagnostic_decisions_data.store(par=system_time,
+                                             data_snapshot=delta_conc_dict, caption=caption)
+
+
+
+    def get_decisions_data(self) -> pd.DataFrame:
+        """
+        Determine and return the diagnostic data about concentration changes at every step - by convention,
+        EVEN aborted ones
+
+        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
+        """
+        return self.diagnostic_decisions_data.get_dataframe(return_copy=True)
+
+
+
+
     def _delta_conc_array_to_dict(self, delta_conc_arr :np.ndarray) -> dict:
+        """
+        Convert a Numpy array into a dict, based on all the registered chemicals.
+        The keys are the species id's, prefixed by "Delta "
+
+        :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
+        :return:                A dictionary such as {"Delta A": 1.23, "Delta X": 52.2}
+        """
+        index_to_delta_species = ["Delta " + species_id
+                                        for species_id in self.species_index_map.index_to_species]
+        # EXAMPLE:  ['Delta A', 'Delta X']
+
+        return dict(zip(index_to_delta_species, delta_conc_arr, strict=True))
+
+
+
+
+
+    ##################  EXPLAIN THINGS  ##################
+
+
+    def stoichiometry_checker_REDUNDANT(self, rxn_index :int, conc_arr_before: np.array, conc_arr_after: np.array) -> bool:
+        """
+        For the indicated reaction, investigate the change in the concentration of the involved chemicals,
+        to ascertain whether the change is consistent with the reaction's stoichiometry.
+        See https://life123.science/reactions
+
+        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
+
+        NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
+
+        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
+        :param conc_arr_before: Numpy array with the concentrations of ALL the species (whether involved
+                                    in the reaction or not), in their index order in a system state variable,
+                                    BEFORE the reaction step
+        :param conc_arr_after:  Same as above, but after the reaction
+                                TODO: maybe also accept a Panda's dataframe row
+
+        :return:                True if the change in reactant/product concentrations is consistent with the
+                                    reaction's stoichiometry, or False otherwise
+        """
+        assert self.reactions.number_of_reactions() == 1, \
+            f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
+            f"{self.reactions.number_of_reactions()} reactions are present."
+
+        assert len(conc_arr_before) == self.species_data.number_of_species(), \
+            f"stoichiometry_checker() : the argument `conc_arr_before` must be a Numpy array " \
+            f"with as many elements as the number of registered chemicals ({self.species_data.number_of_species()}); " \
+            f"instead, it has {len(conc_arr_before)}"
+
+        assert len(conc_arr_after) == self.species_data.number_of_species(), \
+            f"stoichiometry_checker() : the argument `conc_arr_after` must be a Numpy array " \
+            f"with as many elements as the number of registered chemicals ({self.species_data.number_of_species()}); " \
+            f"instead, it has {len(conc_arr_after)}"
+
+        self.reactions.assert_valid_rxn_index(rxn_index)
+
+        return self._stoichiometry_checker_from_deltas(rxn_index = rxn_index,
+                                                       delta_arr = conc_arr_after-conc_arr_before)
+
+
+
+    def _stoichiometry_checker_from_deltas(self, rxn_index :int, delta_arr: np.array) -> bool:
+        """
+        Helper function.
+
+        For the indicated reaction, investigate the change in the concentration of the involved chemicals,
+        to ascertain whether the change is consistent with the reaction's stoichiometry.
+        See https://life123.science/reactions
+
+        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
+
+        NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the species (whether involved
+                                in the reaction or not), in their index order in a system state variable,
+                                as a result of JUST the reaction of interest
+        :return:            True if the change in reactant/product concentrations is consistent with the
+                                reaction's stoichiometry, or False otherwise.
+                                Note: if any of the elements of the passed Numpy array is NaN, then True is returned
+                                      (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
+                                      check because of that)
+        """
+        assert self.species_to_index is not None, \
+            "_stoichiometry_checker_from_deltas(): it appears that when the Diagnostics class was instantiated, " \
+            "the argument `species_to_index` was not included correctly. \n" \
+            "As a result, there's no way to identify " \
+            "which concentration is the system-state array correspond to the species in the reactions."
+
+        if np.isnan(delta_arr).any():
+            return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
+
+        #rxn = self.reactions.get_reaction(rxn_index)    # Object of type "SimulationReaction"
+        reactants = self.reactions.get_reactants(rxn_index)
+        products = self.reactions.get_products(rxn_index)
+
+        # Pick (arbitrarily) the first reactant,
+        # to establish a baseline change in concentration relative to its stoichiometric coefficient
+        baseline_stoichiometry, baseline_species_name = reactants[0]
+        #baseline_species_index = self.species_data.get_species_index(baseline_species_name)
+        baseline_species_index = self.species_to_index.get(baseline_species_name)
+        baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
+        #print("\nbaseline_ratio: ", baseline_ratio)
+
+        for i, term in enumerate(reactants):
+            if i != 0:
+                stoichiometry, species_id = term
+                #species_index = self.species_data.get_species_index(species_id)
+                species_index = self.species_to_index.get(species_id)
+                ratio =  (delta_arr[species_index]) / stoichiometry
+                #print(f"ratio for `{species_name}`: {ratio}")
+                if not np.allclose(ratio, baseline_ratio):
+                    return False
+
+        for term in products:
+            stoichiometry, species_id = term
+            #species_index = self.species_data.get_species_index(species_id)
+            species_index = self.species_to_index.get(species_id)
+            ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
+            #print(f"ratio for `{species_name}`: {ratio}")
+            if not np.allclose(ratio, baseline_ratio):
+                return False
+
+        return True
+
+
+
+
+    def _delta_names_REDUNDANT(self) -> [str]:
+        """
+        Return a list of strings, with the names of ALL the registered chemicals,
+        in their index order, each prefixed by the string "Delta "
+        EXAMPLE: ["Delta A", "Delta B", "Delta X"]
+
+        :return:    A list of strings
+        """
+        chemical_list = self.species_data.get_all_species_ids()      # EXAMPLE: ["A", "B", "X"]
+        chemical_delta_list = ["Delta " + name
+                               for name in chemical_list]
+        return chemical_delta_list
+
+
+
+    def _delta_conc_array_to_dict_REDUNDANT(self, delta_conc_arr :np.ndarray) -> dict:
         """
         Convert a Numpy array into a dict, based on all the registered chemicals.
         The keys are the species id's, prefixed by "Delta "
@@ -810,4 +958,75 @@ class Diagnostics:
             delta_conc_dict[delta_name] = delta_conc_arr[i]
 
         return delta_conc_dict
-                            
+
+
+
+
+####################################################################################################
+####################################################################################################
+
+@dataclass(slots=True)      # Note: (slots=True) has the effect of prohibiting non-listed fields,
+                            #       and of making the class more efficient
+class Diagnostics:
+    reactions: ReactionRegistry | None = None
+    species_index_map: SpeciesIndexMap | None = None
+
+    species_data : SpeciesRegistry | None = None
+
+    rxn_data: RxnData | None = None
+    conc_data: ConcData | None = None
+    step_decision_data: StepDecisionData | None = None
+
+
+
+    def __post_init__(self) -> None:
+        """
+        Automatically invoked by the constructor, just before it terminates
+
+        :return: None
+        """
+        assert self.species_index_map is not None, \
+            "Diagnostics() initialization: arguments `species_index_map` is required"
+
+
+        species_to_index = self.species_index_map.species_to_index
+
+        if (self.species_data is None) and (self.reactions is not None):
+            # Extract the Species Registry from the Reaction Registry
+            self.species_data = self.reactions.get_species_data()    # Object of type "SpeciesRegistry"
+            # TODO: if both supplied, verify compatibility
+
+        assert self.species_data is not None, \
+            "Diagnostics() initialization: at least one of the arguments `reactions` or `species_data` is required"
+
+
+        if (self.reactions is not None) and (self.species_index_map is not None):
+            self.rxn_data = RxnData(reactions=self.reactions, species_data=self.species_data,
+                                    species_to_index=species_to_index, species_index_map=self.species_index_map)
+
+            self.step_decision_data = StepDecisionData(reactions=self.reactions, species_data=self.species_data,
+                                    species_to_index=species_to_index, species_index_map=self.species_index_map)
+
+        if self.species_index_map is not None:
+            self.conc_data = ConcData(species_data=self.species_data,
+                                      species_to_index=species_to_index, species_index_map=self.species_index_map)
+
+
+
+
+    def __str__(self) -> str:
+        """
+
+        :return:
+        """
+        s = "3 diagnostic collections:"
+        s += "\n    1) diagnostic_conc_data (object of type 'CollectionTabular'): "
+        s += "  " + self.conc_data.diagnostic_conc_data.__str__()
+
+        s += f"\n    2) diagnostic_rxn_data: a dictionary of length {len(self.rxn_data.diagnostic_rxn_data)} ;"
+        s += "  the keys are the reaction indices"
+
+        s += f"\n    3) diagnostic_decisions_data (object of type 'CollectionTabular'): "
+        s += "  " + self.step_decision_data.diagnostic_decisions_data.__str__()
+
+        return s

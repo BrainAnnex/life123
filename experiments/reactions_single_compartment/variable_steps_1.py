@@ -94,7 +94,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 dynamics.get_history()
 
 # %%
-(transition_times, step_sizes) = dynamics.explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.conc_data.explain_time_advance(return_times=True)
 
 # %%
 np.array(step_sizes)
@@ -136,7 +136,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=0)
 dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
-dynamics.get_diagnostic_conc_data()
+dynamics.conc_data.get_diagnostic_conc_data()
 
 # %%
 dynamics.get_diagnostic_decisions_data()

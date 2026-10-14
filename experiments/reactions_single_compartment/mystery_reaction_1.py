@@ -179,7 +179,7 @@ A_conc + B_conc
 # Incidentally, there's a function to verify that the stoichiometry 
 # of a single reaction holds true across the entire simulation run 
 # (overkill in this case!)
-uc.get_diagnostics().stoichiometry_checker_entire_run() 
+uc.get_diagnostics().rxn_data.stoichiometry_checker_entire_run()
 
 # %%
 

@@ -194,7 +194,7 @@ A_conc + C_conc    # Constant sums will show that any drop in [A] corresponds to
 # Incidentally, there's a function to verify that the stoichiometry 
 # of a single reaction holds true across the entire simulation run 
 # (overkill in this case!)
-dynamics.diagnostics.stoichiometry_checker_entire_run() 
+dynamics.diagnostics.rxn_data.stoichiometry_checker_entire_run()
 
 # %%
 

@@ -160,7 +160,7 @@ dynamics2.single_compartment_react(initial_step=0.02, duration=4.0,
                                   variable_steps=True)
 
 # %%
-dynamics2.diagnostics.explain_time_advance()
+dynamics2.diagnostics.conc_data.explain_time_advance()
 
 # %%
 dynamics2.plot_history(colors=['darkturquoise', 'green', 'darkblue'], show_intervals=True, title_prefix="WITHOUT catalysis")

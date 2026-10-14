@@ -160,7 +160,7 @@ type(diagnostics)    # this will show an object
 
 # %%
 # Let's revisit the variables steps taken
-diagnostics.explain_time_advance()
+diagnostics.conc_data.explain_time_advance()
 
 # %%
 
@@ -168,7 +168,7 @@ diagnostics.explain_time_advance()
 # #### The Delta-concentration values for all the individual reaction time steps, as contribued by a single reaction, may be inspected from the diagnostic data:
 
 # %%
-diagnostics.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+diagnostics.rxn_data.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
 
 # %% [markdown]
 # ### Note that diagnostic data with the DELTA Concentrations - in the above listing - also records the values that were considered (but not actually used) during *ABORTED* steps.  For example, in steps 0-2, above, the START_TIME remains the same, as the time_step gets progressively reduced until the resulting changes are deemed acceptable.
@@ -292,10 +292,10 @@ uc.adaptive_steps.show_adaptive_parameters()
 # _(note - this is possible because we instantiated the class UniformCompartment with the option to enable the diagnostics)_
 
 # %%
-diagnostics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
+diagnostics.conc_data.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
 
 # %%
-diagnostics.get_decisions_data()
+diagnostics.step_decision_data.get_decisions_data()
 
 # %%
 

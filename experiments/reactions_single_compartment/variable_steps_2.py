@@ -88,7 +88,7 @@ df = dynamics.get_history()
 df
 
 # %%
-dynamics.get_diagnostics().explain_time_advance()
+dynamics.get_diagnostics().conc_data.explain_time_advance()
 
 # %% [markdown]
 # ### Look up some values

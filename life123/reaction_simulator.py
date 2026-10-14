@@ -223,7 +223,7 @@ class ReactionSimulator:
         self.adaptive_steps = VariableTimeSteps()
 
         if (self.diagnostics_enabled) and (not self.diagnostics):
-            self.diagnostics = Diagnostics(reactions=self.reaction_registry, species_to_index=self.species_index_map.species_to_index,
+            self.diagnostics = Diagnostics(reactions=self.reaction_registry,
                                            species_index_map=self.species_index_map)
 
         if preset:
@@ -379,7 +379,7 @@ class ReactionSimulator:
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
             system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
-            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
+            self.diagnostics.conc_data.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
                                                        caption="Set concentration")
 
 
@@ -396,12 +396,12 @@ class ReactionSimulator:
             self.diagnostic_data_snapshot['action'] = "ABORT"
             self.diagnostic_data_snapshot['step_factor'] = self.reaction_step_diagnostics.decision_data["step_factor"]
             self.diagnostic_data_snapshot['time_step'] = self.reaction_step_diagnostics.delta_time
-            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+            self.diagnostics.step_decision_data.save_diagnostic_decisions_data(system_time=self.system_time,
                                                 data=self.diagnostic_data_snapshot, delta_conc_arr=delta_concentrations,
                                                 caption="excessive norm value(s)")
 
             # Make a note of the abort action in all the reaction-specific diagnostics
-            self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
+            self.diagnostics.rxn_data.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
 
 
@@ -420,12 +420,12 @@ class ReactionSimulator:
         if self.adaptive_steps:     # Add more diagnostics data if available
             diagnostics_data["step_factor"] = self.adaptive_steps.step_factors.get('error')
 
-        self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+        self.diagnostics.step_decision_data.save_diagnostic_decisions_data(system_time=self.system_time,
                                                         data=diagnostics_data,
                                                         delta_conc_arr=None)
 
         # Save under "rxn_data" diagnostics
-        self.diagnostics.save_rxn_data(rxn_index=exception_data["rxn_index"], system_time=self.system_time,
+        self.diagnostics.rxn_data.save_rxn_data(rxn_index=exception_data["rxn_index"], system_time=self.system_time,
                                        time_step=exception_data["delta_time"],
                                        increment_dict_single_rxn=None,
                                        aborted=True,
@@ -449,13 +449,13 @@ class ReactionSimulator:
 
         # A type of HARD ABORT is detected and raised (a negative concentration resulting from the combined effect of all reactions)
         if self.diagnostics_enabled:
-            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+            self.diagnostics.step_decision_data.save_diagnostic_decisions_data(system_time=self.system_time,
                                                             data={"action": "ABORT",
                                                                   "step_factor": self.adaptive_steps.step_factors["error"],
                                                                   "caption": "neg. conc. from combined effect of all rxns",
                                                                   "time_step": delta_time})
             # Save up diagnostic data for ALL reactions
-            self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
+            self.diagnostics.rxn_data.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
     
 
@@ -677,7 +677,7 @@ class ReactionSimulator:
                 if self.diagnostics_enabled:
                     # Save up the current time and System State as "diagnostic 'concentration' data"
                     system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
-                    self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
+                    self.diagnostics.conc_data.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
                 t_now = time.perf_counter()
                 t_elapsed = t_now - t_report    # Time elapsed since the last report
@@ -1244,7 +1244,7 @@ class ReactionSimulator:
         """
         # NOTE: self.diagnostic_data_snapshot is only applicable to VARIABLE steps
         if self.diagnostics_enabled:
-            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+            self.diagnostics.step_decision_data.save_diagnostic_decisions_data(system_time=self.system_time,
                                                             delta_conc_arr=delta_concentrations,
                                                             data=self.diagnostic_data_snapshot)
 
@@ -1354,7 +1354,7 @@ class ReactionSimulator:
 
 
         if self.diagnostics_enabled:
-            self.diagnostics.save_rxn_data(rxn_index=rxn_index,
+            self.diagnostics.rxn_data.save_rxn_data(rxn_index=rxn_index,
                                            system_time=self.system_time, time_step=delta_time,
                                            increment_dict_single_rxn=increment_dict_single_rxn,
                                            rate=rxn_rate)   # Save to "diagnostic_rxn_data"
@@ -2297,7 +2297,7 @@ class ReactionSimulator:
                 "plot_step_sizes(): no diagnostic data is available. " \
                 "Did you invoke enable_diagnostics() prior to running the simulation?"
 
-        (transition_times, step_sizes) = self.diagnostics.explain_time_advance(return_times=True, silent=True)
+        (transition_times, step_sizes) = self.diagnostics.conc_data.explain_time_advance(return_times=True, silent=True)
 
         x=transition_times
         y=step_sizes
@@ -2316,7 +2316,7 @@ class ReactionSimulator:
         new_y.append(y[-1])
 
 
-        df = self.diagnostics.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
+        df = self.diagnostics.conc_data.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
 
         # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
         #       the last value, to maintain the full x-axis size
@@ -2390,7 +2390,7 @@ class ReactionSimulator:
         self.diagnostics_enabled = True
         if not self.diagnostics:
             self.diagnostics = Diagnostics(reactions=self.reaction_registry,
-                                           species_to_index=self.species_index_map.species_to_index)
+                                           species_index_map=self.species_index_map)
 
 
 

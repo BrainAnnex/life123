@@ -110,7 +110,7 @@ uc.single_compartment_react(initial_step=0.001, duration=0.3)
 uc.get_history()
 
 # %%
-uc.get_diagnostics().explain_time_advance()
+uc.get_diagnostics().conc_data.explain_time_advance()
 
 # %%
 uc.plot_history(colors=["darkturquoise", "green"],
@@ -241,7 +241,7 @@ uc_new.plot_history(title="Coupled reactions A <-> B and A <-> S (slow but with 
 # ### but EVENTUALLY DOMINATES (energy advantage)
 
 # %%
-uc_new.get_diagnostics().explain_time_advance()
+uc_new.get_diagnostics().conc_data.explain_time_advance()
 
 # %% [markdown]
 # ### Check the final equilibrium

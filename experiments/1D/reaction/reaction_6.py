@@ -151,7 +151,7 @@ arr0, arr1
 
 # %%
 # Check that the changes in the first reaction step conform to the stoichiometry
-bio.get_reaction_handler().get_diagnostics().stoichiometry_checker(rxn_index=0, 
+bio.get_reaction_handler().get_diagnostics().rxn_data.stoichiometry_checker(rxn_index=0,
                                                                    conc_arr_before = arr0, 
                                                                    conc_arr_after = arr1)
 

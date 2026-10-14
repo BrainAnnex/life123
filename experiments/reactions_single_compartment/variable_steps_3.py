@@ -99,7 +99,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 dynamics.get_history()
 
 # %%
-(transition_times, step_sizes) = dynamics.get_diagnostics().explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.get_diagnostics().conc_data.explain_time_advance(return_times=True)
 
 # %%
 np.array(step_sizes)
@@ -167,7 +167,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 dynamics.get_history()
 
 # %%
-(transition_times, step_sizes) = dynamics.get_diagnostics().explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.get_diagnostics().conc_data.explain_time_advance(return_times=True)
 
 # %%
 np.array(step_sizes)

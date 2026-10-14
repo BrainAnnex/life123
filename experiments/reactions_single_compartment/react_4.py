@@ -145,7 +145,7 @@ uc.get_history(t=0.002)
 # ### Step sizes can work both ways!  Notice how, late in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:
 
 # %%
-uc.get_diagnostics().explain_time_advance()
+uc.get_diagnostics().conc_data.explain_time_advance()
 
 # %% [markdown]
 # ### One can see how the reaction proceeds in far-smaller steps in the early times, when the concentrations are changing much more rapidly
@@ -158,7 +158,7 @@ arr0, arr1
 
 # %%
 # Let's verify that the reaction's stoichiometry is being respected
-uc.get_diagnostics().stoichiometry_checker(rxn_index=0, 
+uc.get_diagnostics().rxn_data.stoichiometry_checker(rxn_index=0,
                                            conc_arr_before = arr0, 
                                            conc_arr_after = arr1)
 
@@ -167,13 +167,13 @@ uc.get_diagnostics().stoichiometry_checker(rxn_index=0,
 # The diagnostic data, enabled by our earlier call to `set_diagnostics()`, makes it convenient to check
 
 # %%
-uc.get_diagnostics().get_rxn_data(rxn_index=0, head=15)
+uc.get_diagnostics().rxn_data.get_rxn_data(rxn_index=0, head=15)
 
 # %% [markdown]
 # ### From the diagnostic data, it can be seen that the first step had several false starts - and the time was automatically repeatedly shrunk - but finally happened.  `Delta A` indeed equals - 2 * `Delta C`, satisfying the stoichiometry
 
 # %%
-uc.get_diagnostics().stoichiometry_checker_entire_run()
+uc.get_diagnostics().rxn_data.stoichiometry_checker_entire_run()
 
 # %%
 
@@ -204,6 +204,6 @@ uc.curve_intersect('A', 'C', t_start=0, t_end=0.01)
 # `norm_A` and `norm_B` are computed quantities that are used to guide the adaptive time steps
 
 # %%
-uc.get_diagnostics().get_decisions_data()
+uc.get_diagnostics().step_decision_data.get_decisions_data()
 
 # %%

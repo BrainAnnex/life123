@@ -93,7 +93,7 @@ uc.plot_history(show_intervals=True)
 uc.get_history()
 
 # %%
-uc.get_diagnostics().explain_time_advance()
+uc.get_diagnostics().conc_data.explain_time_advance()
 
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium

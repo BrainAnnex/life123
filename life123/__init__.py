@@ -22,6 +22,7 @@ from life123.collections import (
     CollectionArray,
     Collection
 )
+from life123.diagnostics import Diagnostics
 from life123.history import (
     HistoryBinConcentration,
     HistoryUniformConcentration,
@@ -68,6 +69,7 @@ __all__ = [
     'CollectionArray',
     'Collection',
     'Colors',
+    'Diagnostics',
     'Diffusion1D',
     'HistoryBinConcentration',
     'HistoryUniformConcentration',

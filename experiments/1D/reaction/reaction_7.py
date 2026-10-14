@@ -152,7 +152,7 @@ arr1 = bio.get_reaction_handler().get_historical_concentrations(row=1, df=df)
 arr0, arr1
 
 # %%
-bio.get_reaction_handler().get_diagnostics().stoichiometry_checker(rxn_index=0, 
+bio.get_reaction_handler().get_diagnostics().rxn_data.stoichiometry_checker(rxn_index=0,
                                conc_arr_before = arr0, 
                                conc_arr_after = arr1)
 
@@ -244,7 +244,7 @@ arr1 = bio.get_reaction_handler().get_historical_concentrations(row=23, df=df2)
 arr0, arr1
 
 # %%
-bio.get_reaction_handler().get_diagnostics().stoichiometry_checker(rxn_index=0, 
+bio.get_reaction_handler().get_diagnostics().rxn_data.stoichiometry_checker(rxn_index=0,
                                                        conc_arr_before = arr0, 
                                                        conc_arr_after = arr1)
 

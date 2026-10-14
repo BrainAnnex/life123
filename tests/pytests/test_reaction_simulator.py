@@ -296,7 +296,7 @@ def test_single_compartment_react():
     assert np.allclose(sim.system_time, 0.0035)
     assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])  # Line 7, below
 
-    df = sim.diagnostics.get_diagnostic_conc_data()
+    df = sim.diagnostics.conc_data.get_diagnostic_conc_data()
     row_0 = df.iloc[0]      # Line 0, below
     expected_row = pd.Series([0.0, 100.0, 0.0, 0.0, 1000.0, 0.0, "Set concentration"],
                              index =['TIME', 'A', 'B', 'C', 'E_high', 'E_low', 'caption'])
@@ -312,7 +312,7 @@ def test_single_compartment_react():
     6  0.0030   97.352350  2.633332  ...   999.987725  0.012275                   
     7  0.0035   96.925254  3.056963  ...   999.980686  0.019314
     """
-    assert sim.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+    assert sim.diagnostics.conc_data.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.0035], [0.0005])
 
 
@@ -336,12 +336,12 @@ def test_single_compartment_react():
     assert np.allclose(run2, run1)                  # Same result as before
     assert np.allclose(sim2.system_time, 0.0035)    # Same as before
 
-    df2 = sim2.diagnostics.get_diagnostic_conc_data()
+    df2 = sim2.diagnostics.conc_data.get_diagnostic_conc_data()
     row_0 = df2.iloc[0]      # The initial row
     assert row_0.equals(other=expected_row)     # expected_row is the same as for the first run
 
     #print(sim2.diagnostics.explain_time_advance(return_times=True))
-    assert sim2.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+    assert sim2.diagnostics.conc_data.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.0035], [0.0005])
 
 
@@ -731,9 +731,9 @@ def test__single_compartment_react_main_loop_2_b():
 
 
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data"
-    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
-    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
-    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]   # For reaction 0 (the only reaction we have)
+    assert type(sim.diagnostics.rxn_data.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.rxn_data.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.rxn_data.diagnostic_rxn_data[0]   # For reaction 0 (the only reaction we have)
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
     with pd.option_context('display.max_columns', None):    # The configuration changes automatically revert after exiting the 'with' block
@@ -1224,9 +1224,9 @@ def test_attempt_reaction_step_2_a():
 
 
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
-    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
-    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
-    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(sim.diagnostics.rxn_data.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.rxn_data.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.rxn_data.diagnostic_rxn_data[0]
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
     row_expected = {"START_TIME": 88, "time_step": 0.1, "aborted": False, "Delta A": 7.0, "Delta B": -7.0, "rate": -70., "caption": ""}
@@ -1234,8 +1234,8 @@ def test_attempt_reaction_step_2_a():
     assert compare_pandas(df_expected, df, disregard_order=True)
 
     # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step()
-    assert type(sim.diagnostics.diagnostic_decisions_data) is CollectionTabular
-    df = sim.diagnostics.diagnostic_decisions_data.get_dataframe()
+    assert type(sim.diagnostics.step_decision_data.diagnostic_decisions_data) is CollectionTabular
+    df = sim.diagnostics.step_decision_data.diagnostic_decisions_data.get_dataframe()
     assert type(df) is pd.DataFrame
     assert len(df) == 1
     row_expected = {"START_TIME": 88, "Delta A": 7.0, "Delta B": -7.0, "caption": ""}
@@ -1268,9 +1268,9 @@ def test_attempt_reaction_step_2_b():
 
 
     # Verify the diagnostic data: part 1 - the "diagnostic_rxn_data", created by single_step_single_rxn()
-    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
-    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
-    coll_tab = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(sim.diagnostics.rxn_data.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.rxn_data.diagnostic_rxn_data) == 1
+    coll_tab = sim.diagnostics.rxn_data.diagnostic_rxn_data[0]
     assert type(coll_tab) is CollectionTabular
     df = coll_tab.get_dataframe()
     row = {"START_TIME": 99, "time_step": 0.02, "aborted": False, "Delta A": 1.4, "Delta B": -1.4, "rate": -70., "caption": ""}
@@ -1280,8 +1280,8 @@ def test_attempt_reaction_step_2_b():
 
     # Verify the diagnostic data: part 2 - the "diagnostic_decisions_data", created by attempt_reaction_step(), this time with
     #   extra fields resulting from the VARIABLE step
-    assert type(sim.diagnostics.diagnostic_decisions_data) is CollectionTabular
-    df = sim.diagnostics.diagnostic_decisions_data.get_dataframe()
+    assert type(sim.diagnostics.step_decision_data.diagnostic_decisions_data) is CollectionTabular
+    df = sim.diagnostics.step_decision_data.diagnostic_decisions_data.get_dataframe()
     assert type(df) is pd.DataFrame
     assert len(df) == 1
     # More fields are present now, because of the variable step
@@ -1528,7 +1528,7 @@ def test_single_step_single_rxn_2():
     species_id_set =  rxn_sim.stoichiometry.get_all_species_ids()
     ind.add_species(species_id_set)
 
-    diagnostics = Diagnostics(reactions=reaction_registry, species_to_index=ind.species_to_index)
+    diagnostics = Diagnostics(reactions=reaction_registry, species_index_map=ind)
 
     system = np.array([10, 50])
     sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
@@ -1541,9 +1541,9 @@ def test_single_step_single_rxn_2():
     assert np.allclose(increment_vector, [7, -7])
     assert math.isclose(result, -70)
 
-    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
+    assert len(sim.diagnostics.rxn_data.diagnostic_rxn_data) == 1
 
-    collection = sim.diagnostics.diagnostic_rxn_data[0]
+    collection = sim.diagnostics.rxn_data.diagnostic_rxn_data[0]
     assert type(collection) is CollectionTabular
     df = collection.get_dataframe()
     assert type(df) is pd.DataFrame
@@ -1556,7 +1556,7 @@ def test_single_step_single_rxn_2():
 
 
     # Re-start with a fresh Diagnostics object; this time we'll take an EXCESSIVE step size
-    diagnostics = Diagnostics(reactions=reaction_registry, species_to_index=ind.species_to_index)
+    diagnostics = Diagnostics(reactions=reaction_registry, species_index_map=ind)
 
     system = np.array([10, 50])
     sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
@@ -1580,9 +1580,9 @@ def test_single_step_single_rxn_2():
     """
     #print(sim.diagnostics)
     # part 1: diagnostic_rxn_data
-    assert type(sim.diagnostics.diagnostic_rxn_data) is dict
-    assert len(sim.diagnostics.diagnostic_rxn_data) == 1
-    collection = sim.diagnostics.diagnostic_rxn_data[0]
+    assert type(sim.diagnostics.rxn_data.diagnostic_rxn_data) is dict
+    assert len(sim.diagnostics.rxn_data.diagnostic_rxn_data) == 1
+    collection = sim.diagnostics.rxn_data.diagnostic_rxn_data[0]
     assert type(collection) is CollectionTabular
     df = collection.get_dataframe()
     assert type(df) is pandas.DataFrame
@@ -1592,8 +1592,8 @@ def test_single_step_single_rxn_2():
     assert compare_pandas(df_expected, df)
 
     # part 2: diagnostic_decisions_data
-    assert len(sim.diagnostics.diagnostic_decisions_data) == 1
-    collection = sim.diagnostics.diagnostic_decisions_data
+    assert len(sim.diagnostics.step_decision_data.diagnostic_decisions_data) == 1
+    collection = sim.diagnostics.step_decision_data.diagnostic_decisions_data
     assert type(collection) is CollectionTabular
     df = collection.get_dataframe()
     assert type(df) is pandas.DataFrame

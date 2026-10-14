@@ -29,6 +29,9 @@ class SpeciesIndexMap:
 
         self.species_registry = species_registry
 
+        if (species_ids is None) and (species_registry is not None):
+            species_ids = species_registry.get_all_species_ids(sort=True)
+            # TODO: if both supplied, verify compatibility
 
         if species_ids is not None:
             self.add_species(species_ids)

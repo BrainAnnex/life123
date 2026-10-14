@@ -135,7 +135,7 @@ dynamics.curve_intersect("B", "C", t_start=0.05, t_end=0.1)
 dynamics.get_history()
 
 # %%
-dynamics.diagnostics.explain_time_advance()
+dynamics.diagnostics.conc_data.explain_time_advance()
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -179,13 +179,13 @@ C_final / A_final
 # %%
 # Concentration increments due to reaction 0 (A <-> B)
 # Note that [C] is not affected
-dynamics.diagnostics.get_rxn_data(rxn_index=0)
+dynamics.diagnostics.rxn_data.get_rxn_data(rxn_index=0)
 
 # %%
 # Concentration increments due to reaction 1 (B <-> C) 
 # Also notice that the 0-th row from the A <-> B reaction isn't seen here (start time 0 and step 0.02), 
 # because that step was aborted early on, BEFORE even getting to THIS reaction
-dynamics.diagnostics.get_rxn_data(rxn_index=1)
+dynamics.diagnostics.rxn_data.get_rxn_data(rxn_index=1)
 
 # %%
 
