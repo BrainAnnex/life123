@@ -256,6 +256,8 @@ def test_specify_steps():
 
 def test_single_compartment_react():
 
+    # TODO: test `self.number_neg_concs` and `self.number_soft_aborts`
+
     # Test based on experiment "cycles_1"  (with 3 reactions)
     species_registry = SpeciesRegistry(ids=["A", "B", "C", "E_high", "E_low"])
     rxns = ReactionRegistry(species_registry=species_registry)
@@ -592,8 +594,6 @@ def test__single_compartment_react_main_loop_2_a():
 
     # Inspect the `sim.reaction_step_diagnostics` data object
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.02)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
                                                            'step_factor': 1,
                                                            'applicable_norms': 'ALL'}
@@ -633,8 +633,6 @@ def test__single_compartment_react_main_loop_2_a():
 
     # Inspect the `sim.reaction_step_diagnostics` data object
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
                                                            'step_factor': 0.8,
                                                            'applicable_norms': ['norm_A']}
@@ -675,8 +673,6 @@ def test__single_compartment_react_main_loop_2_a():
 
     # Inspect the `sim.reaction_step_diagnostics` data object
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.0186624)    # 0.8 * 0.5 * (0.6)^6, from multiple re-tries
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
                                                            'step_factor': 1,
                                                            'applicable_norms': 'ALL'}
@@ -962,8 +958,6 @@ def test_reaction_step_common_variable_step_1():
     assert np.allclose(incr, [1.4, -1.4])
 
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.02)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'stay', 'operation': 'stay',
                                                            'step_factor': 1,
                                                            'applicable_norms': 'ALL'}
@@ -983,8 +977,6 @@ def test_reaction_step_common_variable_step_1():
     assert np.allclose(incr, [1.68, -1.68])
 
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
                                                            'step_factor': 0.8,
                                                            'applicable_norms': ['norm_A']}
@@ -1006,8 +998,6 @@ def test_reaction_step_common_variable_step_1():
     assert np.allclose(incr, [0.7, -0.7])
 
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.01)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'low', 'operation': 'upshift',
                                                            'step_factor': 1.5,
                                                            'applicable_norms': 'ALL'}
@@ -1043,8 +1033,6 @@ def test_reaction_step_common_variable_step_2(capsys):
     assert np.allclose(incr, [1.68, -1.68])
 
     assert math.isclose(sim.reaction_step_diagnostics.delta_time, 0.024)
-    assert sim.reaction_step_diagnostics.number_neg_concs == 0
-    assert sim.reaction_step_diagnostics.number_soft_aborts == 0
     assert sim.reaction_step_diagnostics.decision_data == {'action': 'high', 'operation': 'downshift',
                                                            'step_factor': 0.8,
                                                            'applicable_norms': ['norm_A']}

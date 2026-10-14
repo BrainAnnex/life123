@@ -22,7 +22,7 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Sep. 23, 2026"
+LAST_REVISED = "Oct. 13, 2026"
 LIFE123_VERSION = "1.0.0rc9"     # Library version this experiment is based on
 
 # %%
@@ -47,7 +47,8 @@ life123.check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 # Instantiate the simulator and specify the reaction and the chemicals
-uc = life123.UniformCompartment()  
+# Accepting the default:  method="forward_euler"
+uc = life123.ReactionSimulator()     # We call this "uc" because it's a "uniform compartment"
 
 # Elementary Reaction A <-> B
 uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR": 2.})
@@ -58,7 +59,7 @@ uc.describe_reactions()
 uc.get_species_registry().as_dataframe()   # Show all the species and their data
 
 # %%
-# Set the initial concentrations of all the chemicals
+# Set the initial concentrations of all the species
 uc.set_conc({"A": 80., "B": 10.})
 
 # %%

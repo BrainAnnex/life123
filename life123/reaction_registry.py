@@ -543,10 +543,10 @@ class ReactionRegistry:
 
 
         #if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Chemicals involved in the above reactions: {chem_labels}")
+        print(f"Species involved in the above reactions: {chem_labels}")
         '''
         else:
-            print(f"Chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
+            print(f"Species involved in the above reactions (not counting enzymes): {chem_labels}")
 
             print(f"Enzymes involved in the above reactions: ")
             for enz in self.names_of_enzymes():

@@ -10,13 +10,16 @@ import time
 import plotly.graph_objects as pgo
 from dataclasses import dataclass, field
 from typing import Any
+from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
 from life123.species_index_map import SpeciesIndexMap
 from life123.reaction_registry import ReactionRegistry
 from life123.diagnostics import Diagnostics
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
+from life123.numerical import Numerical
 from life123.uniform_compartment import UniformCompartment
-from life123.analytic_reaction_solver import AnalyticReactionSolver
+
+from life123.visualization.plotly_helper import PlotlyHelper
 
 
 
@@ -72,9 +75,6 @@ class ReactionStep:
 
 
     # All the attributes below are only applicable to variable steps
-
-    number_neg_concs : int = 0                  # Zero default upon starting a new sim step
-    number_soft_aborts : int = 0                # Zero default upon starting a new sim step
 
     norms: dict[str, Any] | None = None         #
                                                 # EXAMPLE: {'norm_A': 0.98, 'norm_B': 0.14}
@@ -200,6 +200,10 @@ class ReactionSimulator:
         self.diagnostic_data_snapshot = {}      # TODO: unclear if still needed, now that we have
                                                 #       `self.reaction_step_diagnostics.system_rxn_rates` (maybe merge?)
 
+        self.number_neg_concs = 0       # Note: this is a cumulative value for an entire run; not just a single step
+                                        #       It will get reset upon starting a new sim run
+        self.number_soft_aborts = 0     #   (ditto)
+
         self.reaction_step_diagnostics = None   # Internal data about a single reaction step
                                                 #   (taken in full OR aborted!)
                                                 #   Object of dataclass "ReactionStep"
@@ -251,7 +255,23 @@ class ReactionSimulator:
 
 
 
-    #########  MISC. UTILITIES  #########
+    #####################################################################################################
+
+    '''                              ~   READ/WRITE/SYNCHRONIZE   ~                                   '''
+
+    def ________READ_WRITE_SYNCHRONIZE________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def get_species_registry(self) -> SpeciesRegistry:
+        """
+        Return the "SpeciesRegistry" object being used
+
+        :return:    Object of type "SpeciesRegistry"
+        """
+        return self.species_registry
+
 
 
     def _synchronize_species(self) -> None:
@@ -362,12 +382,18 @@ class ReactionSimulator:
 
 
 
-    def set_conc(self, conc :dict, snapshot=False) -> None:
+    def set_conc(self, conc :dict, snapshot=True) -> None:
         """
+        Set the concentrations of a group of species
 
-        :param conc:
-        :param snapshot:
-        :return:
+        :param conc:    A dict indexed by the species id, for the species of interest.
+                            Anything not specified will be left undisturbed
+                            EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
+
+                        Note: any previous values will get over-written
+        :param snapshot:[OPTIONAL] If True (default), add to the history
+                            a snapshot of this state being set
+        :return:        None
         """
         if snapshot:
             self.system.set_conc(conc=conc,
@@ -458,6 +484,7 @@ class ReactionSimulator:
             self.diagnostics.rxn_data.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                          caption=f"aborted: neg. conc. from combined multiple rxns")
     
+
 
 
 
@@ -630,8 +657,8 @@ class ReactionSimulator:
         step_count = 0
 
         # Reset some diagnostic variables
-        #self.reaction_step_diagnostics.number_neg_concs = 0
-        #self.reaction_step_diagnostics.number_soft_aborts = 0
+        self.number_neg_concs = 0       # Note: this is a cumulative value for an entire run; not just a single step
+        self.number_soft_aborts = 0     #   (ditto)
         self.adaptive_steps.reset_norm_usage_stats()
 
         # Time-related
@@ -722,10 +749,10 @@ class ReactionSimulator:
                 display_time_taken = f"{time_taken/60.:.2f} min"
             print(f"{n_steps_taken} total {step_type_str}step(s) taken in {display_time_taken}")
             if variable_steps:
-                if self.reaction_step_diagnostics.number_neg_concs:
-                    print(f"Number of step re-do's because of negative concentrations: {self.reaction_step_diagnostics.number_neg_concs}")
-                if self.reaction_step_diagnostics.number_soft_aborts:
-                    print(f"Number of step re-do's because of elective soft aborts: {self.reaction_step_diagnostics.number_soft_aborts}")
+                if self.number_neg_concs:
+                    print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
+                if self.number_soft_aborts:
+                    print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
 
                 print("Norm usage:", self.adaptive_steps.norm_usage)
                 print(f"System Time is now: {self.system_time:,.5g}")
@@ -974,7 +1001,7 @@ class ReactionSimulator:
                 #       1. negative concentrations from any one reaction - caught by  validate_increment()
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #print("*** CAUGHT a HARD ABORT")
-                self.reaction_step_diagnostics.number_neg_concs += 1
+                self.number_neg_concs += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     explanation = ex.details.get("message")
                     explanation += f"\n      -> will backtrack, and re-do step with a SMALLER delta time, " \
@@ -996,7 +1023,7 @@ class ReactionSimulator:
                 # under the following scenario:
                 #       * excessive norm(s) measures in the overall step - caught in this function
                 #print("*** CAUGHT a soft ABORT")
-                self.reaction_step_diagnostics.number_soft_aborts += 1
+                self.number_soft_aborts += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     msg = ex.details.get("message")
                     print(f"       {msg}")
@@ -2020,7 +2047,7 @@ class ReactionSimulator:
             else:
                 df = self.get_history()
 
-        chem_list = self.species_data.get_all_species_ids()  # List of all the chemicals' names
+        chem_list = self.species_registry.get_all_species_ids()  # List of all the chemicals' names
 
         if row:
             return df.loc[row][chem_list].to_numpy(dtype='float32')
@@ -2110,27 +2137,27 @@ class ReactionSimulator:
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
-        n_species = self.number_of_system_species()
+        n_species = self.system.number_of_system_species()
         print(f"{n_species} species:")
 
         # Show a line of line of data for each species in turn
-        for species_index, name in enumerate(self.species_data.get_all_species_ids()):
+        for species_index, name in enumerate(self.species_registry.get_all_species_ids()):
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
                 name = ""
 
-            if len(self.system) == 0:
+            if len(self.system.system_state) == 0:
                 print(f"  Species {species_index}{name}. No concentrations set yet")
             else:
                 print(f"  Species {species_index}{name}. Conc: {self.system.system_state[species_index]}")
 
-        if self.macro_system != {}:
-            print("Macro-molecules, with their counts: ", self.macro_system)
+        if self.system.macro_system != {}:
+            print("Macro-molecules, with their counts: ", self.system.macro_system)
 
-        if self.macro_system_state != {}:
+        if self.system.macro_system_state != {}:
             print("Fractional Occupancy at the various binding sites for each macro-molecule:")
-            for mm, state_dict in self.macro_system_state.items():
+            for mm, state_dict in self.system.macro_system_state.items():
                 state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
                 state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
                 print(f"     {mm} || {state_str}")
@@ -2207,7 +2234,7 @@ class ReactionSimulator:
         :return:                A plotly "Figure" object
         """
         if species is None:
-            species = self.species_data.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
+            species = self.species_registry.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.reaction_registry.number_of_reactions()
@@ -2239,7 +2266,7 @@ class ReactionSimulator:
         if (colors is None) and (add_colors is None):      # If no colors were specified in this function call
             # Attempt to make use of the previously-registered colors, if available;
             # otherwise, automatically assign them, and save them with the species data
-            colors = self.species_data.assign_colors(species)   # TODO: ought to avoid existing colors (or at least color/style combos)
+            colors = self.species_registry.assign_colors(species)   # TODO: ought to avoid existing colors (or at least color/style combos)
         elif (add_colors is None):      # Using argument `colors`
             if type(colors)==str:
                 colors = [colors]       # Turn a single value into a string
@@ -2247,7 +2274,7 @@ class ReactionSimulator:
                 f"plot_history(): the number of provided colors ({len(colors)}) doesn't match the number of species ({len(species)})"
             # Save the passed colors with the species data
             for i, col in enumerate(colors):
-                self.get_species_data().set_value(species_id=species[i], field="plot_color", value=col)
+                self.get_species_registry().set_value(species_id=species[i], field="plot_color", value=col)
         else:                           # Using argument `add_colors`
             if type(add_colors) == str:
                 add_colors = [add_colors]       # Turn a single value into a string
@@ -2258,7 +2285,7 @@ class ReactionSimulator:
 
             colors = []     # The colors to be used for this plot, in the same order as the `species` list
             for i, sp in enumerate(species):
-                registered_color = self.get_species_data().get_value(species_id=species[i], field="plot_color")    # Might be blank
+                registered_color = self.get_species_registry().get_value(species_id=species[i], field="plot_color")    # Might be blank
                 if registered_color:    # A color was already assigned to this species
                     colors.append(registered_color)     # Use the pre-assigned color for this species
                 else:
@@ -2268,7 +2295,7 @@ class ReactionSimulator:
                     new_color = add_colors[0]   # Get the next color, from the start of the list
                     del add_colors[0]           # Drop that first element from the list
                     # Use the passed color for this species (and also save it in its species data)
-                    self.get_species_data().set_value(species_id=species[i], field="plot_color", value=new_color)
+                    self.get_species_registry().set_value(species_id=species[i], field="plot_color", value=new_color)
                     colors.append(new_color)
 
 
@@ -3099,7 +3126,7 @@ class VariableTimeSteps:
         # restrict our consideration to only the dynamically involved ones
         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
         #          the reactions are simulated
-        #if self.species_data.number_of_active_chemicals() < n_chems:
+        #if self.species_registry.number_of_active_chemicals() < n_chems:
         if len(indexes_of_active_chemicals) < n_chems:
             delta_conc = delta_conc[indexes_of_active_chemicals]
             #print(f"\nadjust_timestep(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
