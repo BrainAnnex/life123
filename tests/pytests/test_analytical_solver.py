@@ -164,7 +164,7 @@ def test_exact_advance_synthesis_reversible():
     assert np.allclose(P_t, 20.24233230049967)
 
     Dp = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=True)
-    assert np.allclose(Dp, 0.24233230049967)    # This is a DELTA value
+    assert np.allclose(Dp, 0.24233229989273042)    # This is a DELTA value
 
     P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0003, incremental=False)
     assert np.allclose(P_t, 20.70580470925962)

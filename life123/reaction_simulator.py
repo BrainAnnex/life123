@@ -93,7 +93,7 @@ class ReactionSimulator:
     This might be thought of as a "zero-dimensional system".
     """
     
-    def __init__(self, system=None, species_index_map=None, reaction_registry=None, exact=False,
+    def __init__(self, system=None, species_index_map=None, reaction_registry=None,
                  diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
                  uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None,
                  macromolecules=None):
@@ -108,13 +108,11 @@ class ReactionSimulator:
                                 If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
                                 nor `names` (names are contained in the `species_data` object)
 
-
-        :param exact:       [OPTIONAL] If True, use exact analytical solutions whenever possible
         :param diagnostics:
         :param diagnostics_enabled: [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
-        :param method:
+        :param method:      [OPTIONAL] If "analytic", use exact analytical solutions whenever possible; fall back to forward Euler
         :param preset:      [OPTIONAL] String with name of a standard preset
                                 that can be specified to make the time resolution finer or coarser;
                                 it will stay in effect from now on, unless explicitly changed later.
@@ -186,10 +184,6 @@ class ReactionSimulator:
 
         self.system_time = 0.       # Global time of the system, from initialization
         self.previous_system = None # Concentration data of all the species at the previous simulation step
-
-
-        self.exact :bool = exact                # If True, use exact analytical solutions whenever possible;
-                                                # if False, always use the "Forward Euler" approximation method
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
@@ -1518,6 +1512,7 @@ class ReactionSimulator:
         :param delta_time:  The duration of the single time step to take
         :return:            A dictionary of concentration increments for all the species involved
         """
+        # TODO: pytest
         reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
         products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
 
@@ -1538,7 +1533,31 @@ class ReactionSimulator:
             # Work out the stoichiometry for all the species
             increment_dict_single_rxn = {r: -delta_p, p: delta_p}
             return increment_dict_single_rxn
-        else:       # TODO: implement "TWO_TO_ONE" and "ONE_TO_TWO"
+
+
+        elif rxn.analytic_solution_family == "TWO_TO_ONE":
+            # EXAMPLE: A + B -> P       TODO: pytest
+            a = reactants[0][1]           # EXAMPLE: "A"
+            b = reactants[1][1]           # EXAMPLE: "B"
+            p = products[0][1]            # EXAMPLE: "P"
+
+            a0 = conc_init[a]
+            b0 = conc_init[b]
+            p0 = conc_init[p]
+            # Compute the respective increments of R0 and P0
+            if rxn.model.reversible:
+                delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                            A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+            else:
+                delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
+                                                                                      A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
+            return increment_dict_single_rxn
+
+
+        else:       # TODO: implement "ONE_TO_TWO"
             raise Exception(f"analytic_solver_single_rxn(): no exact analytic solution "
                             f"is currently implemented for reactions of type {rxn.analytic_solution_family}")
 
@@ -1653,16 +1672,7 @@ class ReactionSimulator:
                                     for species in all_species}
 
         return (delta_conc, rate_initial)
-    
 
-
-    def set_exact_mode(self, exact :bool) -> None:
-        """
-
-        :param exact:   If True, use exact analytical solutions whenever possible
-        :return:        None
-        """
-        self.exact = exact
 
 
     def set_preset(self, preset :str) -> None:

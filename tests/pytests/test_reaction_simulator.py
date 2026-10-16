@@ -64,7 +64,6 @@ def test_CONSTRUCTOR_1():
     assert sim.method == "forward_euler"
     assert sim.system_time == 0
     assert sim.previous_system is None
-    assert sim.exact is False
     assert math.isclose(sim.temp, 298.15)
     assert sim.diagnostics_enabled is False
     assert sim.diagnostics is None
@@ -1488,7 +1487,7 @@ def test_single_step_single_rxn_1():
 
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(method="analytic", exact=True,
+    sim = ReactionSimulator(method="analytic",
                             system=system, species_index_map=ind)
 
     increment_vector = np.zeros(2, dtype='d')
@@ -1710,10 +1709,44 @@ def test_dispatcher_single_rxn():
     assert compare_dicts(delta_conc, {'A': 5.25, 'B': -5.25})
     assert math.isclose(rate, -70)
 
-    sim = ReactionSimulator(method="analytic", exact=True)
+    sim = ReactionSimulator(method="analytic")
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 5.508570764023133, 'B': -5.508570764023133}) # A lot closer to Heun than to forward Euler!
     assert math.isclose(rate, -70)
+
+
+
+def test_analytic_solver_single_rxn():
+
+    sim = ReactionSimulator(method="analytic")
+
+    # Reaction : A <-> B
+    sim.add_reaction(reactants="A", products="B",
+                     reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    assert compare_dicts(delta_conc, {'A': 5.508570764023133, 'B': -5.508570764023133})
+    assert math.isclose(rate, -70)
+
+    # TODO: test irreversible
+
+
+    # Fresh start with a new reaction A + B <-> P
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants=["A", "B"], products="P",
+                     reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50, "P":20}, delta_time=0.0001)
+    assert compare_dicts(delta_conc, {'A': -0.24233229989273042, 'B': -0.24233229989273042, 'P': 0.24233229989273042})
+    assert math.isclose(rate, 2460)     # 5. * 10 * 50 - 2. * 20
+
+    # TODO: test irreversible
+
+    # TODO: implement and test dissociation reactions
 
 
 

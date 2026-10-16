@@ -28,7 +28,7 @@
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Sep. 23, 2026"
+LAST_REVISED = "Oct. 15, 2026"
 LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based on
 
 # %%
@@ -43,7 +43,7 @@ import numpy as np
 import ipynbname
 from IPython.display import IFrame
 
-from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
+from life123 import check_version, ReactionSimulator, ReactionKinetics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -63,12 +63,10 @@ log_file
 
 # %%
 # Instantiate the simulator and specify the chemicals
-uc = ReactionSimulator()
+uc = ReactionSimulator()     # We call this "uc" because it's a "uniform compartment"
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 uc.add_reaction(reactants="A", products="B", kinetic_parameters={"kF": 3., "kR": 2.})
-
-print("Number of reactions: ", uc.number_of_reactions())
 
 # %%
 uc.describe_reactions()
@@ -149,7 +147,7 @@ uc.get_history()
 # ### Check the final equilibrium
 
 # %%
-uc.get_system_conc()   # The current concentrations, in the order the chemicals were added 
+uc.system.get_conc_as_dict()   # The current concentrations, in the order the chemicals were added 
 
 # %% [markdown]
 # That's very close to the values we previewed earlier:  {'A': 24.0, 'B': 36.0}
@@ -160,7 +158,7 @@ uc.get_system_conc()   # The current concentrations, in the order the chemicals 
 uc.is_in_equilibrium()
 
 # %% [markdown]
-# ### As noted earlier, because of the high initial concentration of B relative to A, the overall reaction has proceeded IN REVERSE
+# ### As noted earlier, because of the high initial concentration of `B` relative to `A`, the overall reaction has proceeded IN REVERSE
 
 # %% [markdown]
 # ## Plots of changes of concentration with time
