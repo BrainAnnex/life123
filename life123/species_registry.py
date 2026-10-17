@@ -355,7 +355,7 @@ class SpeciesRegistry:
                 f"SpeciesRegistry() instantiation: the number of elements in the special argument `{k}` ({len(v)}) " \
                 f"doesn't match the number of species ({number_species})"
 
-            self.set_all_values(field=k, values=v)
+            self.set_all_values(field_name=k, values=v)
 
 
 
@@ -667,15 +667,15 @@ class SpeciesRegistry:
 
 
 
-    def set_value(self, species_id :str, field=None, value=None) -> None:
+    def set_value(self, species_id :str, field_name=None, value=None) -> None:
         """
         Set the value of one specific field (property) for the given species.
         For setting multiple values at once, you may use update()
 
-        EXAMPLE:    set_value(species_id="X", field="diffusion_rate", value=123)
+        EXAMPLE:    set_value(species_id="X", field_name="diffusion_rate", value=123)
 
         :param species_id:  String with a unique value to identify a species
-        :param field:       The name of the property of interest;
+        :param field_name:   The name of the property of interest;
                                 it must match against one of the property names of the class "Species"
         :param value:       The value that we wish to set for the above property;
                                 note that None is an acceptable value
@@ -684,18 +684,18 @@ class SpeciesRegistry:
         s = self.get_species(species_id)
         # TODO: validate for unique name and label, if applicable
 
-        setattr(s, field, value)       # In-place modification.  Note: value could be None
+        setattr(s, field_name, value)       # In-place modification.  Note: value could be None
 
 
 
-    def set_all_values(self, field :str, values :list) -> None:
+    def set_all_values(self, field_name :str, values :list) -> None:
         """
         Set values across ALL species, in order of their registration index,
         for the specified field (property)
 
-        :param field:   The name of the property of interest.  EXAMPLE: "formula"
-        :param values:  A list of values compatible with the above field
-        :return:        None
+        :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
+        :param values:      A list of values compatible with the above field
+        :return:            None
         """
         assert type(values) == list or type(values) == tuple, \
             "set_values(): the argument `values` must be a list or tuple"
@@ -706,7 +706,7 @@ class SpeciesRegistry:
 
         index = 0
         for key, val in self.by_id.items():
-            self.set_value(species_id=key, field=field, value=values[index])
+            self.set_value(species_id=key, field_name=field_name, value=values[index])
             index += 1
 
 
@@ -749,7 +749,7 @@ class SpeciesRegistry:
                 new_color = fallback_colors[new_color_index]
                 new_color_index += 1
                 registered_colors.append(new_color)
-                self.set_value(species_id=label, field="plot_color", value=new_color)
+                self.set_value(species_id=label, field_name="plot_color", value=new_color)
 
 
         return registered_colors        # List of color names, with as many entries as the species of interest

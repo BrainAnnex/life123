@@ -406,10 +406,13 @@ class ReactionRegistry:
 
         :param reaction_model:[OPTIONAL] Primarily meant for the kinetics.
                                 Allowed values are "mass action", "michaelis menten",
-                                "single substrate mechanism", "custom" - as detailed
-                                in class ReactionModelRegistry.
-                                If not provided, it default to "mass action" if the reaction
-                                seems to be elementary from its stoichiometry and kinetic_parameters.
+                                    "single substrate mechanism", "custom";
+                                    for more details, see the class ReactionModelRegistry.
+                                If not provided, it defaults to "mass action" *if* the reaction
+                                    seems to be elementary from its stoichiometry and kinetic_parameters.
+                                If the value "custom" is passed, the dict argument `kinetic_parameters`
+                                    MUST include the key "rate_function", with a value that is a function that handles the custom kinetics;
+                                    EXAMPLE:  {"rate_function": Custom_Model.kinetic_rate_first_order}
         :param autoregister_species:
         :param thermodynamic_parameters:
         :param kinetic_parameters:

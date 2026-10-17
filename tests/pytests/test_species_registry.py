@@ -440,16 +440,16 @@ def test_get_max_value():
 
 
     sr.add_single_species(species_id="A")
-    sr.set_value(species_id="A", field="diffusion_rate", value=10)
+    sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
     result = sr.max_value(field="diffusion_rate")
     assert result == 10
 
     sr.add_single_species(species_id="B")
-    sr.set_value(species_id="B", field="diffusion_rate", value=3)
+    sr.set_value(species_id="B", field_name="diffusion_rate", value=3)
     result = sr.max_value(field="diffusion_rate")
     assert result == 10
 
-    sr.set_value(species_id="B", field="diffusion_rate", value=11)
+    sr.set_value(species_id="B", field_name="diffusion_rate", value=11)
     result = sr.max_value(field="diffusion_rate")
     assert result == 11
 
@@ -465,14 +465,14 @@ def test_missing_values_present():
     assert not sr.has_missing_values(field="diffusion_rate")
 
     sr.add_single_species(species_id="A")
-    sr.set_value(species_id="A", field="diffusion_rate", value=10)
+    sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
     assert not sr.has_missing_values(field="diffusion_rate")
 
     sr.add_single_species(species_id="B")
-    sr.set_value(species_id="B", field="diffusion_rate", value=3)
+    sr.set_value(species_id="B", field_name="diffusion_rate", value=3)
     assert not sr.has_missing_values(field="diffusion_rate")
 
-    sr.set_value(species_id="B", field="diffusion_rate", value=11)
+    sr.set_value(species_id="B", field_name="diffusion_rate", value=11)
     assert not sr.has_missing_values(field="diffusion_rate")
 
     sr.add_single_species(species_id="X")      # This won't get the `diffusion_rate` set; its value will be None
@@ -663,16 +663,16 @@ def test_set_value():
 
     sr.add_single_species(species_id="A")
 
-    sr.set_value(species_id="A", field="diffusion_rate", value=10)
+    sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
     assert  sr.get_value(species_id="A", field="diffusion_rate") == 10
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="A", field="diffusion_rate", value=-4)     # Bad value
+        sr.set_value(species_id="A", field_name="diffusion_rate", value=-4)     # Bad value
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="A", field="categories", value="I'm not a list")    # Bad value
+        sr.set_value(species_id="A", field_name="categories", value="I'm not a list")    # Bad value
 
-    sr.set_value(species_id="A", field="categories", value=["protein", "enzyme"])
+    sr.set_value(species_id="A", field_name="categories", value=["protein", "enzyme"])
     result = sr.get_value(species_id="A", field="categories")
     assert result == ["protein", "enzyme"]
     result = sr.get_value(species_id="A", field="diffusion_rate")
@@ -680,7 +680,7 @@ def test_set_value():
 
 
     sr.add_single_species(species_id="B", plot_color="magenta")
-    sr.set_value(species_id="B", field="plot_color", value="plum")
+    sr.set_value(species_id="B", field_name="plot_color", value="plum")
     result = sr.get_value(species_id="B", field="plot_color")
     assert result == "plum"
 
@@ -693,24 +693,24 @@ def test_set_value():
                                           categories=[], metadata={}, annotation='', plot_color='plum')
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="name", value={"a": 1})      # Bad value
+        sr.set_value(species_id="B", field_name="name", value={"a": 1})      # Bad value
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="name", value="      ")      # Bad value
+        sr.set_value(species_id="B", field_name="name", value="      ")      # Bad value
 
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="label", value=1234)         # Bad value
+        sr.set_value(species_id="B", field_name="label", value=1234)         # Bad value
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field="label", value="      ")     # Bad value
+        sr.set_value(species_id="B", field_name="label", value="      ")     # Bad value
 
 
-    sr.set_value(species_id="A", field="diffusion_rate", value=None)    # None is a legit value to use
+    sr.set_value(species_id="A", field_name="diffusion_rate", value=None)    # None is a legit value to use
     assert sr.get_value(species_id="A", field="diffusion_rate") is None
 
     with pytest.raises(Exception):
-        sr.set_value(species_id="A", field="Impostor", value=666)       # Field doesn't exist in Species
+        sr.set_value(species_id="A", field_name="Impostor", value=666)       # Field doesn't exist in Species
 
 
 
@@ -718,26 +718,26 @@ def test_set_all_values():
     sr = SpeciesRegistry()
 
     with pytest.raises(Exception):
-        sr.set_all_values(field="diffusion_rate", values=[5])  # Mismatch with registry size
+        sr.set_all_values(field_name="diffusion_rate", values=[5])  # Mismatch with registry size
 
     sr.add_single_species(species_id="A")
     assert sr.get_value(species_id="A", field="diffusion_rate") is None    # Not yet set
-    sr.set_all_values(field="diffusion_rate", values=[5])
+    sr.set_all_values(field_name="diffusion_rate", values=[5])
     assert sr.get_value(species_id="A", field="diffusion_rate") == 5       # Now set
 
     sr.add_single_species(species_id="B")
     assert sr.get_all_values(field="diffusion_rate") == [5, None]
 
     with pytest.raises(Exception):
-        sr.set_all_values(field="diffusion_rate", values=[5])  # Mismatch with registry size
+        sr.set_all_values(field_name="diffusion_rate", values=[5])  # Mismatch with registry size
 
-    sr.set_all_values(field="diffusion_rate", values=[8, 12])
+    sr.set_all_values(field_name="diffusion_rate", values=[8, 12])
     assert sr.get_all_values(field="diffusion_rate") == [8, 12]
 
-    sr.set_all_values(field="diffusion_rate", values=[None, 666])
+    sr.set_all_values(field_name="diffusion_rate", values=[None, 666])
     assert sr.get_all_values(field="diffusion_rate") == [None, 666]
 
-    sr.set_all_values(field="plot_color", values=["red", "pink"])
+    sr.set_all_values(field_name="plot_color", values=["red", "pink"])
     assert sr.get_all_values(field="plot_color") == ["red", "pink"]
 
     assert sr.get_species("A") == Species(id='A', name='A', label='A', sort_order=0, diffusion_rate=None, charge=0, formula='',
@@ -762,7 +762,7 @@ def test_assign_colors():
     default_col_1, default_col_2, default_col_3 = Colors.assign_default_colors(3)
 
     sr = SpeciesRegistry(ids="A")
-    sr.set_value(species_id="A", field="plot_color", value="red")
+    sr.set_value(species_id="A", field_name="plot_color", value="red")
     result = sr.assign_colors("A")
     assert result == ["red"]
     assert sr.get_value(species_id="A", field="plot_color") == "red"
@@ -774,20 +774,20 @@ def test_assign_colors():
 
 
     sr = SpeciesRegistry(ids=["A", "B"])
-    sr.set_all_values(field="plot_color", values=["red", "blue"])
+    sr.set_all_values(field_name="plot_color", values=["red", "blue"])
     result = sr.assign_colors(["A", "B"])
     assert result == ["red", "blue"]
     assert sr.get_all_values(field="plot_color") == ["red", "blue"]
 
     sr = SpeciesRegistry(ids="A")
-    sr.set_value(species_id="A", field="plot_color", value="red")
+    sr.set_value(species_id="A", field_name="plot_color", value="red")
     sr.add_single_species(species_id="B")
     result = sr.assign_colors(["A", "B"])
     assert result == ["red", default_col_1]
     assert sr.get_all_values(field="plot_color") == ["red", default_col_1]
 
     sr = SpeciesRegistry(ids=["A", "B"])
-    sr.set_value(species_id="B", field="plot_color", value="yellow")
+    sr.set_value(species_id="B", field_name="plot_color", value="yellow")
     result = sr.assign_colors(["A", "B"])
     assert result == [default_col_1, "yellow"]
     assert sr.get_all_values(field="plot_color") == [default_col_1, "yellow"]
@@ -803,8 +803,8 @@ def test_assign_colors():
     assert sr.get_all_values(field="plot_color") == [default_col_1, default_col_2]
 
     sr = SpeciesRegistry(ids=["A", "B", "C"])
-    sr.set_value(species_id="A", field="plot_color", value="red")
-    sr.set_value(species_id="C", field="plot_color", value="yellow")
+    sr.set_value(species_id="A", field_name="plot_color", value="red")
+    sr.set_value(species_id="C", field_name="plot_color", value="yellow")
     result = sr.assign_colors(["A", "B", "C"])
     assert result == ["red", default_col_1, "yellow"]
     assert sr.get_all_values(field="plot_color") == ["red", default_col_1, "yellow"]
@@ -817,8 +817,8 @@ def test_assign_colors():
     assert sr.get_value(species_id="D", field="plot_color") == default_col_3
 
     sr = SpeciesRegistry(ids=["A", "B", "C", "D", "E"])
-    sr.set_value(species_id="B", field="plot_color", value="red")
-    sr.set_value(species_id="D", field="plot_color", value="yellow")
+    sr.set_value(species_id="B", field_name="plot_color", value="red")
+    sr.set_value(species_id="D", field_name="plot_color", value="yellow")
     result = sr.assign_colors(["B", "C", "D"])
     assert result == ["red", default_col_1, "yellow"]
     assert sr.get_value(species_id="B", field="plot_color") == "red"
@@ -832,7 +832,7 @@ def test_get_color_mapping_by_index():
     assert sr.get_color_mapping_by_index() == {}
 
     sr = SpeciesRegistry(n_species=3)
-    sr.set_all_values(field="plot_color", values=['red', 'green', 'blue'])
+    sr.set_all_values(field_name="plot_color", values=['red', 'green', 'blue'])
     assert sr.get_color_mapping_by_index() == {0: "red", 1: "green", 2: "blue"}
 
 

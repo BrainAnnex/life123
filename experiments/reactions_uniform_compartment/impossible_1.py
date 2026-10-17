@@ -17,7 +17,7 @@
 # ## Violating the Laws of Physics for Fun and Insight!
 # ###  A cascade of reactions `A <-> B <-> C` , mostly in the forward direction
 # ### [PART 1](#impossible_1_part1) : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the cycle with :
-# #### `C <-> A`,  *ALSO* mostly in the forward direction _(never mind the laws of thermodymics)!_
+# #### `C <-> A`,  *ALSO* mostly in the forward direction _(never mind the laws of thermodynamics)!_
 # ### [PART 2](#impossible_1_part2) : restoring the law of physics (by letting `C <-> A` adjust its kinetics based on the energy difference.)
 #
 # All 1st-order kinetics.    

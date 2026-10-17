@@ -155,7 +155,7 @@ rome_group.as_dataframe()
 # Several functions help deal with setting and reading values
 rome_group.update(species_id="Q", diffusion_rate=5, plot_color="red")
 
-rome_group.set_value(species_id="R", field="diffusion_rate", value=8)   # Alternate way to set a single value
+rome_group.set_value(species_id="R", field_name="diffusion_rate", value=8)   # Alternate way to set a single value
 
 rome_group.as_dataframe()
 

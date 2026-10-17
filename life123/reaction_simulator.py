@@ -95,7 +95,7 @@ class ReactionSimulator:
     """
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None,
-                 diagnostics=None, diagnostics_enabled=False, method="forward_euler", preset="mid",
+                 diagnostics=None, enable_diagnostics=False, method="forward_euler", preset="mid",
                  uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None,
                  macromolecules=None):
         """
@@ -110,10 +110,11 @@ class ReactionSimulator:
                                 nor `names` (names are contained in the `species_data` object)
 
         :param diagnostics:
-        :param diagnostics_enabled: [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
+        :param enable_diagnostics: [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
-        :param method:      [OPTIONAL] If "analytic", use exact analytical solutions whenever possible; fall back to forward Euler
+        :param method:      [OPTIONAL] One of the following strings:  "forward_euler", "heun" or "analytic".
+                                If "analytic", use exact analytical solutions whenever possible; failing that, fall back to forward Euler
         :param preset:      [OPTIONAL] String with name of a standard preset
                                 that can be specified to make the time resolution finer or coarser;
                                 it will stay in effect from now on, unless explicitly changed later.
@@ -190,7 +191,7 @@ class ReactionSimulator:
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
 
-        self.diagnostics_enabled = diagnostics_enabled  # Flag indicating whether using diagnostics
+        self.diagnostics_enabled = enable_diagnostics  # Flag indicating whether using diagnostics
         self.diagnostics :Diagnostics = diagnostics
         self.diagnostic_data_snapshot = {}      # TODO: unclear if still needed, now that we have
                                                 #       `self.reaction_step_diagnostics.system_rxn_rates` (maybe merge?)
@@ -204,13 +205,14 @@ class ReactionSimulator:
                                                 #   Object of dataclass "ReactionStep"
 
 
+        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
+                                                                        # of (some of) the species concentrations:
+                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
+
         self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
                                                                     # of (some of) the chemical reaction rates:
                                                                     # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
-        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
-                                                                        # of (some of) the species concentrations:
-                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # Note that reactions natively supported that contain multiple elementary reactions (such as
@@ -338,11 +340,11 @@ class ReactionSimulator:
 
 
 
-    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
+    def capture_conc_snapshot(self, caption="", step_count=None, extra=False) -> None:
         """
 
-        :param step_count:  [OPTIONAL] Step count in the simulation
         :param caption:     [OPTIONAL]
+        :param step_count:  [OPTIONAL] Step count in the simulation
         :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
                                 the capture frequency will NOT considered in the
                                 decision about saving it, but a check will be performed
@@ -350,6 +352,7 @@ class ReactionSimulator:
 
         :return:            None
         """
+        # Check whether this snapshot ought to be skipped, based on some criteria
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
@@ -377,11 +380,34 @@ class ReactionSimulator:
 
 
 
+    def set_single_conc(self, conc, species_id=None, allow_growth=False,
+                        snapshot=True) -> None:
+        """
+
+        :param conc:
+        :param species_id:
+        :param allow_growth:
+        :param snapshot:[OPTIONAL] If True (default), add to the history
+                            a snapshot of this state being set
+        :return:        None
+        """
+        """
+        self.set_conc(conc={species_id: conc}, snapshot=snapshot)
+        """
+        snapshot_funct = self.capture_conc_snapshot if snapshot else None
+
+        self.system.set_single_conc(conc=conc, species_id=species_id, 
+                                    allow_growth=allow_growth, 
+                                    snapshot_funct=snapshot_funct)
+
+
+
     def set_conc(self, conc :dict, snapshot=True) -> None:
         """
         Set the concentrations of a group of species
 
-        :param conc:    A dict indexed by the species id, for the species of interest.
+        :param conc:    A dict indexed by the species id,
+                            for the species whose concentrations we want to set.
                             Anything not specified will be left undisturbed
                             EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
@@ -402,6 +428,7 @@ class ReactionSimulator:
             system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
             self.diagnostics.conc_data.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
                                                        caption="Set concentration")
+
 
 
     def _save_soft_abort_diagnostics(self, delta_concentrations):
@@ -2189,13 +2216,11 @@ class ReactionSimulator:
         print(f"{n_species} species:")
 
         # Show a line of line of data for each species in turn
-        for species_index, name in enumerate(self.species_registry.get_all_species_ids()):
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
+        system_state_size = self.system.number_of_system_species()
+        for species_index in range(system_state_size):
+            name = f" ({self.species_index_map.species_at(species_index)})"
 
-            if len(self.system.system_state) == 0:
+            if species_index >= system_state_size:
                 print(f"  Species {species_index}{name}. No concentrations set yet")
             else:
                 print(f"  Species {species_index}{name}. Conc: {self.system.system_state[species_index]}")
@@ -2211,9 +2236,9 @@ class ReactionSimulator:
                 print(f"     {mm} || {state_str}")
 
         #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Species involved in reactions: {self.reaction_registry.get_species_in_any_reaction()}")
+        print(f"Species involved in reactions: {self.reaction_registry.get_species_in_any_reaction(sort=True)}")
         #else:
-            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.get_species_in_any_reaction()}")
+            #print(f"Species involved in reactions (not counting enzymes): {self.reactions.get_species_in_any_reaction()}")
             #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
 
 
@@ -2282,7 +2307,7 @@ class ReactionSimulator:
         :return:                A plotly "Figure" object
         """
         if species is None:
-            species = self.species_registry.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
+            species = self.species_registry.get_all_species_ids(sort=True)      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.reaction_registry.number_of_reactions()
@@ -2322,7 +2347,7 @@ class ReactionSimulator:
                 f"plot_history(): the number of provided colors ({len(colors)}) doesn't match the number of species ({len(species)})"
             # Save the passed colors with the species data
             for i, col in enumerate(colors):
-                self.get_species_registry().set_value(species_id=species[i], field="plot_color", value=col)
+                self.get_species_registry().set_value(species_id=species[i], field_name="plot_color", value=col)
         else:                           # Using argument `add_colors`
             if type(add_colors) == str:
                 add_colors = [add_colors]       # Turn a single value into a string
@@ -2343,14 +2368,14 @@ class ReactionSimulator:
                     new_color = add_colors[0]   # Get the next color, from the start of the list
                     del add_colors[0]           # Drop that first element from the list
                     # Use the passed color for this species (and also save it in its species data)
-                    self.get_species_registry().set_value(species_id=species[i], field="plot_color", value=new_color)
+                    self.get_species_registry().set_value(species_id=species[i], field_name="plot_color", value=new_color)
                     colors.append(new_color)
 
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=species,
                                         colors=colors, title=title, title_prefix=title_prefix,
                                         range_x=range_x, range_y=range_y,
-                                        y_label=y_label, legend_header="Chemical",
+                                        y_label=y_label, legend_header="Species",
                                         vertical_lines_to_add=vertical_lines_to_add, show_intervals=show_intervals, show=show)
 
 

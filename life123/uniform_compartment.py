@@ -274,7 +274,7 @@ class UniformCompartment:
 
 
     def set_single_conc(self, conc, species_id=None, species_index=None,
-                        allow_growth=True, snapshot=None) -> None:
+                        allow_growth=True, snapshot_funct=None) -> None:
         """
         Set the concentrations of 1 species.
 
@@ -289,7 +289,7 @@ class UniformCompartment:
 
         :param allow_growth:    [OPTIONAL] Only applicable if `species_index` is specified.
                                     If True (default), allow the system state to expand if species_index exceeds the system size
-        :param snapshot:        [OPTIONAL] A function that accepts an argument called "caption"
+        :param snapshot_funct:  [OPTIONAL] A function that accepts an argument called "caption"
         :return:                None
         """
         # Validate the arguments
@@ -322,9 +322,9 @@ class UniformCompartment:
                             "of the arguments `species_name` or `species_index` must be provided")
 
 
-        # If no array position already exists
-        # for the species whose concentration we're setting
         if species_index >= len(self.system_state):
+            # If no array position already exists
+            # for the species whose concentration we're setting
             assert allow_growth, \
                 f"UniformCompartment.set_single_conc(): the given index ({species_index}) cannot fit in the current " \
                 f"system size ({len(self.system_state)}); use the argument `allow_growth=True` to automatically grow the system-state array"
@@ -335,9 +335,9 @@ class UniformCompartment:
 
         self.system_state[species_index] = conc
 
-        if snapshot is not None:
+        if snapshot_funct is not None:
             # Invoke a passed external function
-            snapshot(caption=f"Set concentration of `{self.species_index_map.species_at(species_index)}`")
+            snapshot_funct(caption=f"Set concentration of `{self.species_index_map.species_at(species_index)}`")
 
 
 
@@ -345,7 +345,8 @@ class UniformCompartment:
         """
         Set the concentrations of a group of species
 
-        :param conc:            A dict indexed by the species id, for the species of interest.
+        :param conc:            A dict indexed by the species id,
+                                    for the species whose concentrations we want to set.
                                     Anything not specified will be left undisturbed
                                     EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
@@ -356,10 +357,10 @@ class UniformCompartment:
         :return:                None
         """
         assert type(conc) is dict, \
-            "set_conc(): argument `conc` must be a dict"
+            "set_conc(): argument `conc` must be a dictionary"
 
         for sp_id, conc_value in conc.items():
-            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot=None)  # This function will also take care
+            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot_funct=None)  # This function will also take care
                                                                                     # of optional synchronization
 
         if snapshot_funct is not None:

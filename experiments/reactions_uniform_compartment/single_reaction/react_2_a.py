@@ -82,7 +82,7 @@ IFrame(log_file, width=800, height=600)         # You may also open the above lo
 # %%
 
 # %%
-# Initial concentrations of all the chemicals
+# Set initial concentrations of all the chemicals
 uc.set_conc({"A": 10., "B": 50.})
 
 # %%

@@ -21,7 +21,7 @@
 # ### TAGS :  "uniform compartment", "numerical"
 
 # %%
-LAST_REVISED = "Oct. 15, 2026"
+LAST_REVISED = "Oct. 16, 2026"
 LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based on
 
 # %%
@@ -50,7 +50,8 @@ check_version(LIFE123_VERSION)
 # %%
 # Instantiate the simulator and specify the chemicals
 # Here we use the "fast" preset for the variable steps, which leads to fewer steps, but generally less-accurate results
-uc_fast = ReactionSimulator(preset="fast")    # We call this "uc" because it's a "uniform compartment
+uc_fast = ReactionSimulator(preset="fast",
+                            method="forward_euler")    # We call this "uc" because it's a "uniform compartment
 
 # %%
 # Elementary reaction A + B <-> C
@@ -85,13 +86,14 @@ uc_fast.plot_history(show_intervals=True)
 # %%
 
 # %% [markdown]
-# # 2. Let's now repeat the simulation with the "slow" preset, which yields more data points
+# # 2. Repeat the simulation with the "slow" preset, which yields more data points
 # ### and, generally, more accuracy
 
 # %%
 # Instantiate the simulator and specify the chemicals
-uc_slow = ReactionSimulator(reaction_registry=uc_fast.get_reactions(), preset="slow")
-# Re-use the chemicals and reactions of part 1, but now with the "slow" preset
+uc_slow = ReactionSimulator(reaction_registry=uc_fast.get_reactions(), preset="slow",
+                            method="forward_euler")
+# Re-use the species and reactions of part 1, but now with the "slow" preset
 
 # %%
 # Set the initial concentrations of all the chemicals
@@ -117,7 +119,7 @@ uc_slow.get_history()
 # Instantiate the simulator and specify the chemicals
 uc_exact = ReactionSimulator(preset="slow", reaction_registry=uc_fast.get_reactions(),
                              method="analytic")
-# Re-use the chemicals and reactions of part 1; 
+# Re-use the species and reactions of part 1; 
 # the "slow" preset doesn't particularly matter now because it's just 1 reaction, and we'll be getting the analytic solution  
 
 # %%
@@ -146,6 +148,7 @@ p3 = uc_exact.plot_history(species="C", colors=['forestgreen'], title="exact", s
 PlotlyHelper.combine_plots([p1, p2, p3], title="Comparison of simulation accuracies", xrange=[0, 0.015])
 
 # %% [markdown]
-# ## The comparison reveals a gradient "less precise" -> "more precise" -> "exact" solution
+# ## The comparison reveals a gradient of accuracy between the 3 runs: "less precise" -> "more precise" -> "exact" solution  
+# The "slow" run is almost indistinguishable from the "exact" one : select a rectangle on the plot, to magnify
 
 # %%

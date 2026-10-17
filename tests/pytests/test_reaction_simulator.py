@@ -275,7 +275,7 @@ def test_single_compartment_react():
                       reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
 
 
-    sim = ReactionSimulator(reaction_registry=rxns, diagnostics_enabled=True)
+    sim = ReactionSimulator(reaction_registry=rxns, enable_diagnostics=True)
 
     assert sim.species_index_map.get_all_species_ids(sort=True) == ['A', 'B', 'C', 'E_high', 'E_low']
     assert sim.reaction_registry.number_of_reactions() == 3
@@ -320,7 +320,7 @@ def test_single_compartment_react():
 
     # Now repeat the process, step-by-step
     #print("\n\nNEW RUN:")
-    sim2 = ReactionSimulator(reaction_registry=rxns, diagnostics_enabled=True)
+    sim2 = ReactionSimulator(reaction_registry=rxns, enable_diagnostics=True)
     assert sim2.system_time == 0
 
     sim2.set_conc(conc=initial_conc, snapshot=True)
@@ -360,7 +360,7 @@ def test_single_compartment_react__catch_neg_conc():
     rxns.register_reaction(r)
 
     sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)
+                            enable_diagnostics=True)
 
     # 2nd reaction: elementary reaction S <-> X (mostly forward)
     rxns.add_reaction(reactants="S", products="X",
@@ -423,7 +423,7 @@ def test_single_compartment_react__variable_steps():
 
     #uc = UniformCompartment(species_data=species_registry, preset=None, reactions=rxns)
     sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True, preset=None)
+                            enable_diagnostics=True, preset=None)
 
     # 2nd reaction: elementary reaction S <-> X (mostly forward)
     rxns.add_reaction(reactants="S", products="X",
@@ -711,7 +711,7 @@ def test__single_compartment_react_main_loop_2_b():
     ### Repeat the simulation from previous test, this time with diagnostics enabled (excessive large time step;
     # so large as to cause a backtracking)
     initial_system = np.array([10., 50.])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind, diagnostics_enabled=True,
+    sim = ReactionSimulator(system=initial_system, species_index_map=ind, enable_diagnostics=True,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 666
 
@@ -1202,7 +1202,7 @@ def test_attempt_reaction_step_2_a():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)   # Diagnostics are enabled at instantiation time
+                            enable_diagnostics=True)   # Diagnostics are enabled at instantiation time
     sim.system_time = 88
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)     # FIXED time step
     assert np.allclose(delta_conc, [7, -7])
@@ -1245,7 +1245,7 @@ def test_attempt_reaction_step_2_b():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
-                            diagnostics_enabled=True)   # Diagnostics are enabled at instantiation time
+                            enable_diagnostics=True)   # Diagnostics are enabled at instantiation time
     sim.system_time = 99
     sim.adaptive_steps.use_adaptive_preset(preset="fast")
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.02, variable_steps=True)     # VARIABLE time step
@@ -1519,7 +1519,7 @@ def test_single_step_single_rxn_2():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
-                            diagnostics_enabled=True, diagnostics=diagnostics)
+                            enable_diagnostics=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
     sim.system_time = 123
@@ -1547,7 +1547,7 @@ def test_single_step_single_rxn_2():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
-                            diagnostics_enabled=True, diagnostics=diagnostics)
+                            enable_diagnostics=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
     sim.system_time = 666

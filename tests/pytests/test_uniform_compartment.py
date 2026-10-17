@@ -185,7 +185,7 @@ def test_set_single_conc():
     def foo(caption :str, arg=l):   # Use a mutable argument, to affect the passed variable l
         l.append(caption)
 
-    uc.set_single_conc(conc=1000, species_id="C", snapshot=foo)
+    uc.set_single_conc(conc=1000, species_id="C", snapshot_funct=foo)
     assert l[0] == "Set concentration of `C`"
     assert np.allclose(uc.system_state, np.array([88, 123, 1000, 0, 666]))
 

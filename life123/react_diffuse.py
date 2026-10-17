@@ -62,8 +62,8 @@ class ReactDiffuse:
         match type:
             case "uniform":
                 sim = ReactionSimulator(species_index_map=self.index_species,
-                                            method="forward_euler",
-                                             diagnostics_enabled=False)
+                                        method="forward_euler",
+                                        enable_diagnostics=False)
                 self.module = sim
 
 
