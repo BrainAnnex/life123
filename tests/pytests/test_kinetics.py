@@ -1,6 +1,6 @@
 import numpy as np
 from life123.reactions import Stoichiometry
-from life123.kinetics import MassAction_Model, Custom_Model
+from life123.kinetic_models import MassAction_Model, Custom_Model
 
 
 

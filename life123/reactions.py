@@ -8,7 +8,7 @@ from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
 from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
-from life123.kinetics import MassAction_Model, MichaelisMenten_Model, Custom_Model
+from life123.kinetic_models import MassAction_Model, MichaelisMenten_Model, Custom_Model
 from life123.units import show_standard_units, convert, K, C
 
 
@@ -318,7 +318,7 @@ class SimulationReaction:
                                                                                            A0=R0, P0=P0, t=delta_time, incremental=True)
                 else:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=self.model.kF,
-                                                                                             A0=R0, P0=P0, t=delta_time, incremental=True)
+                                                                                             R0=R0, P0=P0, t=delta_time, incremental=True)
 
                 # Work out the stoichiometry for all the species
                 increment_dict_single_rxn = {r: -delta_p, p: delta_p}

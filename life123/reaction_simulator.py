@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import time
 import plotly.graph_objects as pgo
+import plotly.express as px
 from dataclasses import dataclass, field
 from typing import Any
 from life123.analytic_reaction_solver import AnalyticReactionSolver
@@ -1512,55 +1513,92 @@ class ReactionSimulator:
         :param delta_time:  The duration of the single time step to take
         :return:            A dictionary of concentration increments for all the species involved
         """
-        # TODO: pytest
         reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
         products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
 
-        if rxn.analytic_solution_family == "ONE_TO_ONE":
-            r = reactants[0][1]           # EXAMPLE: "R"
-            p = products[0][1]            # EXAMPLE: "P"
 
-            R0 = conc_init[r]
-            P0 = conc_init[p]
-            # Compute the respective increments of R0 and P0
-            if rxn.model.reversible:
-                delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                                       A0=R0, P0=P0, t=delta_time, incremental=True)
-            else:
-                delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
-                                                                                         A0=R0, P0=P0, t=delta_time, incremental=True)
+        match rxn.analytic_solution_family:
 
-            # Work out the stoichiometry for all the species
-            increment_dict_single_rxn = {r: -delta_p, p: delta_p}
-            return increment_dict_single_rxn
+            case "ONE_TO_ONE":
+                r = reactants[0][1]           # EXAMPLE: "R"
+                p = products[0][1]            # EXAMPLE: "P"
 
+                R0 = conc_init[r]
+                P0 = conc_init[p]
+                # Compute the increment of P
+                if rxn.model.reversible:
+                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                                           A0=R0, P0=P0, t=delta_time, incremental=True)
+                else:
+                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
+                                                                                             R0=R0, P0=P0, t=delta_time, incremental=True)
 
-        elif rxn.analytic_solution_family == "TWO_TO_ONE":
-            # EXAMPLE: A + B -> P       TODO: pytest
-            a = reactants[0][1]           # EXAMPLE: "A"
-            b = reactants[1][1]           # EXAMPLE: "B"
-            p = products[0][1]            # EXAMPLE: "P"
-
-            a0 = conc_init[a]
-            b0 = conc_init[b]
-            p0 = conc_init[p]
-            # Compute the respective increments of R0 and P0
-            if rxn.model.reversible:
-                delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                            A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
-            else:
-                delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
-                                                                                      A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
-
-            # Work out the stoichiometry for all the species
-            increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
-            return increment_dict_single_rxn
+                # Work out the stoichiometry for all the species
+                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+                return increment_dict_single_rxn
 
 
-        else:       # TODO: implement "ONE_TO_TWO"
-            raise Exception(f"analytic_solver_single_rxn(): no exact analytic solution "
-                            f"is currently implemented for reactions of type {rxn.analytic_solution_family}")
+            case "TWO_TO_ONE":
+                # EXAMPLE: A + B -> P
+                a = reactants[0][1]           # EXAMPLE: "A"
+                b = reactants[1][1]           # EXAMPLE: "B"
+                p = products[0][1]            # EXAMPLE: "P"
 
+                a0 = conc_init[a]
+                b0 = conc_init[b]
+                p0 = conc_init[p]
+                # Compute the increment of P
+                if rxn.model.reversible:
+                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+                else:
+                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
+                                                                                          A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+
+                # Work out the stoichiometry for all the species
+                increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
+                return increment_dict_single_rxn
+
+
+            case "ONE_TO_TWO":
+                if rxn.model.reversible:
+                    # EXAMPLE: P <-> A + B    NOTE: for convenience, we're treating the reversible version of this reaction
+                    #                               as being the same as the previous reaction (i.e. A + B <-> P),
+                    #                               with kF and kR reversed
+                    a = products[0][1]           # EXAMPLE: "A"
+                    b = products[1][1]           # EXAMPLE: "B"
+                    p = reactants[0][1]          # EXAMPLE: "P"
+
+                    a0 = conc_init[a]
+                    b0 = conc_init[b]
+                    p0 = conc_init[p]
+                    # Compute the increment of each of the REACTANT (not the product, this time - since we're actually
+                    # solving the reaction A + B <-> P)
+                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kR, kR=rxn.model.kF,
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
+                    # Work out the stoichiometry for all the species
+                    increment_dict_single_rxn = {p: delta_p, a: -delta_p, b: -delta_p}
+                else:
+                    # EXAMPLE: R -> P + Q
+                    # Note that this is a first-order reaction; so, not any different kinetically from R -> P
+                    # (and, from the stoichiometry, the concentration increment of Q will be the same as that of R)
+                    r = reactants[0][1]          # EXAMPLE: "R"
+                    p = products[0][1]           # EXAMPLE: "P"
+                    q = products[1][1]           # EXAMPLE: "Q"
+
+                    r0 = conc_init[r]
+                    p0 = conc_init[p]
+
+                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
+                                                                                             R0=r0, P0=p0, t=delta_time, incremental=True)
+                    # Work out the stoichiometry for all the species
+                    increment_dict_single_rxn = {r: -delta_p, p: delta_p, q: delta_p}
+
+                return increment_dict_single_rxn
+
+            case _:
+                raise Exception(f"analytic_solver_single_rxn(): no exact analytic solution "
+                                f"is currently implemented for reactions of type {rxn.analytic_solution_family}")
 
 
 

@@ -84,28 +84,28 @@ def test_exact_advance_unimolecular_reversible_3():
 def test_exact_advance_unimolecular_irreversible():
     # Reaction A -> P
     # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
-    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
+    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=0)
     assert np.allclose(p, 10.)      # No change
 
-    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0, incremental=True)
+    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=0, incremental=True)
     assert np.allclose(incr, 0)     # No change
 
-    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
+    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=0.005)
     assert np.allclose(p, 11.191044831754994)
 
-    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
+    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=0.31739)
     assert np.allclose(p, 59.127783572982025)
 
-    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739, incremental=True)
+    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=0.31739, incremental=True)
     assert np.allclose(incr, p-10)      # P(t) - P0
 
-    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
+    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=1.12)
     assert np.allclose(p, 87.22117928442091)
 
-    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
+    p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=100.)
     assert np.allclose(p, 90)
 
-    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100., incremental=True)
+    incr = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=100., incremental=True)
     assert np.allclose(incr, 80)
 
 
@@ -113,10 +113,10 @@ def test_exact_advance_unimolecular_irreversible_2():
     # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law, at the middle point
     h = 0.0005
     t_start = 0.3
-    p1 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start)
-    p2 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + h)
+    p1 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=t_start)
+    p2 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=t_start + h)
     a2 = 90 - p2    # From mass conservation
-    p3 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + 2 * h)
+    p3 = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=3., R0=80., P0=10., t=t_start + 2 * h)
 
     gradient = np.gradient([p1, p2, p3], h)
     derivative_p2 = gradient[1]
@@ -485,26 +485,26 @@ def test_approx_solution_synthesis_rxn():
     P0=20.
 
     with pytest.raises(Exception):
-        AnalyticReactionSolver.approx_solution_synthesis_rxn(kF=0, kR=kR, A0=A0, B0=B0, P0=P0, t=0)   # kF cannot be zero
+        AnalyticReactionSolver.approx_solution_synthesis_reversible(kF=0, kR=kR, A0=A0, B0=B0, P0=P0, t=0)   # kF cannot be zero
 
-    p = AnalyticReactionSolver.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0)
+    p = AnalyticReactionSolver.approx_solution_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0)
     assert np.allclose(p, P0)      # No change from P0
 
     #equil = ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=1, B0=B0)
     #print(equil)       # {'A': 0.2948774087575341, 'B': 40.294877408757536, 'P': 29.705122591242464}
 
-    p = AnalyticReactionSolver.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0.1)
+    p = AnalyticReactionSolver.approx_solution_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0.1)
     assert np.allclose(p, 29.705122591242464)       # Reaching the equilibrium value after a sufficiently long time
 
 
     # Process a whole array of times in one call
     t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
-    result = AnalyticReactionSolver.approx_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., P0=20., t=t)
+    result = AnalyticReactionSolver.approx_solution_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=t)
     assert np.allclose(result, [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
 
     # Compare against exact solution
     for t in [0, 0.000864, 0.001555, 0.009850, 0.067400]:
-        p_approx = AnalyticReactionSolver.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+        p_approx = AnalyticReactionSolver.approx_solution_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
         p_exact = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
         assert abs(p_approx - p_exact) / p_exact < 0.02     # Less than 2% discrepancy
 

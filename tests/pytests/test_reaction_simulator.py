@@ -12,7 +12,7 @@ from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.uniform_compartment import UniformCompartment
 from life123.reactions import ReactionDefinition
 from life123.reaction_simulator import ExcessiveTimeStepHard
-from life123.kinetics import Custom_Model
+from life123.kinetic_models import Custom_Model
 from life123.reaction_kinetics import ReactionKinetics
 from life123.collections import CollectionTabular
 from life123.diagnostics import Diagnostics
@@ -1716,7 +1716,7 @@ def test_dispatcher_single_rxn():
 
 
 
-def test_analytic_solver_single_rxn():
+def test_analytic_solver_single_rxn_1():
 
     sim = ReactionSimulator(method="analytic")
 
@@ -1724,29 +1724,81 @@ def test_analytic_solver_single_rxn():
     sim.add_reaction(reactants="A", products="B",
                      reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
     rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.model.reversible
     assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
 
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 5.508570764023133, 'B': -5.508570764023133})
-    assert math.isclose(rate, -70)
-
-    # TODO: test irreversible
+    assert math.isclose(rate, -70)      # 3. * 10 - 2. * 50.
 
 
-    # Fresh start with a new reaction A + B <-> P
+    # Fresh start with a new reaction A -> B (irreversible)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants="A", products="B",
+                     reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert not rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 80, "B": 20}, delta_time=0.31739)
+    assert compare_dicts(delta_conc, {'A': -49.127783572982025, 'B': 49.127783572982025})
+    assert math.isclose(rate, 240)     # 3. * 80
+
+
+def test_analytic_solver_single_rxn_2():
+
+    sim = ReactionSimulator(method="analytic")
+
+    # Reaction A + B <-> P
     sim.reaction_registry.clear_reactions_data()
     sim.add_reaction(reactants=["A", "B"], products="P",
                      reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.model.reversible
     assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
 
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50, "P":20}, delta_time=0.0001)
     assert compare_dicts(delta_conc, {'A': -0.24233229989273042, 'B': -0.24233229989273042, 'P': 0.24233229989273042})
     assert math.isclose(rate, 2460)     # 5. * 10 * 50 - 2. * 20
 
-    # TODO: test irreversible
 
-    # TODO: implement and test dissociation reactions
+    # Fresh start with a new reaction A + B -> P  (irreversible)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants=["A", "B"], products="P",
+                     reaction_model="mass action", kinetic_parameters={"kF": 5.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert not rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50, "P":20}, delta_time=0.01)
+    assert compare_dicts(delta_conc, {'A': -8.8871974442945, 'B': -8.8871974442945, 'P': 8.8871974442945})
+    assert math.isclose(rate, 2500)     # 5. * 10 * 50 - 2. * 20
+
+
+    # Fresh start with a new reaction P <-> A + B  (simply the same as the previous reversible reaction A + B <-> P , as long as kF and kR are reversed)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants="P", products=["A", "B"],
+                     reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.}) # Notice the reversal of kF and kR
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50, "P":20}, delta_time=0.0001)
+    assert compare_dicts(delta_conc, {'A': -0.24233229989273042, 'B': -0.24233229989273042, 'P': 0.24233229989273042})  # Same as before
+    assert math.isclose(rate, -2460)    # The opposite of what was in the reversed reaction
+
+
+    # Fresh start with a new reaction R -> P + Q  (irreversible)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants="R", products=["P", "Q"],
+                     reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert not rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"R": 80, "P": 20, "Q":100}, delta_time=0.31739)
+    assert compare_dicts(delta_conc, {'R': -49.127783572982025, 'P': 49.127783572982025, 'Q': 49.127783572982025})
+    assert math.isclose(rate, 240)        # 3. * 80
 
 
 

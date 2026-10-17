@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from life123.species_registry import SpeciesRegistry
-from life123.kinetics import Custom_Model
+from life123.kinetic_models import Custom_Model
 from life123.reactions import Stoichiometry, ReactionThermodynamics, \
 ReactionDefinition, SimulationReaction, MassAction_Model, MichaelisMenten_Model
 from tests.utilities.comparisons import *

@@ -14,7 +14,7 @@ def test_half_time_unimolecular_irreversible():
     half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
     assert np.allclose(half_time, math.log(2) / kF)
 
-    p_halftime = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
+    p_halftime = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, R0=80., P0=10., t=half_time)
     a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
     assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
 
