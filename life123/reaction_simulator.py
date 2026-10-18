@@ -922,15 +922,18 @@ class ReactionSimulator:
             #       2. negative concentration from the combined effect of multiple reactions
             #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
             exception_data = ex.details     # Start with the details of the caught exception...
-            # ... and add/edit some
-            exception_data["previous_function"] = exception_data["function"]
-            exception_data["function"] = "reaction_step_common_fixed_step"   # Overwrite
+            # ... and then build a good message for raising an Exception about the failed fixed-step simulation
+            previous_function = exception_data["function"]
+            #exception_data["previous_function"] = exception_data["function"]
+            #exception_data["function"] = "reaction_step_common_fixed_step"   # Overwrite
+            #print(exception_data)
             old_message = exception_data.get("message")
-            exception_data["message"] = f"reaction_step_common_fixed_step(): unable to complete the reaction step.  " \
-                                        f"Try REDUCING the time step, or switching to variable time steps. \n" \
-                                        f"DETAILS: \n{old_message}"
+            new_message = f"reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: {exception_data['system_time']:.6g} \n" \
+                          f"Try REDUCING the time step, or switching to variable time steps. \n" \
+                          f"DETAILS received from the low-level function `{previous_function}()`: \n{old_message}"
+            #exception_data["message"] = new_message
 
-            raise ExcessiveTimeStepHard(exception_data)
+            raise ExcessiveTimeStepHard(new_message)
 
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
@@ -1168,7 +1171,7 @@ class ReactionSimulator:
             first_neg_index = neg_indices[0]
             chem_name = self.species_index_map.species_at(int(first_neg_index))  # The int() is to convert the NumPy integer type
             exception_data = {
-                "message": f"      The tentative time step ({delta_time:.6g}) "
+                "message": f"      The attempted time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the species (for instance `{chem_name}`, of index {first_neg_index}), from the COMBINED reactions."
                                         f"\n      Baseline concentration values: {self.system.system_state} at system time {self.system_time:.5g}; requested changes (NOT carried out): {delta_concentrations}",
@@ -1450,10 +1453,10 @@ class ReactionSimulator:
             delta_time = self.reaction_step_diagnostics.delta_time
             # After having saved the appropriate diagnostic data, raise the custom Exception "ExcessiveTimeStepHard"
             exception_data = {
-                "message": f"      The tentative time step ({delta_time:.6g}) "
+                "message": f"      The attempted time step ({delta_time:.6g}) "
                            f"would lead to a NEGATIVE concentration in the species `{species_id}` "
                            f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index})\n"
-                           f"      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}",
+                           f"      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}, due to a reaction rate of {rxn_rate:.4g}",
                 "function": "_validate_increment",
                 "delta_time": delta_time,
                 #"action": "ABORT",
