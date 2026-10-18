@@ -13,17 +13,17 @@
 # ---
 
 # %% [markdown]
-# ### A demo/tutorial on the data structure for Species and SpeciesRegistry
+# ### A demo/tutorial about `Species` and `SpeciesRegistry`
 #
 # **"Species"** is very broadly defined to be a molecule or larger entity that the simulator acts on.   
 # For now, small molecules, enzymes and macromolecules.   
-# NOT to be confused with ecological species (homo sapiens, etc)!
+# IMPORTANT: NOT to be confused with ecological species (homo sapiens, etc)!
 
 # %% [markdown]
-# ### TAGS :   "quick-start", "basic"
+# ### TAGS :   "quick-start", "basic", "infrastructure"
 
 # %%
-LAST_REVISED = "Sep. 23, 2026"
+LAST_REVISED = "Oct. 17, 2026"
 LIFE123_VERSION = "1.0.0rc9"     # Library version this experiment is based on
 
 # %%
@@ -44,13 +44,13 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # %%
 
 # %% [markdown]
-# ## 1. Individual species
+# # 1. Individual species
 
 # %%
 # Minimal!
 s1 = Species("A")   # The first, and only required, argument is a unique "id"
 
-s1    # Notice the various attributes (fields); by default, "name" and "label" are made equal to the supplied "id"
+s1    # Notice the various attributes (fields); by default, "name" and "label" - if not explicitly assigned - are made equal to the supplied "id"
 
 # %%
 
@@ -70,7 +70,7 @@ s2 = Species(
 print(s2)
 
 # %%
-# ... or added later
+# ... or be added/modified later
 
 s2.diffusion_rate=123.   # s1 is a "Species" object (a python dataclass), and its attributes may be read/set the usual way
 
@@ -97,11 +97,11 @@ print(s2)       # Unchanged
 # %%
 
 # %% [markdown]
-# ## 2. Registry of species
-# Keeping together all your species data
+# # 2. Registry of species
+# #### Keeping together all your species data
 
 # %%
-# Good for testing; auto-assigns id's, names and labels: "A", "B", "C", ....
+# Good for testing: if just a number of species is passed, it auto-assigns id's, names and labels: "A", "B", "C", ....
 test_registry = SpeciesRegistry(n_species=3)
 test_registry
 
@@ -113,7 +113,7 @@ test_registry.as_dataframe()
 # %%
 
 # %%
-# If you already have existing "Species" objects, you can initialize a SpeciesRegistry with them
+# If you already have existing "Species" objects, you can initialize a SpeciesRegistry with a list of them
 sr = SpeciesRegistry(species=[s1,s2])
 sr.as_recordset()
 
@@ -133,13 +133,13 @@ sr_2 = SpeciesRegistry()
 sr_2.as_recordset()
 
 # %%
-sr_2.add_species("X")       # Minimal!
+sr_2.add_single_species("X")       # Minimal!
 
 # %%
 sr_2.as_recordset()     # `name` and `label`, not directly supplied, were by default made equal to `id`
 
 # %%
-sr_2.add_species("Y", annotation="need to re-test")
+sr_2.add_single_species("Y", annotation="need to re-test")
 
 # %%
 
@@ -147,7 +147,7 @@ sr_2.add_species("Y", annotation="need to re-test")
 
 # %%
 # A SpeciesRegistry can also be started with lists/tuples of data
-# ("Rome" is a joke about the initials "SPQR": "Senatus Populusque Romanus")
+# ("Rome" is a joke about the initials "SPQR" in ancient times: "Senatus Populusque Romanus")
 rome_group = SpeciesRegistry(ids=["S", "P", "Q", "R"], molecular_weight=[1200, 600, 2900, 1500], annotation=["Senatus", "Populusque", None, "Romanus"])
 rome_group.as_dataframe()
 
