@@ -13,15 +13,18 @@
 # ---
 
 # %% [markdown]
-# ## Reversible Synthesis elementary reaction `A + B <-> C`
+# ## Reversible Synthesis elementary reaction `A + B <-> P`
 # #### taken to equilibrium.
-# #### Comparison of 2 approximate solutions, and the exact solutions 
+# #### Comparison of 2 approximate solutions against the exact solutions.  
+# Both approximate solutions use the "Forward Euler" method, but with different timestep sizes
+#
+# SEE ALSO:  experiment `heun_vs_forward_euler` , to contrast with a different approximate method
 
 # %% [markdown]
 # ### TAGS :  "uniform compartment", "numerical"
 
 # %%
-LAST_REVISED = "Oct. 16, 2026"
+LAST_REVISED = "Oct. 18, 2026"
 LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based on
 
 # %%
@@ -48,21 +51,21 @@ check_version(LIFE123_VERSION)
 # Specify the chemicals, the reactions, and the initial concentrations
 
 # %%
-# Instantiate the simulator and specify the chemicals
+# Instantiate the simulator
 # Here we use the "fast" preset for the variable steps, which leads to fewer steps, but generally less-accurate results
 uc_fast = ReactionSimulator(preset="fast",
                             method="forward_euler")    # We call this "uc" because it's a "uniform compartment
 
 # %%
-# Elementary reaction A + B <-> C
-uc_fast.add_reaction(reactants=["A" , "B"], products="C", 
+# Elementary reaction A + B <-> P
+uc_fast.add_reaction(reactants=["A" , "B"], products="P", 
                      kinetic_parameters={"kF": 5., "kR": 2.})
 
 uc_fast.describe_reactions()
 
 # %%
-# Set the initial concentrations of all the chemicals
-uc_fast.set_conc({"A": 10., "B": 50., "C": 20.})
+# Set the initial concentrations of all the species
+uc_fast.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
 
@@ -90,14 +93,14 @@ uc_fast.plot_history(show_intervals=True)
 # ### and, generally, more accuracy
 
 # %%
-# Instantiate the simulator and specify the chemicals
+# Instantiate a new simulator
 uc_slow = ReactionSimulator(reaction_registry=uc_fast.get_reactions(), preset="slow",
                             method="forward_euler")
 # Re-use the species and reactions of part 1, but now with the "slow" preset
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_slow.set_conc({"A": 10., "B": 50., "C": 20.})
+uc_slow.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
 uc_slow.single_compartment_react(initial_step=0.004, duration=0.06, variable_steps=True)
@@ -116,7 +119,7 @@ uc_slow.get_history()
 # # 3. And, finally, get the EXACT analytic solution
 
 # %%
-# Instantiate the simulator and specify the chemicals
+# Instantiate a new simulator
 uc_exact = ReactionSimulator(preset="slow", reaction_registry=uc_fast.get_reactions(),
                              method="analytic")
 # Re-use the species and reactions of part 1; 
@@ -124,7 +127,7 @@ uc_exact = ReactionSimulator(preset="slow", reaction_registry=uc_fast.get_reacti
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_exact.set_conc({"A": 10., "B": 50., "C": 20.}, snapshot=True)
+uc_exact.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
 uc_exact.single_compartment_react(initial_step=0.004, duration=0.06, variable_steps=True)
@@ -137,12 +140,12 @@ uc_exact.get_history()
 # %%
 
 # %% [markdown]
-# # 4. Let's compare plots for the concentration of `C`, as a function of time, from the earlier 3 simulations
+# # 4. Let's compare plots for the concentration of the product `P`, as a function of time, from the earlier 3 simulations
 
 # %%
-p1 = uc_fast.plot_history(species="C", colors=['#F5B914'], title="fast (less precise)", show=False)
-p2 = uc_slow.plot_history(species="C", colors=['#CBE504'], title="slow (more precise)", show=False)
-p3 = uc_exact.plot_history(species="C", colors=['forestgreen'], title="exact", show=False)
+p1 = uc_fast.plot_history(species="P", colors=['#F5B914'], title="fast (less precise)", show=False)
+p2 = uc_slow.plot_history(species="P", colors=['#CBE504'], title="slow (more precise)", show=False)
+p3 = uc_exact.plot_history(species="P", colors=['forestgreen'], title="EXACT", show=False)
 
 # %%
 PlotlyHelper.combine_plots([p1, p2, p3], title="Comparison of simulation accuracies", xrange=[0, 0.015])
@@ -150,5 +153,8 @@ PlotlyHelper.combine_plots([p1, p2, p3], title="Comparison of simulation accurac
 # %% [markdown]
 # ## The comparison reveals a gradient of accuracy between the 3 runs: "less precise" -> "more precise" -> "exact" solution  
 # The "slow" run is almost indistinguishable from the "exact" one : select a rectangle on the plot, to magnify
+
+# %% [markdown]
+# See the experiment `heun_vs_forward_euler` to contrast using the "Heun" method, for approximate solutions, to the "Forward Euler" method used here. 
 
 # %%

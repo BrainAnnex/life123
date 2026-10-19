@@ -5,7 +5,9 @@ import copy
 import plotly.express as px
 import plotly.graph_objects as pgo
 import plotly.subplots as sp
+from collections import Counter
 from life123.visualization.colors import Colors
+
 
 
 
@@ -399,7 +401,10 @@ class PlotlyHelper:
         """
         Combine together several existing Plotly plots into a single one,
         with COMBINED axes.
-        Note: the individual plots (aka Plotly "Figures") may contain one or more "traces"
+        Note: the individual plots (aka Plotly "Figures") may contain:
+                - "layout shapes" (a form of annotation); they all get brought in
+                - one or more "traces" (data elements); the arguments `legend_show_all_traces` and `legend_trace_selector`
+                                                        will control their merger
 
         EXAMPLE:
                     from life123 import PlotlyHelper
@@ -429,9 +434,10 @@ class PlotlyHelper:
 
         :param legend_show_all_traces: [OPTIONAL] Default, False.  If True, the legend will include all the "traces" (sub-parts)
                                             of each figure.
-                                            - Use True when the figures consist of meaningful separate parts (such as multiple curves),
+                                            - Use True when the individual "figures" (plots) consist of
+                                              meaningful separate parts (such as multiple curves),
                                               all of which ought to appear in the legend;
-                                            - use False when each figures consists of one actual data curve
+                                            - use False when each "figure" (plot) consists of one actual data curve
                                               and various modifications to it
         :param legend_trace_selector:  [OPTIONAL] Only applicable if `legend_show_all_traces` is False.
                                             Meant for scenarios where each of the Plotly figures only contains one meaningful trace (sub-part)
@@ -480,6 +486,7 @@ class PlotlyHelper:
             # If no function was provided by the user, utilize a lambda function that always returns 0
             legend_trace_selector = lambda fig: 0
 
+
         for fig_index, fig in enumerate(fig_list):   # For each "figure" (plot) to combine together
             #n = len(fig.data)     # The number of traces in that figure.  Not in current use; perhaps to ditch
             chosen_idx = legend_trace_selector(fig)     # The index of the trace to be used for the combined legend
@@ -522,8 +529,37 @@ class PlotlyHelper:
 
             #trace_offset += n
 
-
         # END "for fig in fig_list"
+
+
+        # Merge "layout shapes" from all source figures.
+        # EXAMPLE of "layout shapes": the vertical lines optionally created by plot_pandas()
+        # However, if `layout_index` is specified, that figure's shapes are already
+        # included in all_fig's layout, so we'll make sure to not add them a second time.
+        shapes_to_add = []
+
+        for i, source_fig in enumerate(fig_list):
+            if layout_index is not None and i == layout_index:
+                continue
+
+            source_layout = source_fig.to_plotly_json().get("layout", {})
+            source_shapes = source_layout.get("shapes", [])
+
+            shapes_to_add.extend(copy.deepcopy(source_shapes))
+
+        if shapes_to_add:
+            # Preserve shapes already present in all_fig's layout.
+            existing_shapes = (
+                all_fig.to_plotly_json()
+                       .get("layout", {})
+                       .get("shapes", [])
+            )
+
+            all_fig.update_layout(
+                shapes=copy.deepcopy(existing_shapes) + shapes_to_add
+            )
+
+
 
 
         if layout_index is None:
@@ -1116,6 +1152,558 @@ class PlotlyHelper:
     def ________GENERA_UTILITIES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
+
+    @staticmethod
+    def explain_plot(fig: pgo.Figure, concise: bool=True) -> None:
+        """
+        Print out a readable summary explanation of a Plotly "Figure".
+        A "Figure" is a complete plot, including layout and annotations
+
+        Intended for debugging and exploration, especially when a plot
+        contains less-obvious elements such as layout shapes or annotations.
+
+        Notes
+        -----
+        - The figure is not modified.
+        - Large data arrays are summarized rather than printed in full.
+        - The report describes properties stored in the figure; Plotly
+          may infer additional defaults when the figure is rendered.
+
+        :param fig:     The Plotly "Figure" object  to examine
+        :param concise: [OPTIONAL]
+                        If True (default):
+                            Print a compact summary of traces, data, shapes,
+                            annotations, axes, legend, images, and frames.
+                        If False:
+                            Print additional stored properties of each trace, shape,
+                            annotation, axis, and other layout components.
+        :return:        None
+        """
+        # TODO: pytest
+
+        if not hasattr(fig, "to_dict") or not hasattr(fig, "data"):
+            raise TypeError(
+                "explain_plot(): the argument `fig` is not a Plotly Figure object"
+            )
+
+        # Get a dictionary representation for convenient inspection.
+        spec = fig.to_dict()
+        traces = spec.get("data", []) or []
+        layout = spec.get("layout", {}) or {}
+        frames = spec.get("frames", []) or []
+
+        # ---------------------------------------------------------------
+        # Helper functions used only by explain_plot()
+        # ---------------------------------------------------------------
+
+        def _short(value, limit=100):
+            """Return a compact representation of a value."""
+            if isinstance(value, (list, tuple)) and len(value) > 8:
+                text = (
+                    f"{type(value).__name__}(len={len(value)}, "
+                    f"first={repr(value[:3])}, "
+                    f"last={repr(value[-1])})"
+                )
+            else:
+                text = repr(value)
+
+            if len(text) > limit:
+                return text[:limit - 3] + "..."
+
+            return text
+
+        def _sequence_summary(value):
+            """Summarize a data sequence without dumping the whole array."""
+            if value is None:
+                return "not set"
+
+            if isinstance(value, (str, bytes, dict)):
+                return _short(value, 110)
+
+            # NumPy arrays and similar objects expose their dimensions.
+            shape = getattr(value, "shape", None)
+            if shape is not None:
+                try:
+                    shape = tuple(shape)
+                    if len(shape) > 1:
+                        first_row = value[0] if len(value) else None
+                        return (
+                            f"shape={shape}, "
+                            f"first row={_short(first_row, 65)}"
+                        )
+                except (TypeError, IndexError, ValueError):
+                    pass
+
+            try:
+                n = len(value)
+            except TypeError:
+                return _short(value, 110)
+
+            # Handle ordinary nested lists, such as a matrix.
+            if (
+                isinstance(value, (list, tuple))
+                and n > 0
+                and isinstance(value[0], (list, tuple))
+            ):
+                return (
+                    f"{n} rows, "
+                    f"first row={_sequence_summary(value[0])}, "
+                    f"last row={_sequence_summary(value[-1])}"
+                )
+
+            if n <= 5:
+                return f"n={n}, values={_short(value, 110)}"
+
+            return (
+                f"n={n}, "
+                f"first={_short(value[:3], 65)}, "
+                f"last={_short(value[-1], 40)}"
+            )
+
+        def _title_text(title_obj):
+            """Extract the text from a Plotly title specification."""
+            if isinstance(title_obj, dict):
+                return title_obj.get("text")
+            return title_obj
+
+        def _style_summary(style, properties):
+            """Show selected style properties from a nested dictionary."""
+            if not isinstance(style, dict):
+                return ""
+
+            parts = [
+                f"{key}={_short(style[key], 55)}"
+                for key in properties
+                if key in style and style[key] is not None
+            ]
+            return ", ".join(parts)
+
+        def _plural(n, word):
+            return f"{n} {word if n == 1 else word + 's'}"
+
+
+        # ---------------------------------------------------------------
+        # Figure overview
+        # ---------------------------------------------------------------
+
+        type_counts = Counter(
+            trace.get("type", "unknown") for trace in traces
+        )
+        trace_types = (
+            ", ".join(
+                f"{name}: {count}"
+                for name, count in sorted(type_counts.items())
+            )
+            or "none"
+        )
+
+        title = _title_text(layout.get("title"))
+
+        shapes = layout.get("shapes") or []
+        annotations = layout.get("annotations") or []
+        images = layout.get("images") or []
+        sliders = layout.get("sliders") or []
+        updatemenus = layout.get("updatemenus") or []
+
+        print("=" * 72)
+        print("PLOTLY FIGURE EXPLANATION")
+        print("=" * 72)
+        print(f"Object type : {type(fig).__name__}")
+        print(f"Title       : {_short(title) if title else '(no title)'}")
+        print(f"Traces      : {len(traces)} ({trace_types})")
+        print(
+            "Layout      : "
+            f"{_plural(len(shapes), 'shape')}, "
+            f"{_plural(len(annotations), 'annotation')}, "
+            f"{_plural(len(images), 'image')}"
+        )
+        print(f"Frames      : {len(frames)}")
+
+        if not concise:
+            print(f"Figure keys : {list(spec.keys())}")
+
+
+        # ---------------------------------------------------------------
+        # Trace summaries
+        # ---------------------------------------------------------------
+
+        print("\nTRACES — fig.data")
+
+        if not traces:
+            print("  (No traces.)")
+
+        # Fields that are especially informative in a compact report.
+        core_data_fields = (
+            "x", "y", "z", "values", "labels", "locations",
+            "lat", "lon", "r", "theta"
+        )
+
+        # Additional fields worth showing in detailed mode.
+        all_data_fields = set(core_data_fields) | {
+            "text", "ids", "customdata", "hovertext",
+            "open", "high", "low", "close",
+            "a", "b", "c", "i", "j", "k",
+            "u", "v", "w"
+        }
+
+        for i, trace in enumerate(traces):
+            trace_type = trace.get("type", "unknown")
+            name = trace.get("name") or "(unnamed)"
+            mode = trace.get("mode")
+
+            header = f"  [{i}] {trace_type} | name={_short(name, 55)}"
+
+            if mode is not None:
+                header += f" | mode={mode}"
+
+            if "showlegend" in trace:
+                header += f" | showlegend={trace['showlegend']}"
+
+            axes = []
+            if "xaxis" in trace:
+                axes.append(f"xaxis={trace['xaxis']}")
+            if "yaxis" in trace:
+                axes.append(f"yaxis={trace['yaxis']}")
+
+            if axes:
+                header += " | " + ", ".join(axes)
+
+            print(header)
+
+            fields_to_show = (
+                core_data_fields if concise else sorted(all_data_fields)
+            )
+
+            for key in fields_to_show:
+                if key in trace and trace[key] is not None:
+                    print(
+                        f"      {key}: "
+                        f"{_sequence_summary(trace[key])}"
+                    )
+
+            # Make data-series styling visible, without dumping every
+            # styling property in concise mode.
+            for style_name, style_properties in (
+                ("line", ("color", "dash", "width", "shape")),
+                ("marker", ("color", "size", "symbol", "opacity")),
+            ):
+                style = trace.get(style_name)
+
+                if not isinstance(style, dict) or not style:
+                    continue
+
+                if concise:
+                    summary = _style_summary(style, style_properties)
+                    if summary:
+                        print(f"      {style_name}: {summary}")
+                else:
+                    print(f"      {style_name}: {_short(style, 200)}")
+
+            if not concise:
+                # Display other stored trace properties, including such
+                # items as hovertemplate, opacity, orientation, and so on.
+                excluded = all_data_fields | {"line", "marker"}
+
+                for key, value in trace.items():
+                    if key not in excluded:
+                        print(f"      {key}: {_short(value, 180)}")
+
+
+        # ------------------------------------------------------------------
+        # Layout shapes — the graphical objects that might seem to be traces
+        # ------------------------------------------------------------------
+
+        print("\nLAYOUT SHAPES — fig.layout.shapes")
+
+        if not shapes:
+            print("  (No shapes.)")
+
+        for i, shape in enumerate(shapes):
+            shape_type = shape.get("type", "rect")
+
+            if (
+                shape_type == "line"
+                and shape.get("x0") == shape.get("x1")
+            ):
+                # Special handling makes vertical reference lines
+                # immediately recognizable in the report.
+                coordinates = (
+                    f"vertical at x={_short(shape.get('x0'))}; "
+                    f"y={_short(shape.get('y0'))}"
+                    f" -> {_short(shape.get('y1'))}"
+                )
+            else:
+                coordinates = (
+                    f"x0={_short(shape.get('x0'))}, "
+                    f"x1={_short(shape.get('x1'))}, "
+                    f"y0={_short(shape.get('y0'))}, "
+                    f"y1={_short(shape.get('y1'))}"
+                )
+
+            xref = shape.get("xref", "x")
+            yref = shape.get("yref", "y")
+
+            print(
+                f"  [{i}] {shape_type} | {coordinates} "
+                f"| refs: x={xref}, y={yref}"
+            )
+
+            line_summary = _style_summary(
+                shape.get("line"), ("color", "dash", "width")
+            )
+            if line_summary:
+                print(f"      line style: {line_summary}")
+
+            if not concise:
+                # Print all the stored shape properties, including fill,
+                # opacity, layer, path, visibility, and naming.
+                for key, value in shape.items():
+                    print(f"      {key}: {_short(value, 180)}")
+
+
+        # ---------------------------------------------------------------
+        # Annotations — text labels and optional arrows
+        # ---------------------------------------------------------------
+
+        print("\nLAYOUT ANNOTATIONS — fig.layout.annotations")
+
+        if not annotations:
+            print("  (No annotations.)")
+
+        for i, annotation in enumerate(annotations):
+            text = annotation.get("text", "(no text)")
+
+            print(
+                f"  [{i}] text={_short(text, 90)} | "
+                f"x={_short(annotation.get('x'))}, "
+                f"y={_short(annotation.get('y'))} | "
+                f"refs: x={annotation.get('xref', 'x')}, "
+                f"y={annotation.get('yref', 'y')}"
+            )
+
+            if not concise:
+                for key, value in annotation.items():
+                    print(f"      {key}: {_short(value, 180)}")
+
+
+        # ---------------------------------------------------------------
+        # Layout images
+        # ---------------------------------------------------------------
+
+        if images or not concise:
+            print("\nLAYOUT IMAGES — fig.layout.images")
+
+            if not images:
+                print("  (No images.)")
+
+            for i, image in enumerate(images):
+                source = image.get("source")
+
+                # Avoid printing a potentially enormous embedded image.
+                if isinstance(source, str) and source.startswith("data:"):
+                    source_description = "(embedded data URI)"
+                else:
+                    source_description = _short(source, 70)
+
+                print(
+                    f"  [{i}] source={source_description} | "
+                    f"x={_short(image.get('x'))}, "
+                    f"y={_short(image.get('y'))} | "
+                    f"size=({_short(image.get('sizex'))}, "
+                    f"{_short(image.get('sizey'))}) | "
+                    f"refs: x={image.get('xref', 'paper')}, "
+                    f"y={image.get('yref', 'paper')}"
+                )
+
+                if not concise:
+                    for key, value in image.items():
+                        if key != "source":
+                            print(f"      {key}: {_short(value, 180)}")
+
+
+        # ---------------------------------------------------------------
+        # Axes
+        # ---------------------------------------------------------------
+
+        axis_keys = [
+            key for key, value in layout.items()
+            if (
+                (
+                    key == "xaxis"
+                    or key.startswith("xaxis")
+                    or key == "yaxis"
+                    or key.startswith("yaxis")
+                )
+                and isinstance(value, dict)
+            )
+        ]
+
+        def _axis_sort_key(key):
+            prefix = "xaxis" if key.startswith("xaxis") else "yaxis"
+            suffix = key[len(prefix):]
+            return (prefix, int(suffix) if suffix.isdigit() else 1)
+
+        axis_keys.sort(key=_axis_sort_key)
+
+        print("\nAXES — fig.layout.xaxis / yaxis")
+
+        if not axis_keys:
+            print("  (No explicit Cartesian axis settings found.)")
+
+        core_axis_properties = {
+            "title", "type", "range", "domain", "anchor",
+            "matches", "autorange", "visible", "scaleanchor"
+        }
+
+        for key in axis_keys:
+            axis = layout[key]
+            axis_title = _title_text(axis.get("title"))
+
+            parts = [
+                f"title={_short(axis_title, 60)}",
+                f"type={axis.get('type', 'auto/default')}"
+            ]
+
+            for prop in (
+                "range", "domain", "autorange", "anchor",
+                "matches", "scaleanchor", "visible"
+            ):
+                if prop in axis:
+                    parts.append(f"{prop}={_short(axis[prop], 60)}")
+
+            print(f"  {key}: " + ", ".join(parts))
+
+            if not concise:
+                for prop, value in axis.items():
+                    if prop not in core_axis_properties:
+                        print(f"      {prop}: {_short(value, 180)}")
+
+
+        # ---------------------------------------------------------------
+        # Legend
+        # ---------------------------------------------------------------
+
+        legend = layout.get("legend") or {}
+        legend_title = _title_text(legend.get("title"))
+
+        print("\nLEGEND — fig.layout.legend")
+        print(
+            f"  layout.showlegend={layout.get('showlegend', '(default)')}"
+        )
+        if legend:
+            print(
+                f"  title={_short(legend_title)}, "
+                f"orientation={legend.get('orientation', '(default)')}, "
+                f"position=({_short(legend.get('x'))}, "
+                f"{_short(legend.get('y'))})"
+            )
+        else:
+            print("  No explicit legend configuration.")
+
+        if not concise and legend:
+            for key, value in legend.items():
+                print(f"      {key}: {_short(value, 180)}")
+
+
+        # ---------------------------------------------------------------
+        # Other layout settings
+        # ---------------------------------------------------------------
+
+        if concise:
+            # These commonly help explain appearance without overwhelming
+            # the report with the many defaults supplied by Plotly.
+            common_layout_properties = (
+                "width", "height", "hovermode", "dragmode",
+                "barmode", "paper_bgcolor", "plot_bgcolor"
+            )
+
+            properties = [
+                f"{key}={_short(layout[key], 90)}"
+                for key in common_layout_properties
+                if key in layout
+            ]
+
+            if properties:
+                print("\nOTHER LAYOUT SETTINGS")
+                for prop in properties:
+                    print(f"  {prop}")
+
+        else:
+            print("\nOTHER STORED LAYOUT PROPERTIES")
+
+            handled = {
+                "title", "legend", "shapes", "annotations", "images",
+                "sliders", "updatemenus", "template"
+            }
+            handled.update(axis_keys)
+
+            other_keys = [
+                key for key in sorted(layout)
+                if key not in handled
+            ]
+
+            if not other_keys:
+                print("  (None.)")
+
+            for key in other_keys:
+                print(f"  {key}: {_short(layout[key], 200)}")
+
+            if "template" in layout:
+                print(
+                    "  template: present "
+                    "(omitted because templates can be extensive)"
+                )
+
+
+        # ---------------------------------------------------------------
+        # Animation frames and interactive layout controls
+        # ---------------------------------------------------------------
+
+        print("\nFRAMES — fig.frames")
+
+        if not frames:
+            print("  (No animation frames.)")
+
+        for i, frame in enumerate(frames):
+            frame_traces = frame.get("data", []) or []
+            name = frame.get("name", "(unnamed)")
+
+            print(
+                f"  [{i}] name={_short(name, 55)}, "
+                f"traces={len(frame_traces)}, "
+                f"target trace indices={_short(frame.get('traces'), 90)}"
+            )
+
+            if not concise:
+                if frame.get("layout"):
+                    print(
+                        f"      layout keys: "
+                        f"{list(frame['layout'].keys())}"
+                    )
+
+                for j, frame_trace in enumerate(frame_traces):
+                    print(
+                        f"      frame trace [{j}]: "
+                        f"type={frame_trace.get('type', '(inherited)')}, "
+                        f"stored keys={list(frame_trace.keys())}"
+                    )
+
+        if sliders or updatemenus or not concise:
+            print("\nINTERACTIVE LAYOUT CONTROLS")
+            print(f"  sliders: {len(sliders)}")
+            print(f"  updatemenus: {len(updatemenus)}")
+
+            if not concise:
+                for key in ("sliders", "updatemenus"):
+                    for i, control in enumerate(layout.get(key) or []):
+                        print(
+                            f"  {key}[{i}]: "
+                            f"{_short(control, 250)}"
+                        )
+
+        print("=" * 72)
+
 
 
     @classmethod

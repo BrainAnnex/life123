@@ -570,7 +570,7 @@ class ReactionSimulator:
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  variable_steps=True, explain_variable_steps=None,
-                                 silent=False, report_interval=0.5) -> dict:
+                                 silent=False, report_interval=0.5) -> dict|None:
         """
         Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
         based on the INITIAL concentrations stored in self.system
@@ -609,8 +609,9 @@ class ReactionSimulator:
         :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
                                             to inform the user of the current status
 
-        :return:                        A dictionary containing the key "recommended_next_step"
-                                        Note: the object attributes self.system.system and self.system_time get updated
+        :return:                        If `variable_steps` is True, return a dictionary containing the key "recommended_next_step";
+                                            otherwise, return None
+                                            Note: the object attributes self.system.system_state and self.system_time get updated
         """
 
         # Default values
@@ -777,7 +778,8 @@ class ReactionSimulator:
                     print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
 
                 print("Norm usage:", self.adaptive_steps.norm_usage)
-                print(f"System Time is now: {self.system_time:,.5g}")
+
+            print(f"System Time is now: {self.system_time:,.5g}")
 
 
         # One final snapshot, unless already taken for the last step done
@@ -786,7 +788,8 @@ class ReactionSimulator:
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(final_step_caption)
 
-        return {"recommended_next_step": recommended_next_step}
+        if variable_steps:
+            return {"recommended_next_step": recommended_next_step}
 
 
 
@@ -928,7 +931,7 @@ class ReactionSimulator:
             #exception_data["function"] = "reaction_step_common_fixed_step"   # Overwrite
             #print(exception_data)
             old_message = exception_data.get("message")
-            new_message = f"reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: {exception_data['system_time']:.6g} \n" \
+            new_message = f"reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: {self.system_time:.6g} \n" \
                           f"Try REDUCING the time step, or switching to variable time steps. \n" \
                           f"DETAILS received from the low-level function `{previous_function}()`: \n{old_message}"
             #exception_data["message"] = new_message
@@ -2299,7 +2302,7 @@ class ReactionSimulator:
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines` argument,
+        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines_to_add` argument,
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.

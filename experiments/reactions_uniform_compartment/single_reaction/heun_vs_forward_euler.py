@@ -13,15 +13,18 @@
 # ---
 
 # %% [markdown]
-# ## Reversible Synthesis elementary reaction `A + B <-> C`
+# ## Reversible Synthesis elementary reaction `A + B <-> P`
 # #### taken to equilibrium.
-# #### Comparison of 2 approximate solutions, and the exact solutions 
+# #### Comparison of 2 numerical solvers ("Heun" and "Forward Euler") against the exact solution.
+# We'll use large, fixed-sized, steps for the numerical solvers.   
+#
+# SEE ALSO: experiment `react_3_b`
 
 # %% [markdown]
 # ### TAGS :  "uniform compartment", "numerical"
 
 # %%
-LAST_REVISED = "Oct. 17, 2026"
+LAST_REVISED = "Oct. 18, 2026"
 LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based on
 
 # %%
@@ -41,27 +44,26 @@ check_version(LIFE123_VERSION)
 # %%
 
 # %% [markdown]
-# # 1. Run a simulation with low accuracy
+# # 1. Run a simulation using the **"Forward Euler"** method (a simple, straighforward method)
 
 # %% [markdown]
 # ### Initialize the System
 # Specify the chemicals, the reactions, and the initial concentrations
 
 # %%
-# Instantiate the simulator and specify the chemicals
-# Here we use the "fast" preset for the variable steps, which leads to fewer steps, but generally less-accurate results
-uc_fast = ReactionSimulator(method="forward_euler")    # We call this "uc" because it's a "uniform compartment
+# Instantiate the simulator
+sim_euler = ReactionSimulator(method="forward_euler")
 
 # %%
-# Elementary reaction A + B <-> C
-uc_fast.add_reaction(reactants=["A" , "B"], products="C", 
-                     kinetic_parameters={"kF": 5., "kR": 2.})
+# Elementary reaction A + B <-> P
+sim_euler.add_reaction(reactants=["A" , "B"], products="P", 
+                       kinetic_parameters={"kF": 5., "kR": 2.})
 
-uc_fast.describe_reactions()
+sim_euler.describe_reactions()
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_fast.set_conc({"A": 10., "B": 50., "C": 20.})
+sim_euler.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
 
@@ -69,40 +71,49 @@ uc_fast.set_conc({"A": 10., "B": 50., "C": 20.})
 # ### Run the reaction
 
 # %%
-uc_fast.single_compartment_react(initial_step=0.004, duration=0.02, variable_steps=False) # NOT using variable steps!
+sim_euler.single_compartment_react(initial_step=0.004, duration=0.02, variable_steps=False) # NOT using variable steps!
 
 # %%
-uc_fast.get_history()
+sim_euler.get_history()
 
 # %% [markdown]
 # ### Plots changes of concentrations with time
 
 # %%
-uc_fast.plot_history(show_intervals=True)
+sim_euler.plot_history(show_intervals=True)
+
+# %% [markdown]
+# The simulator clearly got to ambitious in that 1st step!  (In fact, if you try with a slightly larger step size, it'll give an error about excessive step size)
+
+# %%
 
 # %%
 
 # %% [markdown]
-# # 2. Repeat the simulation with the "Heun" method, which is more sophisticated
-# ### and, generally, more accurate
+# # 2. Repeat the simulation with the **"Heun"** method, which is more sophisticated
+# ### and, generally, more accurate.  
+# SAME FIXED STEP SIZE
 
 # %%
-# Instantiate the simulator and specify the chemicals
-uc_slow = ReactionSimulator(method="heun", reaction_registry=uc_fast.get_reactions())
+# Instantiate a new simulator
+sim_heun = ReactionSimulator(method="heun", reaction_registry=sim_euler.get_reactions())
 # Re-use the species and reactions of part 1, but now with the "heun" ODE solver
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_slow.set_conc({"A": 10., "B": 50., "C": 20.})
+sim_heun.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
-uc_slow.single_compartment_react(initial_step=0.004, duration=0.02, variable_steps=False) # NOT using variable steps!
+# NOT using variable steps!   Same fixed step as before
+sim_heun.single_compartment_react(initial_step=0.004, duration=0.02, variable_steps=False) 
 
 # %%
-uc_slow.get_history()
+sim_heun.get_history()
 
 # %%
-uc_slow.plot_history(show_intervals=True)
+sim_heun.plot_history(show_intervals=True)
+
+# %%
 
 # %%
 
@@ -110,41 +121,43 @@ uc_slow.plot_history(show_intervals=True)
 # # 3. And, finally, get the EXACT analytic solution
 
 # %%
-# Instantiate the simulator and specify the chemicals
-uc_exact = ReactionSimulator(reaction_registry=uc_fast.get_reactions(),
-                             method="analytic")
+# Instantiate a new simulator
+sim_exact = ReactionSimulator(reaction_registry=sim_euler.get_reactions(),
+                              method="analytic")
 # Re-use the species and reactions of part 1, but now with an exact ODE solver
 
 # %%
 # Set the initial concentrations of all the chemicals
-uc_exact.set_conc({"A": 10., "B": 50., "C": 20.})
+sim_exact.set_conc({"A": 10., "B": 50., "P": 20.})
 
 # %%
-uc_exact.single_compartment_react(initial_step=0.001, duration=0.02, variable_steps=False) 
+sim_exact.single_compartment_react(initial_step=0.0005, duration=0.02, variable_steps=False) 
 # Here we use smaller steps to more accurately depict the exact solution in the whole interval
 
 # %%
-#uc_exact.get_history() 
+#sim_exact.get_history() 
 
 # %%
-uc_exact.plot_history(show_intervals=True)
+sim_exact.plot_history(show_intervals=True)
+
+# %%
 
 # %%
 
 # %% [markdown]
-# # 4. Let's compare plots for the concentration of `C`, as a function of time, from the earlier 3 simulations
+# # 4. Let's compare plots for the concentration of the product `P`, as a function of time, from the earlier 3 simulations
 
 # %%
-p1 = uc_fast.plot_history(species="C", colors=['#F5B914'], title="Forward Euler (simpler)", show=False)
-p2 = uc_slow.plot_history(species="C", colors=['#CBE504'], title="Heun (more complex)", show=False)
-p3 = uc_exact.plot_history(species="C", colors=['forestgreen'], title="exact", show=False)
+p1 = sim_euler.plot_history(species="P", colors=['#F5B914'], title="Forward Euler (simpler)", show_intervals=True, show=False)
+p2 = sim_heun.plot_history(species="P",  colors=['#CBE504'], title="Heun (more complex)", show=False)
+p3 = sim_exact.plot_history(species="P", colors=['forestgreen'], title="EXACT", show=False)
 
 # %%
 PlotlyHelper.combine_plots([p1, p2, p3], title="Comparison of simulation accuracies")
 
 # %% [markdown]
 # ## The comparison reveals that the `Heun` method greatly outperformed the `Forward Euler` one
-# in this scenario with large fixed simulation steps 
+# in this scenario with large, fixed simulation steps.  
+# Notice how `Forward Euler` starts out with exactly the correct initial slope (that's exactly how it works) - but that ends up being its downfall when continuing along that direction for an extended time step!
 
 # %%
-# TODO:  rename uc_slow and uc_fast   ; show dotted lines at the steps  ; maybe rename C to P (and also in react_3_b)

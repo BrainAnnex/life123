@@ -383,20 +383,21 @@ def test_single_compartment_react__catch_neg_conc():
     with pytest.raises(ExcessiveTimeStepHard) as ex:
         # This step would make [S] negative
         sim.single_compartment_react(initial_step=0.25, n_steps=1, variable_steps=False)
-    details = ex.value.details
-    print(details)
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert details["delta_time"] == 0.25
-    assert details["caption"] == "aborted: neg. conc. in `S` from rxn # 0"
-    assert details["system_time"] == 0.25
-    assert details["rxn_index"] == 0
-    assert details["rate"] == 950   # 8. * 125 - 2. * 25
-    assert details["species_id"] == "S"
-    assert details["previous_function"] == "_validate_increment"
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
-      The tentative time step (0.25) would lead to a NEGATIVE concentration in the species `S` from the reaction `2 S <-> U` (rxn # 0)
-      Baseline concentration value of `S` : 125 at system time 0.25; requested change (NOT carried out): -475"""
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert details["delta_time"] == 0.25
+    #assert details["caption"] == "aborted: neg. conc. in `S` from rxn # 0"
+    #assert details["system_time"] == 0.25
+    #assert details["rxn_index"] == 0
+    #assert details["rate"] == 950   # 8. * 125 - 2. * 25
+    #assert details["species_id"] == "S"
+    #assert details["previous_function"] == "_validate_increment"
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 0.25 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `_validate_increment()`: 
+      The attempted time step (0.25) would lead to a NEGATIVE concentration in the species `S` from the reaction `2 S <-> U` (rxn # 0)
+      Baseline concentration value of `S` : 125 at system time 0.25; requested change (NOT carried out): -475, due to a reaction rate of 950"""
 
     # Nothing has changed, since that last step wasn't actually taken
     assert np.allclose(sim.system_time, 0.25)
@@ -545,18 +546,20 @@ def test__single_compartment_react_main_loop_1():
     with pytest.raises(ExcessiveTimeStepHard) as ex:
         sim._single_compartment_react_main_loop(time_step=0.714285715, variable_steps=False,
                                                 step_count=1, n_steps=1000)
-    details = ex.value.details
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert math.isclose(details["delta_time"], 0.714285715)
-    assert details["caption"] == 'aborted: neg. conc. in `B` from rxn # 0'
-    assert details["system_time"] == 20
-    assert details["rate"] == -70.0
-    assert details["rxn_index"] == 0
-    assert details["previous_function"] == "_validate_increment"
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
-      The tentative time step (0.714286) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
-      Baseline concentration value of `B` : 50 at system time 20; requested change (NOT carried out): -50"""
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert math.isclose(details["delta_time"], 0.714285715)
+    #assert details["caption"] == 'aborted: neg. conc. in `B` from rxn # 0'
+    #assert details["system_time"] == 20
+    #assert details["rate"] == -70.0
+    #assert details["rxn_index"] == 0
+    #assert details["previous_function"] == "_validate_increment"
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 20 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `_validate_increment()`: 
+      The attempted time step (0.714286) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 50 at system time 20; requested change (NOT carried out): -50, due to a reaction rate of -70"""
 
     # The following values are all unchanged
     assert sim.system_time == 20
@@ -793,17 +796,19 @@ def test_reaction_step_common_fixed_step_1():
     sim.system.set_system_state([10, 50])     # Reset the system state
     with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B] negative
         sim.reaction_step_common_fixed_step(delta_time=0.8)
-    details = ex.value.details
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert details["delta_time"] == 0.8
-    assert details["system_time"] == 0
-    assert details["rate"] == -70.0
-    assert details["rxn_index"] == 0
-    assert details["previous_function"] == "_validate_increment"
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
-      The tentative time step (0.8) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
-      Baseline concentration value of `B` : 50 at system time 0; requested change (NOT carried out): -56"""
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert details["delta_time"] == 0.8
+    #assert details["system_time"] == 0
+    #assert details["rate"] == -70.0
+    #assert details["rxn_index"] == 0
+    #assert details["previous_function"] == "_validate_increment"
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 0 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `_validate_increment()`: 
+      The attempted time step (0.8) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 50 at system time 0; requested change (NOT carried out): -56, due to a reaction rate of -70"""
 
 
 
@@ -811,13 +816,15 @@ DETAILS:
     sim.method = "heun"
     with pytest.raises(ExcessiveTimeStepHard) as ex:      # Excessive time step that would make [B] negative
         sim.reaction_step_common_fixed_step(delta_time=0.8)
-    details = ex.value.details
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert details["delta_time"] == 0.8
-    assert details["rate"] == -70.0
-    assert details["previous_function"] == "heun_single_rxn"
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert details["delta_time"] == 0.8
+    #assert details["rate"] == -70.0
+    #assert details["previous_function"] == "heun_single_rxn"
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 0 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `heun_single_rxn()`: 
 heun_single_rxn(): excessive time step (0.8), leading to negative concentrations"""
 
 
@@ -855,18 +862,19 @@ def test_reaction_step_common_fixed_step_2():
 
     with pytest.raises(ExcessiveTimeStepHard) as ex:
         sim.reaction_step_common_fixed_step(delta_time=0.0040651)    # A step so large that it would make [A] negative
-    details = ex.value.details
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert math.isclose(details["delta_time"], 0.0040651)
-    assert details["system_time"] == 0
-    assert details["rate"] == 2460
-    assert details["rxn_index"] == 0
-    assert details["previous_function"] == "_validate_increment"
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
-      The tentative time step (0.0040651) would lead to a NEGATIVE concentration in the species `A` from the reaction `A + B <-> C` (rxn # 0)
-      Baseline concentration value of `A` : 10 at system time 0; requested change (NOT carried out): -10.0001"""
-
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert math.isclose(details["delta_time"], 0.0040651)
+    #assert details["system_time"] == 0
+    #assert details["rate"] == 2460
+    #assert details["rxn_index"] == 0
+    #assert details["previous_function"] == "_validate_increment"
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 0 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `_validate_increment()`: 
+      The attempted time step (0.0040651) would lead to a NEGATIVE concentration in the species `A` from the reaction `A + B <-> C` (rxn # 0)
+      Baseline concentration value of `A` : 10 at system time 0; requested change (NOT carried out): -10.0001, due to a reaction rate of 2460"""
 
 
     rxns.clear_reactions_data()       # Re-start with a blank slate of reactions
@@ -922,13 +930,15 @@ DETAILS:
     # but combined (-10.72) they would make [A] negative!
     with pytest.raises(ExcessiveTimeStepHard) as ex:
         sim.reaction_step_common_fixed_step(delta_time=0.002)
-    details = ex.value.details
-    assert details["function"] == "reaction_step_common_fixed_step"
-    assert details["previous_function"] == "attempt_reaction_step"
-    assert math.isclose(details["delta_time"], 0.002)
-    assert details["message"] == """reaction_step_common_fixed_step(): unable to complete the reaction step.  Try REDUCING the time step, or switching to variable time steps. 
-DETAILS: 
-      The tentative time step (0.002) would lead to a NEGATIVE concentration 
+    msg = ex.value.details
+    #details = ex.value.details
+    #assert details["function"] == "reaction_step_common_fixed_step"
+    #assert details["previous_function"] == "attempt_reaction_step"
+    #assert math.isclose(details["delta_time"], 0.002)
+    assert msg == """reaction_step_common_fixed_step(): unable to complete the reaction step.  System time is now: 0 
+Try REDUCING the time step, or switching to variable time steps. 
+DETAILS received from the low-level function `attempt_reaction_step()`: 
+      The attempted time step (0.002) would lead to a NEGATIVE concentration 
       in one or more of the species (for instance `A`, of index 0), from the COMBINED reactions.
       Baseline concentration values: [10 50 20  0  0] at system time 0; requested changes (NOT carried out): [-10.72   0.88   4.92   0.     0.  ]"""
 
@@ -1619,8 +1629,8 @@ def test_validate_increment():
     assert details["system_time"] == 0
     assert details["rate"] == 123
     assert details["rxn_index"] == 0
-    assert details["message"] == """      The tentative time step (0.97) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
-      Baseline concentration value of `B` : 10 at system time 0; requested change (NOT carried out): -10.001"""
+    assert details["message"] == """      The attempted time step (0.97) would lead to a NEGATIVE concentration in the species `B` from the reaction `A <-> B` (rxn # 0)
+      Baseline concentration value of `B` : 10 at system time 0; requested change (NOT carried out): -10.001, due to a reaction rate of 123"""
 
     # TODO: test that diagnostic data, if enabled, gets saved as needed
 
