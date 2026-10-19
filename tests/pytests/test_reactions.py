@@ -325,7 +325,7 @@ def test_step_simulation_1():
 
     # Exact solution
     result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': -2.5918177931828215, 'B': 2.5918177931828215}
+    assert result[0] == {'A': -2.591817793182822, 'B': 2.591817793182822}
     assert result[1] == 30    # Rate = 3. * 10.
 
     result = sim_rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50}, exact=True)

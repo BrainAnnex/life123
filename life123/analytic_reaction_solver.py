@@ -32,13 +32,14 @@ class AnalyticReactionSolver:
         # Formula is:  R(t) = R0 Exp(-kF t)
 
         if incremental:
-            R_incr = R0 * (np.exp(-kF * t) - 1)
+            R_incr = R0 * math.expm1(-kF * t)           # A more precise form for R0 * (np.exp(-kF * t) - 1)
+                                                        # when (-kF * t) is close to zero
             P_incr = - R_incr   # From mass conservation
             return P_incr
 
 
         TOT = R0 + P0
-        A_t = R0 * np.exp(-kF * t)
+        A_t = R0 * math.exp(-kF * t)
         P_t = TOT - A_t     # From mass conservation
 
         return P_t

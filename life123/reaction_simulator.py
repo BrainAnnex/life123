@@ -1,7 +1,8 @@
 # Classes:
-#   1) ReactionStep
-#   2) ReactionSimulator
-#   3) VariableTimeSteps:
+#   - ExcessiveTimeStepHard and ExcessiveTimeStepSoft
+#   - ReactionStep
+#   - ReactionSimulator
+#   - VariableTimeSteps:
 
 import math
 import numpy as np
