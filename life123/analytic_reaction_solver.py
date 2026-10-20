@@ -91,6 +91,8 @@ class AnalyticReactionSolver:
         from time 0 to time t,
         with the specified parameters.
 
+        Note: to simulate 2 A -> P, set A0 and B0 to the same value
+
         :param kF:  Forward reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B

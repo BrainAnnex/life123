@@ -361,7 +361,6 @@ def test_exact_advance_synthesis_reversible_3():
 
 def test_exact_advance_synthesis_irreversible():
     # Reaction A + B -> P
-
     # We'll start with `A` as the limiting reagent
     # No change at time 0
     P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0, incremental=False)
@@ -418,12 +417,19 @@ def test_exact_advance_synthesis_irreversible():
     P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=0, incremental=False)
     assert np.allclose(P_t, 20)     # No change
 
-    for t  in [0.0003, 0.0004, 0.5, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.]:
-        P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=t, incremental=False)
-        P_t_approx = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30.000001, P0=20, t=t, incremental=False)
+
+    for t  in [0.0003, 0.0004, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 0.5, 1.]:
+        P_t =        AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=t, incremental=False)
+        # Compare with the non-special case where A0 != B0 (use values that are close, but not so close that they
+        # will trigger the np.allclose(A0, B0) inside the function - and hence a special handling)
+        P_t_approx = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30.001, P0=20, t=t, incremental=False)
+        assert np.allclose(P_t, P_t_approx, rtol=1e-04, atol=1e-08)     # Be relatively lenient, because B0 could not be made too close to A0
+
+        # Compare with the reversible solver, in a scenario with a tiny reverse rate constant (but not so small as to trigger a switch
+        # to the irreversible solver)
         c = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=eps, A0=30, B0=30, P0=20, t=t, incremental=False)
         assert np.allclose(P_t, c)
-        assert np.allclose(P_t, P_t_approx)
+
 
     # A time so large that the reaction has gone to completion
     P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=1000., incremental=False)

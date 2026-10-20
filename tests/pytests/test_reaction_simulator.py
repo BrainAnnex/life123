@@ -1760,7 +1760,6 @@ def test_analytic_solver_single_rxn_2():
     sim = ReactionSimulator(method="analytic")
 
     # Reaction A + B <-> P
-    sim.reaction_registry.clear_reactions_data()
     sim.add_reaction(reactants=["A", "B"], products="P",
                      reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     rxn_sim = sim.reaction_registry.get_reaction(0)
@@ -1809,6 +1808,21 @@ def test_analytic_solver_single_rxn_2():
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"R": 80, "P": 20, "Q":100}, delta_time=0.31739)
     assert compare_dicts(delta_conc, {'R': -49.127783572982025, 'P': 49.127783572982025, 'Q': 49.127783572982025})
     assert math.isclose(rate, 240)        # 3. * 80
+
+
+def test_analytic_solver_single_rxn_3():
+    sim = ReactionSimulator(method="analytic")
+
+    # Reaction 2 A -> P  (irreversible)
+    sim.add_reaction(reactants=["A", "A"], products="P",
+                     reaction_model="mass action", kinetic_parameters={"kF": 5.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert not rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 30, "P":20}, delta_time=0.01)
+    assert compare_dicts(delta_conc, {'A': -18., 'P': 18.})
+    assert math.isclose(rate, 4500)     # 5. * 30^2
 
 
 

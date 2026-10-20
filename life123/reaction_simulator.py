@@ -1578,6 +1578,7 @@ class ReactionSimulator:
         match rxn.analytic_solution_family:
 
             case "ONE_TO_ONE":
+                # EXAMPLES:  R -> P  or  R <-> P
                 r = reactants[0][1]           # EXAMPLE: "R"
                 p = products[0][1]            # EXAMPLE: "P"
 
@@ -1597,10 +1598,16 @@ class ReactionSimulator:
 
 
             case "TWO_TO_ONE":
-                # EXAMPLE: A + B -> P
-                a = reactants[0][1]           # EXAMPLE: "A"
-                b = reactants[1][1]           # EXAMPLE: "B"
-                p = products[0][1]            # EXAMPLE: "P"
+                if len(reactants) > 1:
+                    # EXAMPLES:  A + B -> P  or  A + B <-> P
+                    a = reactants[0][1]         # EXAMPLE: "A"
+                    b = reactants[1][1]         # EXAMPLE: "B"
+                else:
+                   # EXAMPLES:  2 A -> P  or   2 A <-> P
+                    a = reactants[0][1]         # EXAMPLE: "A"
+                    b = a                       # EXAMPLE: "A"
+
+                p = products[0][1]              # EXAMPLE: "P"
 
                 a0 = conc_init[a]
                 b0 = conc_init[b]
@@ -1620,11 +1627,16 @@ class ReactionSimulator:
 
             case "ONE_TO_TWO":
                 if rxn.model.reversible:
-                    # EXAMPLE: P <-> A + B    NOTE: for convenience, we're treating the reversible version of this reaction
-                    #                               as being the same as the previous reaction (i.e. A + B <-> P),
-                    #                               with kF and kR reversed
-                    a = products[0][1]           # EXAMPLE: "A"
-                    b = products[1][1]           # EXAMPLE: "B"
+                    if len(products) > 1:
+                        # EXAMPLE: P <-> A + B    NOTE: for convenience, we're treating the reversible version of this reaction
+                        #                               as being the same as the previous reaction (i.e. A + B <-> P),
+                        #                               with kF and kR reversed
+                        a = products[0][1]           # EXAMPLE: "A"
+                        b = products[1][1]           # EXAMPLE: "B"
+                    else:
+                        # EXAMPLE: P <-> 2A
+                        a = products[0][1]           # EXAMPLE: "A"
+                        b = a
                     p = reactants[0][1]          # EXAMPLE: "P"
 
                     a0 = conc_init[a]
@@ -1637,12 +1649,18 @@ class ReactionSimulator:
                     # Work out the stoichiometry for all the species
                     increment_dict_single_rxn = {p: delta_p, a: -delta_p, b: -delta_p}
                 else:
-                    # EXAMPLE: R -> P + Q
-                    # Note that this is a first-order reaction; so, not any different kinetically from R -> P
-                    # (and, from the stoichiometry, the concentration increment of Q will be the same as that of R)
+                    if len(products) > 1:
+                        # EXAMPLE: R -> P + Q
+                        # Note that this is a first-order reaction; so, not any different kinetically from R -> P
+                        # (and, from the stoichiometry, the concentration increment of Q will be the same as that of R)
+                        p = products[0][1]           # EXAMPLE: "P"
+                        q = products[1][1]           # EXAMPLE: "Q"
+                    else:
+                        # EXAMPLE: R -> 2 P
+                        p = products[0][1]           # EXAMPLE: "P"
+                        q = p
+
                     r = reactants[0][1]          # EXAMPLE: "R"
-                    p = products[0][1]           # EXAMPLE: "P"
-                    q = products[1][1]           # EXAMPLE: "Q"
 
                     r0 = conc_init[r]
                     p0 = conc_init[p]
