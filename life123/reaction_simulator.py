@@ -101,7 +101,11 @@ class ReactionSimulator:
                  macromolecules=None):
         """
 
-        :param system:
+        :param system:              [OPTIONAL] A Numpy array with the initial concentrations of all species.
+                                        The significance of the array index positions will be determined by the index->species mapping
+                                        passed to the argument `species_index_map`, or
+                                        present in the object passed to `uniform_compartment`;
+                                        therefore, either of those arguments must also be present
         :param species_index_map:
         :param reaction_registry:   [OPTIONAL] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
                                 If passed, cannot pass either of the args `species_data` nor `names` (those are both part of the "ReactionRegistry" object);
@@ -121,7 +125,6 @@ class ReactionSimulator:
                                 it will stay in effect from now on, unless explicitly changed later.
                                 Available values (in generally-increasing speed):
                                     'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
-        :param system:
         :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         :param species_ids: [OPTIONAL] A single id, or list or tuple of id's, of the species.
                                 (note: providing a list allows one to make the species appear in a particular desired order)
@@ -247,6 +250,10 @@ class ReactionSimulator:
                                                                             # i.e. to check for changes externally made to the registry
 
         if system is not None:
+            assert self.species_registry is not None, \
+                "ReactionSimulator() instantiation: in order to pass the argument `system`, " \
+                "you must also pass `species_index_map` or `uniform_compartment`"
+
             self.system.set_system_state(conc=system)
 
 
@@ -1574,7 +1581,6 @@ class ReactionSimulator:
         reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
         products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
 
-
         match rxn.analytic_solution_family:
 
             case "ONE_TO_ONE":
@@ -1612,6 +1618,7 @@ class ReactionSimulator:
                 a0 = conc_init[a]
                 b0 = conc_init[b]
                 p0 = conc_init[p]
+
                 # Compute the increment of P
                 if rxn.model.reversible:
                     delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
@@ -1648,7 +1655,8 @@ class ReactionSimulator:
                                                                 A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
                     # Work out the stoichiometry for all the species
                     increment_dict_single_rxn = {p: delta_p, a: -delta_p, b: -delta_p}
-                else:
+
+                else:   # Irreversible
                     if len(products) > 1:
                         # EXAMPLE: R -> P + Q
                         # Note that this is a first-order reaction; so, not any different kinetically from R -> P
@@ -1657,6 +1665,7 @@ class ReactionSimulator:
                         q = products[1][1]           # EXAMPLE: "Q"
                     else:
                         # EXAMPLE: R -> 2 P
+                        # Note that this is a first-order reaction; so, not any different kinetically from R -> P
                         p = products[0][1]           # EXAMPLE: "P"
                         q = p
 
@@ -1668,9 +1677,13 @@ class ReactionSimulator:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
                                                                                              R0=r0, P0=p0, t=delta_time, incremental=True)
                     # Work out the stoichiometry for all the species
-                    increment_dict_single_rxn = {r: -delta_p, p: delta_p, q: delta_p}
+                    if len(products) > 1:
+                        increment_dict_single_rxn = {r: -delta_p, p: delta_p, q: delta_p}
+                    else:
+                        increment_dict_single_rxn = {r: -delta_p, p: 2 * delta_p}
 
                 return increment_dict_single_rxn
+
 
             case _:
                 raise Exception(f"analytic_solver_single_rxn(): no exact analytic solution "

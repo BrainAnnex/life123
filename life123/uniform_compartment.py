@@ -266,9 +266,9 @@ class UniformCompartment:
             f"(such as the passed value {min(conc)})"
 
         if isinstance(conc, (list, tuple)):
-            self.system_state = np.array(conc)
+            self.system_state = np.array(conc, dtype='d')   # float64
         else:
-            self.system_state = conc.copy()    # Clone
+            self.system_state = conc.astype(dtype='d')    # Clone, while standardizing the data type
 
 
 

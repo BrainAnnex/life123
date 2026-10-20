@@ -422,6 +422,8 @@ class ReactionRegistry:
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
+        # TODO: also allow a single term as a tuple.  EXAMPLE:  products=(2, "P")
+
         # Merge the temp value into the rest of the thermodynamics parameters
         if temp is not None:
             if thermodynamic_parameters is None:

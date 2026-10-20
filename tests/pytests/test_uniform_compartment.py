@@ -129,6 +129,7 @@ def test_set_system_state():
     uc = UniformCompartment(species_index_map=ind)
 
     uc.set_system_state([1, 2, 3])
+    assert uc.system_state.dtype == np.dtype('float64')
     assert np.allclose(uc.system_state, np.array([1, 2, 3]))
 
     with pytest.raises(Exception):

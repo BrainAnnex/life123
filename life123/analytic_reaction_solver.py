@@ -169,6 +169,8 @@ class AnalyticReactionSolver:
         from time 0 to time t,
         with the specified parameters.
 
+        Note: to simulate 2 A -> P, set A0 and B0 to the same value
+
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
@@ -267,7 +269,9 @@ class AnalyticReactionSolver:
         with the specified parameters, sampled at the given time(s).
 
         This approximation is relatively coarse; in the pytests, errors of up to about 2% were seen,
-        with the worst errors in the mid-portion between the starting state and the final equilibrium
+        with the worst errors in the mid-portion between the starting state and the final equilibrium.
+
+        Note: to simulate 2 A -> P, set A0 and B0 to the same value
 
         :param kF:  Forward reaction rate constant (cannot be zero)
         :param kR:  Reverse reaction rate constant

@@ -940,7 +940,7 @@ Try REDUCING the time step, or switching to variable time steps.
 DETAILS received from the low-level function `attempt_reaction_step()`: 
       The attempted time step (0.002) would lead to a NEGATIVE concentration 
       in one or more of the species (for instance `A`, of index 0), from the COMBINED reactions.
-      Baseline concentration values: [10 50 20  0  0] at system time 0; requested changes (NOT carried out): [-10.72   0.88   4.92   0.     0.  ]"""
+      Baseline concentration values: [10. 50. 20.  0.  0.] at system time 0; requested changes (NOT carried out): [-10.72   0.88   4.92   0.     0.  ]"""
 
 
 
@@ -1029,7 +1029,7 @@ def test_reaction_step_common_variable_step_2(capsys):
     assert ind.index_to_species == ["A", "B"]
 
     # New simulation, with slightly larger time step
-    initial_system = np.array([10, 50])
+    initial_system = [10, 50]
     sim = ReactionSimulator(system=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")
 
@@ -1052,7 +1052,7 @@ def test_reaction_step_common_variable_step_2(capsys):
     output_expected = """
 (STEP 1 aborted) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.04 ...
     Previous:  None
-    Baseline:  [10 50]
+    Baseline:  [10. 50.]
     Deltas:    [ 2.8 -2.8]
     Norms:     { 'norm_A': 3.92 }
     Thresholds:    
@@ -1065,7 +1065,7 @@ def test_reaction_step_common_variable_step_2(capsys):
 
 (STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.024 ...
     Previous:  None
-    Baseline:  [10 50]
+    Baseline:  [10. 50.]
     Deltas:    [ 1.68 -1.68]
     Norms:     { 'norm_A': 1.4112, 'norm_B': 0.168 }
     Thresholds:    
@@ -1130,7 +1130,7 @@ def test_attempt_reaction_step(capsys):
     captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
     assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.02 ..." in captured.out
     assert "    Previous:  None" in captured.out
-    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Baseline:  [10. 50.]" in captured.out
     assert "    Deltas:    [ 1.4 -1.4]" in captured.out
     assert "    Norms:     { 'norm_A': 0.98, 'norm_B': 0.14 }" in captured.out
     assert "    Thresholds:" in captured.out
@@ -1155,7 +1155,7 @@ def test_attempt_reaction_step(capsys):
     captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
     assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.025 ..." in captured.out
     assert "    Previous:  None" in captured.out
-    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Baseline:  [10. 50.]" in captured.out
     assert "    Deltas:    [ 1.75 -1.75]" in captured.out
     assert "    Norms:     { 'norm_A': 1.5312, 'norm_B': 0.175 }" in captured.out
     assert "    Thresholds:" in captured.out
@@ -1181,7 +1181,7 @@ def test_attempt_reaction_step(capsys):
     captured = capsys.readouterr()  # Capture the standard output and standard error, from the previous function call
     assert "(STEP 1 completed) SYSTEM TIME 0 : Examining Conc. changes due to tentative Δt=0.01 ..." in captured.out
     assert "    Previous:  None" in captured.out
-    assert "    Baseline:  [10 50]" in captured.out
+    assert "    Baseline:  [10. 50.]" in captured.out
     assert "    Deltas:    [ 0.7 -0.7]" in captured.out
     assert "    Norms:     { 'norm_A': 0.245, 'norm_B': 0.07 }" in captured.out
     assert "    Thresholds:" in captured.out
@@ -1727,6 +1727,7 @@ def test_dispatcher_single_rxn():
 
 
 def test_analytic_solver_single_rxn_1():
+    # "ONE_TO_ONE"
 
     sim = ReactionSimulator(method="analytic")
 
@@ -1811,6 +1812,7 @@ def test_analytic_solver_single_rxn_2():
 
 
 def test_analytic_solver_single_rxn_3():
+    # "TWO_TO_ONE"
     sim = ReactionSimulator(method="analytic")
 
     # Reaction 2 A -> P  (irreversible)
@@ -1823,6 +1825,60 @@ def test_analytic_solver_single_rxn_3():
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 30, "P":20}, delta_time=0.01)
     assert compare_dicts(delta_conc, {'A': -18., 'P': 18.})
     assert math.isclose(rate, 4500)     # 5. * 30^2
+
+
+    # Fresh start with a new reaction 2 A <-> P  (reversible)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants=[(2, "A")], products="P",
+                     reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 35, "P":20}, delta_time=0.002)
+    assert compare_dicts(delta_conc, {'A': -8.996591327802719, 'P': 8.996591327802719})
+    assert math.isclose(rate, 6085)     # 5. * 35^2 - 2. * 20
+
+
+def test_analytic_solver_single_rxn_4():
+    # "ONE_TO_TWO" (special case R -> 2 P)
+    sim = ReactionSimulator(method="analytic")
+
+    # Start with a *side tour* to the "ONE_TO_ONE" reaction R -> P (to provide a comparison value)
+    sim.add_reaction(reactants="R", products="P",
+                     reaction_model="mass action", kinetic_parameters={"kF": 5.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"     # This is a side tour
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"R": 30, "P":20}, delta_time=0.04)
+    delta_reactant = delta_conc["R"]    # -5.438077407660543
+    assert math.isclose(rate, 150)      # 5. * 30
+
+
+    # Fresh start with reaction R -> 2 P  (irreversible)
+    sim.reaction_registry.clear_reactions_data()
+    sim.add_reaction(reactants="R", products=[(2, "P")],
+                     reaction_model="mass action", kinetic_parameters={"kF": 5.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert not rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"R": 30, "P":20}, delta_time=0.04)
+    assert math.isclose(delta_conc["R"], delta_reactant)    # Same as before
+    assert math.isclose(delta_conc["P"], -2 * delta_reactant)   # 10.876154815321087, from the stoichiometry
+    assert math.isclose(rate, 150)     # Same as before
+
+
+def test_analytic_solver_single_rxn_5():
+    # "ONE_TO_TWO" (special case P <-> 2 A)
+
+    sim = ReactionSimulator(method="analytic")
+    # Reaction P <-> 2 A (reversible)  : same reaction as the 2 A <-> P we saw before, with kF and kR reversed
+    sim.add_reaction(reactants="P", products=[(2, "A")],
+                     reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
+    rxn_sim = sim.reaction_registry.get_reaction(0)
+    assert rxn_sim.model.reversible
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 35, "P":20}, delta_time=0.002)
+    assert compare_dicts(delta_conc, {'A': -8.996591327802719, 'P': 8.996591327802719}) # Same as before!
+    assert math.isclose(rate, -6085)     # Switched sign from before
 
 
 

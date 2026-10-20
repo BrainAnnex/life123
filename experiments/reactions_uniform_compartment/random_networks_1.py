@@ -112,7 +112,7 @@ G_list   # kJ/mol
 
 # %%
 # Instantiate the simulator with our species and reactions
-sim = ReactionSimulator(reaction_registry=rxns, method="analytic")
+sim = ReactionSimulator(reaction_registry=rxns, method="heun")   # analytic
 
 # %%
 
@@ -143,7 +143,13 @@ sim.system.get_system_conc()
 # %%
 
 # %%
-sim.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters
+sim.single_compartment_react(initial_step=0.00001, target_end_time=1.)   # Using defaults for all other parameters
+
+# %%
+sim.system.system_state
+
+# %%
+sim.system_time
 
 # %%
 sim.plot_history(show_intervals=True)
