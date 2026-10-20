@@ -140,17 +140,26 @@ class RandomReactionNetwork:
 
             if verbose:
                 print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
-                print(self.reaction_data.get_reaction(i).describe(concise=False))
+                print(self.reaction_data.get_reaction(i).describe(detail="full"))
 
 
 
-    def get_reaction_data(self):
+    def get_reaction_data(self) -> ReactionRegistry:
         """
-        Extract and return all the reactions
+        Extract and return an object containing all the reactions
 
         :return:    Object of type "ReactionRegistry"
         """
         return self.reaction_data
+
+
+
+    def get_all_random_reactions(self) -> list:
+        """
+
+        :return:     List of objects of type "SimulationReaction"
+        """
+        return self.reaction_data.get_all_reactions()
 
 
 

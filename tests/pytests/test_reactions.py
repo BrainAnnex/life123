@@ -149,7 +149,7 @@ def test_determine_reaction_rate_2_a():
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                                   reaction_model="custom",
                                   kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
-     #print(rxn_defn.describe(concise=False))
+     #print(rxn_defn.describe(detail="full"))
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.model.rate_function.__name__ == "kinetic_rate_first_order"
@@ -169,7 +169,7 @@ def test_determine_reaction_rate_2_a():
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                              reaction_model="custom",
                              kinetic_parameters={"kF": 10})     # rate_function not provided
-    #print(rxn_defn.describe(concise=False))
+    #print(rxn_defn.describe(detail="full"))
 
     sim_rxn = rxn_defn.sim_reactions[0]
 
@@ -263,7 +263,7 @@ def test_determine_reaction_rate_3():
     rxn_defn = ReactionDefinition(id=22, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
                                   reaction_model="michaelis menten",
                                   kinetic_parameters={'kM': 2, 'kcat': 5})
-    #print(rxn_defn.describe(concise=False))
+    #print(rxn_defn.describe(detail="full"))
 
     sim_rxn = rxn_defn.sim_reactions[0]
 
@@ -373,7 +373,7 @@ def test_step_simulation_2():
     initial_conc = {"E": 1, "S": 20, "P": 0, "ES*": 0}
     dt = 0.002
 
-    # Look at each derived reaction individually
+    # Look at each DERIVED reaction (as used by simulator) individually
     rxn_sim_tuple = rxn_defn.sim_reactions
     assert len(rxn_sim_tuple) == 2
     rxn_sim_1, rxn_sim_2 = rxn_sim_tuple
@@ -437,7 +437,7 @@ def test_step_simulation_3():
     rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
                              reaction_model="custom",
                              kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
-    #print(rxn_defn.describe(concise=False))
+    #print(rxn_defn.describe(detail="full"))
 
     sim_rxn = rxn_defn.sim_reactions[0]
 
@@ -931,16 +931,17 @@ def test_describe():
     rxn_defn = ReactionDefinition(reactants="R", products="P", species_registry=sr,
                              thermodynamic_parameters={"delta_H": 0.5, "delta_S": -3, "temp": 100},
                              reaction_model="mass action", kinetic_parameters={"kF": 10})
-    assert rxn_defn.describe(concise=True) == "R <-> P"
+    assert rxn_defn.describe(detail="minimal") == "R <-> P"
 
-    assert rxn_defn.describe(concise=False) ==  \
+    assert rxn_defn.describe(detail="full") ==  \
         'R <-> P\n'  \
         '        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"\n'  \
-        '        Thermodynamics - passed:    (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | Temp = -173.1 C)\n'  \
-        '        Thermodynamics - derived:   (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K_eq = 0.38206 | Temp = -173.1 C)\n'  \
-        '        Kinetics - passed:   (kF = 10)\n'  \
-        '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "mass action"   (kF = 10 | kR = 26.174 | K = 0.38206 | reversible = True)'
+        '        Thermodynamics - passed:  (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | Temp = -173.1 C)\n'  \
+        '        Thermodynamics - derived:  (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K_eq = 0.38206 | Temp = -173.1 C)\n'  \
+        '        Kinetics - passed:  (kF = 10)\n'  \
+        '        Kinetics - derived: 1 DERIVED reaction (as used by simulator)\n'  \
+        '                  [1]   R <-> P\n' \
+        '                        Type: "mass action"   (kF = 10 | kR = 26.174 | K = 0.38206 | reversible = True)'
 
 
     # Reaction: # E + S <-> ES -> E + P, with SingleSubstrateMechanism model
@@ -949,16 +950,19 @@ def test_describe():
                                   species_registry=sr, autoregister_species=True,
                                   reaction_model="single substrate mechanism",
                                   kinetic_parameters={"k1_F": 18, "k1_R": 100, "k2_F": 49})
-    assert rxn_defn.describe(concise=True) == "S + E -> P + E"
-    assert rxn_defn.describe(concise=False) ==  \
-        'S + E -> P + E\n'  \
-        '        Enzymatic reaction, with Reaction Model: "single substrate mechanism"   (Reaction ID 85)\n'  \
-        '        Thermodynamics - passed:  None\n'  \
-        '        Thermodynamics - derived: None\n'  \
-        '        Kinetics - passed:   (k1_F = 18 | k1_R = 100 | k2_F = 49)\n'  \
-        '        Kinetics - derived:  2 derived reactions\n'  \
-        '            (1) Type: "mass action"   (kF = 18 | kR = 100 | K = 0.18 | reversible = True)\n'  \
-        '            (2) Type: "mass action"   (kF = 49 | reversible = False)'
+    assert rxn_defn.describe(detail="minimal") == "S + E -> P + E"
+
+    assert rxn_defn.describe(detail="full") == \
+        """S + E -> P + E
+        Enzymatic reaction, with Reaction Model: "single substrate mechanism"   (Reaction ID 85)
+        Thermodynamics - passed: None
+        Thermodynamics - derived: None
+        Kinetics - passed:  (k1_F = 18 | k1_R = 100 | k2_F = 49)
+        Kinetics - derived: 2 DERIVED reactions (as used by simulator)
+                  [1]   S + E <-> ES*
+                        Type: "mass action"   (kF = 18 | kR = 100 | K = 0.18 | reversible = True)
+                  [2]   ES* -> P + E
+                        Type: "mass action"   (kF = 49 | reversible = False)"""
 
 
     # Reaction: # E + S <-> ES -> E + P, with "michaelis menten" model
@@ -966,74 +970,78 @@ def test_describe():
     rxn_defn = ReactionDefinition(id=22, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
                                   reaction_model="michaelis menten",
                                   kinetic_parameters={'kM': 2, 'kcat': 5})
-    assert rxn_defn.describe(concise=True) == "S + E -> P + E"
-    assert rxn_defn.describe(concise=False) ==  \
-        'S + E -> P + E\n'  \
-        '        Enzymatic reaction, with Reaction Model: "michaelis menten"   (Reaction ID 22)\n'  \
-        '        Thermodynamics - passed:  None\n'  \
-        '        Thermodynamics - derived: None\n'  \
-        '        Kinetics - passed:   (kM = 2 | kcat = 5)\n'  \
-        '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "Michaelis-Menten"   (kM = 2 | kcat = 5 | Substrate = \'S\' | Enzyme = \'E\' | Product = \'P\')'
+    assert rxn_defn.describe(detail="minimal") == "S + E -> P + E"
+    assert rxn_defn.describe(detail="full") ==  \
+        """S + E -> P + E
+        Enzymatic reaction, with Reaction Model: "michaelis menten"   (Reaction ID 22)
+        Thermodynamics - passed: None
+        Thermodynamics - derived: None
+        Kinetics - passed:  (kM = 2 | kcat = 5)
+        Kinetics - derived: 1 DERIVED reaction (as used by simulator)
+                  [1]   S + E -> P + E
+                        Type: "Michaelis-Menten"   (kM = 2 | kcat = 5 | Substrate = 'S' | Enzyme = 'E' | Product = 'P')"""
 
 
     # Reaction: CH4 + 2 O2 <-> CO2 + 2 H2O (no model specified)
     sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
     rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr)
-    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 -> CO2 + 2 H2O"
+    assert rxn_defn.describe(detail="minimal") == "CH4 + 2 O2 -> CO2 + 2 H2O"
 
-    assert rxn_defn.describe(concise=False) ==  \
+    assert rxn_defn.describe(detail="full") ==  \
         'CH4 + 2 O2 -> CO2 + 2 H2O\n'  \
         '        General one-step reaction, with no Reaction Model specified\n'  \
-        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - passed: None\n'  \
         '        Thermodynamics - derived: None\n'  \
         '        Kinetics - passed: None\n'  \
-        '        Kinetics - derived:  None'
+        '        Kinetics - derived: None'
 
 
     # Same reaction, with more parameters
     rxn_defn = ReactionDefinition(id=777,
                                   reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
                                   reaction_model="custom")
-    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 -> CO2 + 2 H2O"
-    assert rxn_defn.describe(concise=False) ==  \
+    assert rxn_defn.describe(detail="minimal") == "CH4 + 2 O2 -> CO2 + 2 H2O"
+    assert rxn_defn.describe(detail="full") ==  \
         'CH4 + 2 O2 -> CO2 + 2 H2O\n'  \
         '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 777)\n'  \
-        '        Thermodynamics - passed:  None\n'  \
+        '        Thermodynamics - passed: None\n'  \
         '        Thermodynamics - derived: None\n'  \
         '        Kinetics - passed: None\n'  \
-        '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "custom"   (reversible = False)'
+        '        Kinetics - derived: 1 DERIVED reaction (as used by simulator)\n'  \
+        '                  [1]   CH4 + 2 O2 -> CO2 + 2 H2O\n'\
+        '                        Type: "custom"   (reversible = False)'
 
 
     # Same reaction, with yet more parameters
     rxn_defn = ReactionDefinition(id=999,
                                   reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
                                   reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": kinetic_test_func})
-    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
-    assert rxn_defn.describe(concise=False) ==  \
+    assert rxn_defn.describe(detail="minimal") == "CH4 + 2 O2 <-> CO2 + 2 H2O"
+    assert rxn_defn.describe(detail="full") ==  \
         'CH4 + 2 O2 <-> CO2 + 2 H2O\n'  \
         '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 999)\n'  \
-        '        Thermodynamics - passed:  None\n'  \
-        '        Thermodynamics - derived:   (K_eq = 5)\n'  \
-        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
-        '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
+        '        Thermodynamics - passed: None\n'  \
+        '        Thermodynamics - derived:  (K_eq = 5)\n'  \
+        '        Kinetics - passed:  (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
+        '        Kinetics - derived: 1 DERIVED reaction (as used by simulator)\n'  \
+        '                  [1]   CH4 + 2 O2 <-> CO2 + 2 H2O\n' \
+        '                        Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
 
     # Same reaction, with yet more parameters
     rxn_defn = ReactionDefinition(id=1001,
                                   reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")], species_registry=sr,
                                   reaction_model="custom", kinetic_parameters={"kF": 10, "kR": 2, "rate_function": kinetic_test_func},
                                   thermodynamic_parameters={"temp": 200})
-    assert rxn_defn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
-    assert rxn_defn.describe(concise=False) ==  \
+    assert rxn_defn.describe(detail="minimal") == "CH4 + 2 O2 <-> CO2 + 2 H2O"
+    assert rxn_defn.describe(detail="full") ==  \
         'CH4 + 2 O2 <-> CO2 + 2 H2O\n'  \
         '        General one-step reaction, with Reaction Model: "custom"   (Reaction ID 1001)\n'  \
-        '        Thermodynamics - passed:    (Temp = -73.15 C)\n'  \
-        '        Thermodynamics - derived:   (delta_G = -2.6763 kJ/mol | K_eq = 5 | Temp = -73.15 C)\n'  \
-        '        Kinetics - passed:   (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
-        '        Kinetics - derived:  1 derived reaction\n'  \
-        '            (1) Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
+        '        Thermodynamics - passed:  (Temp = -73.15 C)\n'  \
+        '        Thermodynamics - derived:  (delta_G = -2.6763 kJ/mol | K_eq = 5 | Temp = -73.15 C)\n'  \
+        '        Kinetics - passed:  (kF = 10 | kR = 2 | rate_function = kinetic_test_func())\n'  \
+        '        Kinetics - derived: 1 DERIVED reaction (as used by simulator)\n'  \
+        '                  [1]   CH4 + 2 O2 <-> CO2 + 2 H2O\n' \
+        '                        Type: "custom"   (kF = 10 | kR = 2 | K = 5 | rate_function = kinetic_test_func() | reversible = True)'
 
 
 

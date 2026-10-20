@@ -128,7 +128,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 # Continue with several delta_t steps
 for _ in range(7):
     bio.react_diffuse(time_step=delta_t, n_steps=1)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()
@@ -154,7 +154,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 for _ in range(4):
     print("\n\n+ 10 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=10)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()
@@ -181,7 +181,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 for _ in range(4):
     print("\n\n+++ 30 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=30)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()
@@ -202,7 +202,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 for _ in range(4):
     print("\n+++++ 50 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=50)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()
@@ -223,7 +223,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 for _ in range(4):
     print("\n+++++++++++++++ 150 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=150)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()
@@ -244,7 +244,7 @@ bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 for _ in range(2):
     print("\n++++++++++ ... ++++++++++ 1,000 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=1000)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %%
 bio.show_system_snapshot()

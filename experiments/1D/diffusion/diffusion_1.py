@@ -97,7 +97,7 @@ delta_time = 10.
 status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 print(status)
 
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view; by default, smoothed
@@ -116,7 +116,7 @@ for i in range(50):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
     if i<2 or i==6 or i>=49:
-        bio.describe_state(concise=True)
+        bio.describe_state(detail="minimal")
     
         # Line curve view
         fig = bio.visualize_system(title_prefix="Diffusion")   # Line curve view

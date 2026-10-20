@@ -485,7 +485,7 @@ class RxnData:
         self.reactions.assert_valid_rxn_index(rxn_index)
 
         if print_reaction:
-            print("Reaction: ", self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True))
+            print("Reaction: ", self.reactions.single_reaction_describe(rxn_index=rxn_index, detail="minimal"))
 
         movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "CollectionTabular"
 

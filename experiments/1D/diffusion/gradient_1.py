@@ -87,7 +87,7 @@ for i in range(501):
     
     if (i <= 12 and i%3 == 0) or (i%100 == 0):   # Display more frequently initially
         print()
-        bio.describe_state(concise=True)
+        bio.describe_state(detail="minimal")
         
         # Show the system state as a line plot
         fig = bio.visualize_system(title_prefix="Diffusion")

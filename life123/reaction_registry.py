@@ -1,5 +1,6 @@
 import math
 
+from typing import Literal
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import DisplayNetwork
 from life123.reactions import ReactionDefinition, SimulationReaction
@@ -470,7 +471,7 @@ class ReactionRegistry:
         assert len(sim_rxn_tuple) > 0, \
             f"register_reaction(): no active reaction was added " \
             f"(typically caused by not passing a `reaction_model` argument " \
-            f"when you added the reaction {rxn_defn.describe(concise=True)})"
+            f"when you added the reaction {rxn_defn.describe(detail='minimal')})"
 
         for sim_rxn in sim_rxn_tuple:
             self.reaction_list.append(sim_rxn)
@@ -510,43 +511,39 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def describe_reactions(self, concise=False) -> None:
+    def describe_reactions(self, detail: Literal["minimal", "summary", "full"] = "minimal") -> None:
         """
         Print out a user-friendly plain-text form of ALL the reactions.
         If wanting to describe just 1 reaction, use single_reaction_describe()
 
-        EXAMPLE (not concise):
-            Number of reactions: 2
-            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products
-            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products
-            Chemicals involved in the above reactions: {'CH4', 'O2', 'H2O', 'A', 'B', 'C'}
-
-        :param concise:     If True, less detail is shown
-        :return:            None
+        :param detail:  [OPTIONAL] A string that is either "minimal", "summary", "full"
+        :return:        None
         """
         #TODO: implement a Pandas version
-        print(f"Number of reactions: {self.number_of_reactions()}")
+        number_rxns = self.number_of_reactions()
+        print(f"Number of reactions: {number_rxns}")
 
-        # Print a concise description of EACH REACTION IN TURN
-        for description in self.multiple_reactions_describe(concise=concise):
-            print(description)
+        # Print a description of EACH REACTION IN TURN
+        for i in range(number_rxns):    #  ALL reactions
+            description = self.single_reaction_describe(rxn_index=i, detail=detail)
+            print(f"{i}: {description}")
 
-        chem_labels = self.get_species_in_any_reaction(sort=True)   # Set of chem labels, sorted by species id
+        species_ids = self.get_species_in_any_reaction(sort=True)   # Sorted list of species id
 
-        # If plot colors were registered, show them alongside the chem labels
-        chem_labels_with_colors = []
-        for label in chem_labels:
-            color = self.species_data.get_value(species_id=label, field="plot_color")
+        # If plot colors were registered, show them alongside the species id's
+        species_ids_with_colors = []
+        for sp_id in species_ids:
+            color = self.species_data.get_value(species_id=sp_id, field="plot_color")
             if color:
-                chem_labels_with_colors.append(f'"{label}" ({color})')
+                species_ids_with_colors.append(f'"{sp_id}" ({color})')
             else:
-                chem_labels_with_colors.append(f'"{label}"')
+                species_ids_with_colors.append(f'"{sp_id}"')
 
-        chem_labels = "{" + ", ".join(chem_labels_with_colors) + "}"
+        species_ids = "{" + ", ".join(species_ids_with_colors) + "}"
 
 
         #if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Species involved in the above reactions: {chem_labels}")
+        print(f"~~~  Species involved in the above reactions: {species_ids}")
         '''
         else:
             print(f"Species involved in the above reactions (not counting enzymes): {chem_labels}")
@@ -558,44 +555,19 @@ class ReactionRegistry:
 
 
 
-    def multiple_reactions_describe(self, rxn_list=None, concise=False) -> [str]:
+    def single_reaction_describe(self, rxn_index: int, detail: Literal["minimal", "summary", "full"] = "summary") -> str:
         """
-        The counterpart of single_reaction_describe() for many reactions.
-        Return a list of strings, each string being a (concise or not) user-friendly plain-text form of
-        each of the reactions
+        Return, as a string, a user-friendly plain-text form of the given reaction
 
-        :param rxn_list:    Either a list of integers, to identify the reactions of interest,
-                                or None, meaning ALL reactions
-        :param concise:     If True, less detail is shown
-        :return:            A list of strings; each string is the description of one of the reactions
-        """
-        if rxn_list is None:
-            rxn_list = range(self.number_of_reactions())    # Show ALL reactions, by default
-
-        out = []    # Output list being built
-
-        for i in rxn_list:
-            description = self.single_reaction_describe(rxn_index=i, concise=concise)
-            description = f"{i}: {description}"
-            out.append(description)
-
-        return out
-
-
-
-    def single_reaction_describe(self, rxn_index: int, concise=False) -> str:
-        """
-        Return as a string, a user-friendly plain-text form of the given reaction
-        EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
-        EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+        EXAMPLE ("minimal"):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
 
         :param rxn_index:   Integer to identify the reaction of interest
-        :param concise:     If True, less detail is shown
+        :param detail:
         :return:            A string with a description of the specified reaction
         """
         rxn_defn = self.reaction_defn_list[rxn_index]
 
-        return rxn_defn.describe(concise)    # Invoke the individual "ReactionDefinition" object
+        return rxn_defn.describe(detail)    # Invoke the individual "ReactionDefinition" object
 
 
 
@@ -739,10 +711,10 @@ class ReactionRegistry:
         # Send a brief summary of all the reactions to the HTML log file
         header = "<h3>List of reactions:</h3>\n"
 
-        header += "<pre>"    #"<p style='font-family: monospace; padding-left:20px'>"
-        rxn_descriptions = self.multiple_reactions_describe(concise=True)
-        for desc in rxn_descriptions:
-            header += f"    {desc}\n"
+        header += "<pre>"
+        for i in range(self.number_of_reactions()):    #  ALL reactions
+            desc = self.single_reaction_describe(rxn_index=i, detail="minimal")
+            header += f"{i}:     {desc}\n"
         header += "</pre>\n"
 
         graph_data = self.prepare_graph_network()

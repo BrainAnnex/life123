@@ -154,7 +154,7 @@ class System1D:
             <PANDAS data frame returned>
 
         :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None, if concise=True;
+        :return:        None, if detail="minimal";
                             a Pandas dataframe otherwise
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
@@ -1747,7 +1747,7 @@ class BioSim1D(System1D):
 
         if self.debug:
             print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step:.5g}:")
-            self.describe_state(concise=True)
+            self.describe_state(detail="minimal")
             print()
 
         status = {"steps": n_steps, "system time": f"{self.system_time:,.5g}", "time_step": time_step}

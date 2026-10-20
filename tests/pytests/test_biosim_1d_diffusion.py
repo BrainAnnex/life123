@@ -272,7 +272,7 @@ def test_diffuse_4():
 
     # Do 1 step
     bio.diffuse(time_step = 0.01, n_steps = 1)
-    #bio.describe_state()(concise=True)
+    #bio.describe_state()(detail="minimal")
     """
     DIFFUSION STEP 0:
     [[95.  5.  0.]
@@ -282,7 +282,7 @@ def test_diffuse_4():
 
     # Repeat 1 step
     bio.diffuse(time_step = 0.01, n_steps = 1)
-    #bio.describe_state()(concise=True)
+    #bio.describe_state()(detail="minimal")
     """
     DIFFUSION STEP 0:
     [[ 9.25 81.5   9.25]

@@ -55,18 +55,17 @@ def test_reaction_step_1b():
                                reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.}, temp=298.15)
 
     assert bio.reactions.number_of_reactions() == 1
-    result = bio.reactions.multiple_reactions_describe()
-    assert result == [
-            '0: A <-> B\n'
-            '        Unimolecular rearrangement/isomerization reaction, with Reaction '
-            'Model: "mass action"\n'
-            '        Thermodynamics - passed:    (Temp = 25 C)\n'
-            '        Thermodynamics - derived:   (delta_G = -1.0051 kJ/mol | K_eq = 1.5 | '
-            'Temp = 25 C)\n'
-            '        Kinetics - passed:   (kF = 3 | kR = 2)\n'
-            '        Kinetics - derived:  1 derived reaction\n'
-            '            (1) Type: "mass action"   (kF = 3 | kR = 2 | K = 1.5 | reversible = True)'
-    ]
+    result = bio.reactions.single_reaction_describe(0, detail="full")
+    assert result == \
+        """A <-> B
+        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"
+        Thermodynamics - passed:  (Temp = 25 C)
+        Thermodynamics - derived:  (delta_G = -1.0051 kJ/mol | K_eq = 1.5 | Temp = 25 C)
+        Kinetics - passed:  (kF = 3 | kR = 2)
+        Kinetics - derived: 1 DERIVED reaction (as used by simulator)
+                  [1]   A <-> B
+                        Type: "mass action"   (kF = 3 | kR = 2 | K = 1.5 | reversible = True)"""
+
     assert np.allclose(bio.system_state, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

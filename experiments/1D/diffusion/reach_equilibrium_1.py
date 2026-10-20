@@ -61,7 +61,7 @@ for i in range(10):
     delta_time = 10.
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
     print(f"\nAfter Delta time {delta_time}.  ({status['steps']} steps taken):")
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %% [markdown]
 # *Notice the diffusing pulse "bounces" off the left wall after total time 30:*  
@@ -79,7 +79,7 @@ for i in range(20):
     delta_time = 100.
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
     print(f"\nAfter Delta time {delta_time}.  ({status['steps']} steps taken):")
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
 # %% [markdown]
 # ## The system has now reached equilibrium

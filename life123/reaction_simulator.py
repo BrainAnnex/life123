@@ -1459,7 +1459,7 @@ class ReactionSimulator:
             exception_data = {
                 "message": f"      The attempted time step ({delta_time:.6g}) "
                            f"would lead to a NEGATIVE concentration in the species `{species_id}` "
-                           f"from the reaction `{rxn.describe(concise=True)}` (rxn # {rxn_index})\n"
+                           f"from the reaction `{rxn.describe(detail='minimal')}` (rxn # {rxn_index})\n"
                            f"      Baseline concentration value of `{species_id}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}, due to a reaction rate of {rxn_rate:.4g}",
                 "function": "_validate_increment",
                 "delta_time": delta_time,
@@ -2321,11 +2321,11 @@ class ReactionSimulator:
             if number_of_rxns > 2:
                 title = f"Changes in concentrations for {number_of_rxns} reactions"
             elif number_of_rxns == 1:
-                rxn_text = self.reaction_registry.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                rxn_text = self.reaction_registry.single_reaction_describe(rxn_index=0, detail="minimal")   # The only reaction
                 title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
             else:   # Exactly 2 reactions
-                rxn_text_0 = self.reaction_registry.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reaction_registry.single_reaction_describe(rxn_index=1, concise=True)
+                rxn_text_0 = self.reaction_registry.single_reaction_describe(rxn_index=0, detail="minimal")
+                rxn_text_1 = self.reaction_registry.single_reaction_describe(rxn_index=1, detail="minimal")
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if y_label is None:
@@ -2577,7 +2577,7 @@ class ReactionSimulator:
         if rxn_index is not None:
             # Check the 1 reaction that was requested
             if explain:
-                description = self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                description = self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, detail="minimal")
                 print(description)
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
@@ -2587,11 +2587,12 @@ class ReactionSimulator:
         else:
             # Check ALL the reactions
             status = True       # Overall status
-            description_list = self.reaction_registry.multiple_reactions_describe(concise=True)
+            #description_list = self.reaction_registry.multiple_reactions_describe(detail="minimal")
             for rxn_index in range(self.reaction_registry.number_of_reactions()):
                 # For each reaction
                 if explain:
-                    print(description_list[rxn_index])
+                    print(rxn_index, ": ", self.reaction_registry.single_reaction_describe(rxn_index=rxn_index, detail="minimal"))
+                    #print(description_list[rxn_index])
 
                 single_status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
 

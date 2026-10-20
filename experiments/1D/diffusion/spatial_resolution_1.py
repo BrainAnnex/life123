@@ -64,7 +64,7 @@ bio.visualize_system(title_prefix="Diffusion")
 bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 
@@ -102,11 +102,11 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # # Initial Diffusions with delta_x = 1
 
 # %%
-bio.describe_state(concise=True)   # Our initial state
+bio.describe_state(detail="minimal")   # Our initial state
 
 # %%
 bio.diffuse(total_duration=7, time_step=0.0005)
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 # SAVE the above system data (a matrix of dimension n_species x n_bins):  this is the result of diffusion with delta_x = 1
@@ -144,7 +144,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.5)
 bio.decrease_spatial_resolution(2)
 
 # %%
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/2
@@ -179,7 +179,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.25)
 # %%
 # Finally, reduce the resolution by a factor 4, to return to the original number of bins
 bio.decrease_spatial_resolution(4)
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/4
@@ -213,7 +213,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.1)
 # %%
 # Finally, reduce the resolution by a factor 10, to return to the original number of bins
 bio.decrease_spatial_resolution(10)
-bio.describe_state(concise=True)
+bio.describe_state(detail="minimal")
 
 # %%
 # SAVE the above system data: this is the result of diffusion with delta_x of 1/10

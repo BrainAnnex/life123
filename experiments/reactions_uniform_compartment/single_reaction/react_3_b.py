@@ -36,7 +36,7 @@ LIFE123_VERSION = "1.0.0rc9"        # Library version this experiment is based o
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import pandas as pd
-from life123 import check_version, ReactionSimulator,PlotlyHelper
+from life123 import check_version, ReactionSimulator, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)

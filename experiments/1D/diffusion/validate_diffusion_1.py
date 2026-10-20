@@ -99,7 +99,7 @@ algorithm = None  # "Explicit, with 3+1 stencil"
 # in the history object
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
-    bio.describe_state(concise=True)
+    bio.describe_state(detail="minimal")
 
     arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")

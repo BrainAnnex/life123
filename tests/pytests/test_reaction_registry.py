@@ -278,12 +278,11 @@ def test_add_reaction():
     assert r_3.stoichiometry == Stoichiometry({"A": -1, "B": -2, "C": 3, "D": 1})
 
 
-    # Check the descriptions we has so far
-    rxn_info = rxns.multiple_reactions_describe(concise=True)
-    assert rxn_info[0] == '0: A <-> B'
-    assert rxn_info[1] == '1: 2 B <-> 5 C'
-    assert rxn_info[2] == '2: 2 D <-> C'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D'
+    # Check the reactions we have added
+    assert rxns.single_reaction_describe(0, detail="minimal") == 'A <-> B'
+    assert rxns.single_reaction_describe(1, detail="minimal") == '2 B <-> 5 C'
+    assert rxns.single_reaction_describe(2, detail="minimal") == '2 D <-> C'
+    assert rxns.single_reaction_describe(3, detail="minimal") == 'A + 2 B <-> 3 C + D'
 
 
 

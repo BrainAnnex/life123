@@ -2,6 +2,7 @@ from __future__ import annotations      # To facilitate type annotations
 import numpy as np
 import math
 from typing import Set, Tuple
+from typing import Literal
 from dataclasses import dataclass, field, asdict
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
@@ -137,6 +138,7 @@ class SimulationReaction:
                                     or "generated" (one of multiple sub-reactions used to model the original reaction)
         :param analytic_solution_family:   [OPTIONAL]
         """
+        # TODO: maybe rename arg `source_object` to `source_defn_object`
         self.model = model
         self.stoichiometry: Stoichiometry|None = stoichiometry
 
@@ -183,19 +185,19 @@ class SimulationReaction:
 
 
 
-    def describe(self, concise=False) -> str:
+    def describe(self, detail: Literal["minimal", "summary", "full"] = "summary") -> str:
         """
         This is the "SimulationReaction" version of ReactionDefinition.describe()
 
-        :param concise:
-        :return:
+        :param detail:  [OPTIONAL] Either of "minimal", "summary" or "full"
+        :return:        A string with a description of this "SimulationReaction" object
         """
         reversible = getattr(self.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
 
         rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
 
-        if not concise:
-            rxn_description += f'Type: "{self.model.name}" {self.source_object.format_reaction_details(self.model.get_parameters())}'
+        if detail != "minimal":
+            rxn_description += f'\nType: "{self.model.name}" {self.source_object.format_reaction_details(self.model.get_parameters())}'
 
         return rxn_description
 
@@ -1042,17 +1044,26 @@ class ReactionDefinition:
 
 
 
-    def describe(self, concise=False) -> str:
+    def describe(self, detail: Literal["minimal", "summary", "full"] = "summary") -> str:
         """
         Return, as a string, a user-friendly plain-text form of the reaction,
         plus a fair deal of optional information
 
-        :param concise:     If True, less detail is shown
-        :return:            A string with a description of this reaction
+        :param detail:  [OPTIONAL] Either of "minimal", "summary" or "full"
+        :return:        A string with a description of this "ReactionDefinition" object
         """
         # TODO: put to good use the new describe() method of the "SimulationReaction" class
-        sim_rxn_tuple = self.sim_reactions
 
+        # Validate arg
+        if detail not in {"minimal", "summary", "full"}:
+            raise ValueError(
+                f"Unknown detail level: {detail!r}. "
+                "Expected 'minimal', 'summary', or 'full'."
+            )
+
+        sim_rxn_tuple = self.sim_reactions  # A tuple of "SimulationReaction" objects
+
+        # Determine whether the limited circumstances apply to sensible denote this "ReactionDefinition" object as "reversible"
         reversible = False
         if len(sim_rxn_tuple) == 1:
             # If there's exactly 1 derived reaction, extract the "reversible" attribute from it, if possible
@@ -1061,11 +1072,11 @@ class ReactionDefinition:
 
         rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
 
-        if concise:
+        if detail == "minimal":
             return rxn_description      # Minimalist description
 
 
-        # If we get this far, we're looking for a more detailed description
+        # If we get this far, we're looking for a more detailed description ("summary" or "full")
 
         INDENT = "        "
 
@@ -1078,31 +1089,34 @@ class ReactionDefinition:
         if self.id:
              rxn_description += f"   (Reaction ID {self.id})"
 
+        derived_str = " - derived" if detail == "full" else ""
 
-        rxn_description += f"\n{INDENT}Thermodynamics - passed:  "
-        s = self.format_reaction_details(self.source_thermodynamic_parameters)
-        rxn_description += s if s else "None"
+        if detail == "full":
+            rxn_description += f"\n{INDENT}Thermodynamics - passed:"
+            s = self.format_reaction_details(self.source_thermodynamic_parameters)
+            rxn_description += s if s else " None"
 
-        rxn_description += f"\n{INDENT}Thermodynamics - derived: "
+        rxn_description += f"\n{INDENT}Thermodynamics{derived_str}:"
         s = self.format_reaction_details(self.thermodynamics.to_dict())
-        rxn_description += s if s else "None"
+        rxn_description += s if s else " None"
 
-        rxn_description += f"\n{INDENT}Kinetics - passed: "
-        s = self.format_reaction_details(self.source_kinetic_parameters)
-        rxn_description += s if s else "None"
+        if detail == "full":
+            rxn_description += f"\n{INDENT}Kinetics - passed:"
+            s = self.format_reaction_details(self.source_kinetic_parameters)
+            rxn_description += s if s else " None"
 
-        rxn_description += f"\n{INDENT}Kinetics - derived:  "
-        s = f"{len(sim_rxn_tuple)} derived reaction"
+        reaction_str = "reactions" if len(sim_rxn_tuple) > 1 else "reaction"    # Get the singular/plural form
+
+        rxn_description += f"\n{INDENT}Kinetics{derived_str}: "
+        s = f"{len(sim_rxn_tuple)} DERIVED {reaction_str} (as used by simulator)"
         rxn_description += s if len(sim_rxn_tuple) > 0 else "None"
 
-        if len(sim_rxn_tuple) > 1:
-            rxn_description += "s"  # The plural form
-
+        EXTRA_INDENT = " " * 10
         for i, sim_rxn in enumerate(sim_rxn_tuple):
-            rxn_description += f"\n{INDENT}    "
-            #if len(sim_rxn_tuple) > 1:
-            rxn_description += f"({i+1}) "     # Show the numbering, if more than one
-            rxn_description += f'Type: "{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
+            rxn_description += f"\n{INDENT}{EXTRA_INDENT}"
+            rxn_description += f"[{i+1}]   "     # Show the numbering, if more than one
+            rxn_description += sim_rxn.describe(detail="minimal")
+            rxn_description += f'\n{INDENT}{EXTRA_INDENT}      Type: "{sim_rxn.model.name}" {self.format_reaction_details(sim_rxn.model.get_parameters())}'
 
         return rxn_description
 
@@ -1427,16 +1441,17 @@ class ReactionDefinition:
         """
         Format and return a string with some details about the parameters of this reaction,
         contained in the passed dictionary.
-        Also, add units of measurements; any property named "temp" gets converted from degree K to C.
+        Also:
+            - add units of measurements
+            - any property named "temp" gets converted from degree K to C
 
         :param rxn_properties:  A dictionary with numerical properties of interest for the reaction.
-                                    Any None value will be dropped
+                                    Any None value will be dropped.
                                     EXAMPLE: {'kF': 3.0, 'kR': None, 'delta_G': 1.2345, 'K': 1.5}
 
         :return:                A string with some details about the parameters of this reaction
                                     EXAMPLE: "  (kF = 3 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
         """
-        # TODO: probably move to SimulationReaction
         #print("rxn_properties: ", rxn_properties)
         details = []    # Running list of strings with each of the individual details
 
@@ -1469,10 +1484,7 @@ class ReactionDefinition:
 
         description = ""
 
-        #if temp:
-        #    details.append(f"Temp = {convert(temp, from_unit=K, to_unit=C):,.4g} C")          # EXAMPLE: "Temp = 25 C"
-
-        if details:     # If there is any data
+        if len(details) > 0:     # If any data is present
             description = "  (" + ' | '.join(details) + ")"   # EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol)"
 
         return description
