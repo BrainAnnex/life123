@@ -167,7 +167,7 @@ class SimulationReaction:
         Get the "ReactionThermodynamics" object
         associated to the source reaction
 
-        :return:
+        :return:    Object of type "ReactionThermodynamics"
         """
         return self.source_object.thermodynamics
 

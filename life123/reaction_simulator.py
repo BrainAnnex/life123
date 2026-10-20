@@ -255,9 +255,9 @@ class ReactionSimulator:
 
     #####################################################################################################
 
-    '''                              ~   READ/WRITE/SYNCHRONIZE   ~                                   '''
+    '''                              ~   READ/WRITE   ~                                   '''
 
-    def ________READ_WRITE_SYNCHRONIZE________(DIVIDER):
+    def ________READ_WRITE________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -272,103 +272,7 @@ class ReactionSimulator:
 
 
 
-    def _synchronize_species(self) -> None:
-        """
-        Index all the species that participate in any of the reactions
-        in the reaction registry attached to this module.
-        Note: some species may lack indexing if they originate from reactions that were
-              directly added thru the ReactionRegistry object
-
-        :return:
-        """
-        for rxn in self.reaction_registry.get_all_reactions():
-            # rxn is a "SimulationReaction" object
-            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
-            self.system.add_species(species_id_set)
-
-
-
-    def ensure_synchronized_with_reaction_registry(self) -> None:
-        """
-        For "lazy synchronization" with external mutation in the reaction registry
-
-        :return:
-        """
-        if self._reaction_registry_version != self.reaction_registry.version:
-            #print("************ ensure_synchronized_with_reaction_registry(): OUT OF SYNCH DETECTED!")
-            self._synchronize_species()
-            self._reaction_registry_version = self.reaction_registry.version
-
-
-
-    def capture_rate_snapshot(self, step_count=None, caption=None,
-                             force=False, system_time=None) -> None:
-        """
-        Take the reaction rates for the last (current) step of all reactions,
-        stored as a dict in the object property `self.reaction_step_diagnostics.system_rxn_rates`,
-        and save them in the ongoing table storing the "rate history".
-
-        Note: reaction rate history is regarded as akin to concentration history - something to periodically
-              sample and record, separate from diagnostics
-
-        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
-        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
-        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
-        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
-        :return:            None
-        """
-        if not force and not self.rate_history.to_capture(step_count):
-            return
-
-        if system_time is None:
-            system_time = self.system_time
-
-        data_snapshot = {}     # rxn_rates_snapshot
-        for k, v in self.reaction_step_diagnostics.system_rxn_rates.items():
-            if type(v) == tuple:
-                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
-                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
-                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
-            else:
-                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-        '''
-           EXAMPLE of data_snapshot:
-                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
-        '''
-        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
-
-
-
-    def capture_conc_snapshot(self, caption="", step_count=None, extra=False) -> None:
-        """
-
-        :param caption:     [OPTIONAL]
-        :param step_count:  [OPTIONAL] Step count in the simulation
-        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
-                                the capture frequency will NOT considered in the
-                                decision about saving it, but a check will be performed
-                                to make sure it's not a duplicate of the earlier capture
-
-        :return:            None
-        """
-        # Check whether this snapshot ought to be skipped, based on some criteria
-        if not self.conc_history.to_capture(step_count, extra=extra):
-            return
-
-        data_snapshot = self.system.get_conc_as_dict(species_ids=self.conc_history.restrict_chemicals)
-        '''
-           EXAMPLE of data_snapshot:
-                {"A": 1.3, "B": 4.9}        
-        '''
-        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
-
-
-
-    def get_species_conc(self, species_id :str) -> float:
+    def get_single_conc(self, species_id :str) -> float:
         """
         Return the current system concentration of the given species, specified by its id.
         If no species with that id exists, an Exception is raised
@@ -384,6 +288,7 @@ class ReactionSimulator:
     def set_single_conc(self, conc, species_id=None, allow_growth=False,
                         snapshot=True) -> None:
         """
+        Set the system concentration of a single species
 
         :param conc:
         :param species_id:
@@ -429,6 +334,125 @@ class ReactionSimulator:
             system_data = self.system.get_conc_as_dict()   # The current System State, as a dict
             self.diagnostics.conc_data.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time,
                                                        caption="Set concentration")
+
+
+
+    def set_system_state(self, conc : np.ndarray | list | tuple) -> None:
+        """
+
+        :param conc:    Numpy array or list/tuple of concentration values
+        :return:        None
+        """
+        self.system.set_system_state(conc=conc)
+        self.capture_conc_snapshot(caption="Set system state", extra=True)
+
+
+
+    def capture_conc_snapshot(self, caption="", step_count=None, extra=False) -> None:
+        """
+
+        :param caption:     [OPTIONAL]
+        :param step_count:  [OPTIONAL] Step count in the simulation
+        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
+                                the capture frequency will NOT considered in the
+                                decision about saving it, but a check will be performed
+                                to make sure it's not a duplicate of the earlier capture
+
+        :return:            None
+        """
+        # Check whether this snapshot ought to be skipped, based on some criteria
+        if not self.conc_history.to_capture(step_count, extra=extra):
+            return
+
+        data_snapshot = self.system.get_conc_as_dict(species_ids=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                {"A": 1.3, "B": 4.9}        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
+
+
+
+    def capture_rate_snapshot(self, step_count=None, caption=None,
+                             force=False, system_time=None) -> None:
+        """
+        Take the reaction rates for the last (current) step of all reactions,
+        stored as a dict in the object property `self.reaction_step_diagnostics.system_rxn_rates`,
+        and save them in the ongoing table storing the "rate history".
+
+        Note: reaction rate history is regarded as akin to concentration history - something to periodically
+              sample and record, separate from diagnostics
+
+        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
+        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
+        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
+        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
+        :return:            None
+        """
+        if not force and not self.rate_history.to_capture(step_count):
+            return
+
+        if system_time is None:
+            system_time = self.system_time
+
+        data_snapshot = {}     # rxn_rates_snapshot
+        for k, v in self.reaction_step_diagnostics.system_rxn_rates.items():
+            if type(v) == tuple:
+                # Only pairs are currently used (for sub-reactions of enzymatic reactions) -> TODO: this is being phased out
+                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
+                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
+            else:
+                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
+        '''
+           EXAMPLE of data_snapshot:
+                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
+        '''
+        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
+
+
+
+
+
+
+    #####################################################################################################
+
+    '''                              ~   UTILITIES ANDSYNCHRONIZE   ~                                   '''
+
+    def ________UTILITIES_AND_SYNCHRONIZE________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def ensure_synchronized_with_reaction_registry(self) -> None:
+        """
+        For "lazy synchronization" with external mutation in the reaction registry
+
+        :return:
+        """
+        if self._reaction_registry_version != self.reaction_registry.version:
+            #print("************ ensure_synchronized_with_reaction_registry(): OUT OF SYNCH DETECTED!")
+            self._synchronize_species()
+            self._reaction_registry_version = self.reaction_registry.version
+
+
+
+    def _synchronize_species(self) -> None:
+        """
+        Index all the species that participate in any of the reactions
+        in the reaction registry attached to this module.
+        Note: some species may lack indexing if they originate from reactions that were
+              directly added thru the ReactionRegistry object
+
+        :return:
+        """
+        for rxn in self.reaction_registry.get_all_reactions():
+            # rxn is a "SimulationReaction" object
+            species_id_set = rxn.stoichiometry.get_all_species_ids()    # Set of ID's of species participating in this reaction
+            self.system.add_species(species_id_set)
 
 
 
@@ -706,11 +730,11 @@ class ReactionSimulator:
                     (termination_keyword, termination_parameter) = stop
                     if termination_keyword == "conc_below":
                         chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) < conc_threshold:
+                        if self.get_single_conc(chem_name) < conc_threshold:
                             break   # The concentration of the specified chemical has dropped the requested threshold
                     elif termination_keyword == "conc_above":
                         chem_name, conc_threshold = termination_parameter
-                        if self.get_species_conc(chem_name) > conc_threshold:
+                        if self.get_single_conc(chem_name) > conc_threshold:
                             break   # The concentration of the specified chemical has risen above the requested threshold
 
                 if (not variable_steps) and (step_count == n_steps)\
@@ -1954,7 +1978,7 @@ class ReactionSimulator:
             d = self.system.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
             for (site_number, ligand) in d.items():
                 aff_data = self.system.macromolecules.get_binding_site_affinity(mm, site_number)
-                conc = self.get_species_conc(ligand)
+                conc = self.get_single_conc(ligand)
                 fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
 
                 self.system.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)

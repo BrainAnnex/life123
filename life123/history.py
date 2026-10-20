@@ -1,7 +1,7 @@
 import os
 import csv
 import pandas as pd
-from life123.collections import CollectionTabular, Collection
+from life123.collections import CollectionTabular, CollectionGeneric
 
 
 
@@ -202,7 +202,7 @@ class HistoryBinConcentration(History):
 
         self.restrict_bins = bins                               # Bin address, or list of them,
                                                                 #   or None (meaning ALL bins, with no restriction)
-        self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
+        self.history = CollectionGeneric(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
         # Note: an alternative (untried) to using general Collections for the history
         #       might be to use CollectionTabular tabular instead,
         #       with columns such as:  SYSTEM TIME | bin_5_A | bin_5_B | bin_8_A | bin_8_B | caption

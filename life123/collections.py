@@ -7,18 +7,15 @@ import numpy as np
 class CollectionTabular:
     """
     A "tabular collection" is a Pandas dataframe
-    built up from a sequence of "snapshots" of data that's in the form of a python dictionary
+    built up from a sequence of "snapshots" taken from data that's in the form of a python dictionary
     (representing a list of values and their corresponding names),
     such as the state of the system or of parts thereof.
 
     Each data "snapshots" is taken at different times,
-    or results from varying some parameter.
+    or originates from varying some parameter other than time.
 
     Each snapshot - incl. its parameter values and optional captions -
     will constitute a "row" in a tabular format
-
-    MAIN DATA STRUCTURE for "tabular" collections:
-        A Pandas dataframe
     """
 
     def __init__(self, parameter_name="SYSTEM TIME"):
@@ -91,7 +88,7 @@ class CollectionTabular:
 
     def get_dataframe(self, head=None, tail=None,
                       val_start=None, val_end=None,
-                      search_col=None, search_val=None, return_copy=True) -> pd.DataFrame:
+                      search_col=None, search_val=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case a column named "search_value"
@@ -120,15 +117,15 @@ class CollectionTabular:
         :param search_val:  [OPTIONAL] Number, or list/tuple of numbers, with value(s)
                                 to search in the above column
 
-        :param return_copy: TODO: OBSOLETE  - [OPTIONAL] If True (default), the returned dataframe is guaranteed to be a (deep) copy -
-                                so that modifying it won't affect the internal dataframe
-
-        :return:            A Pandas dataframe, with all or some of the rows
+        :return:            A (possibly empty) Pandas dataframe, with all or some of the rows
                                 that were stored in the main data structure.
                                 If a search was requested, insert a column named "search_value" to the left
         """
         # Turn the data into a Pandas dataframe
         df = pd.DataFrame(self.snapshot_list)
+
+        if df.empty:
+            return df
 
         # Make the column `self.parameter_name` to become the first (leftmost)
         col_name = self.parameter_name
@@ -377,7 +374,7 @@ class CollectionArray:
 
 ###############################################################################################################
 
-class Collection:
+class CollectionGeneric:
     """
     A "Collection" is a list of snapshots that the user wants to preserve,
     such as the state of the entire system, or of parts thereof,

@@ -2187,9 +2187,9 @@ def test_is_in_equilibrium():
 
 
     sim.system.set_system_state(conc=[3, 4.6, 33.001])    # "A", "B", "F"
-    assert sim.get_species_conc('A') == 3
-    assert sim.get_species_conc('B') == 4.6
-    assert sim.get_species_conc('F') == 33.001
+    assert sim.get_single_conc('A') == 3
+    assert sim.get_single_conc('B') == 4.6
+    assert sim.get_single_conc('F') == 33.001
 
     assert sim.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
            == {False: [1]}        # Now using the System concentrations

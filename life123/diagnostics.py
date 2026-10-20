@@ -79,7 +79,7 @@ class ConcData:
                     'TIME' 	'A' 'B' ... 'caption'
                     where 'A', 'B', ... are the labels of all the chemicals
         """
-        return self.diagnostic_conc_data.get_dataframe(return_copy=True)
+        return self.diagnostic_conc_data.get_dataframe()
 
 
 
@@ -495,7 +495,7 @@ class RxnData:
             return None
 
 
-        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t, return_copy=True)
+        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
 
 
 
@@ -781,7 +781,7 @@ class StepDecisionData:
 
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
-        return self.diagnostic_decisions_data.get_dataframe(return_copy=True)
+        return self.diagnostic_decisions_data.get_dataframe()
 
 
 

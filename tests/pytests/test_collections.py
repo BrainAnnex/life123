@@ -2,12 +2,19 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123.collections import CollectionTabular, CollectionArray, Collection
+from life123.collections import CollectionTabular, CollectionArray, CollectionGeneric
 from tests.utilities.comparisons import *
 
 
 
-###############  For class CollectionTabular  ###############
+#####################################################################################################
+
+'''                              ~   Class CollectionTabular   ~                                   '''
+
+def ________CollectionTabular________(DIVIDER):
+    pass        # Used to get a better structure view in IDEs
+#####################################################################################################
+
 
 def test_store():
     ct = CollectionTabular()
@@ -41,6 +48,9 @@ def test_store():
 
 def test_get_dataframe_1():
     ct = CollectionTabular()
+
+    df = ct.get_dataframe()
+    assert df.empty
 
     ct.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
     df = ct.get_dataframe()
@@ -226,7 +236,14 @@ def test_update_last_snapshot():
 
 
 
-###############  For class CollectionArray  ###############
+#####################################################################################################
+
+'''                              ~   Class CollectionArray   ~                                   '''
+
+def ________CollectionArray________(DIVIDER):
+    pass        # Used to get a better structure view in IDEs
+#####################################################################################################
+
 
 def test_CollectionArray():
     m = CollectionArray()
@@ -302,10 +319,17 @@ def test_CollectionArray():
 
 
 
-###############  For class CollectionGeneral  ###############
+#####################################################################################################
+
+'''                              ~   Class CollectionGeneric   ~                                   '''
+
+def ________CollectionGeneric________(DIVIDER):
+    pass        # Used to get a better structure view in IDEs
+#####################################################################################################
+
 
 def test_Collection():
-    m = Collection()
+    m = CollectionGeneric()
 
     m.store(par=10, data_snapshot={"c1": 1, "c2": 2}, caption="first entry")
     assert len(m) == 1

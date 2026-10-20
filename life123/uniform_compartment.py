@@ -250,8 +250,8 @@ class UniformCompartment:
         IMPORTANT: make sure that the array is in the right order, according to the current species index map.
                    A safer function to use is set_conc(), where species id's are used, instead of their array indexes
 
-        :param conc:  Numpy array or list/tuple of concentration values
-        :return:            None
+        :param conc:    Numpy array or list/tuple of concentration values
+        :return:        None
         """
         assert len(conc) <= self.species_index_map.number_of_mapped_species(), \
             f"set_system_state(): the number of the passed concentration values ({len(conc)}) " \
@@ -268,7 +268,6 @@ class UniformCompartment:
         if isinstance(conc, (list, tuple)):
             self.system_state = np.array(conc)
         else:
-
             self.system_state = conc.copy()    # Clone
 
 

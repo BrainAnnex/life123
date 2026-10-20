@@ -22,7 +22,7 @@
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Oct. 19, 2026"
+LAST_REVISED = "Oct. 20, 2026"
 LIFE123_VERSION = "1.0.0rc9"         # Library version this experiment is based on
 
 # %%
@@ -88,17 +88,17 @@ rxns.describe_reactions(detail="summary")
 # #### Investigate the random values that were assigned to the reactions (in a manner to be consistent with thermodynamics, for example across groups of reactions):
 
 # %%
-H_list = [rxn.source_object.thermodynamics.delta_H
+H_list = [rxn.get_thermodynamics().delta_H
           for rxn in net.get_all_random_reactions()]    # rxn is an object of type "SimulationReaction"
 H_list   # kJ/mol
 
 # %%
-S_list = [rxn.source_object.thermodynamics.delta_S
+S_list = [rxn.get_thermodynamics().delta_S
           for rxn in net.get_all_random_reactions()]    # rxn is an object of type "SimulationReaction"
 S_list   # J/(mol·K)
 
 # %%
-G_list = [rxn.source_object.thermodynamics.delta_G
+G_list = [rxn.get_thermodynamics().delta_G
           for rxn in net.get_all_random_reactions()]    # rxn is an object of type "SimulationReaction"
 G_list   # kJ/mol
 
@@ -112,7 +112,7 @@ G_list   # kJ/mol
 
 # %%
 # Instantiate the simulator with our species and reactions
-sim = ReactionSimulator(reaction_registry=rxns)
+sim = ReactionSimulator(reaction_registry=rxns, method="analytic")
 
 # %%
 
@@ -124,3 +124,26 @@ sim.plot_reaction_network(log_file=log_file)
 IFrame(log_file, width=1200, height=700)         # You may also open the above log file in a browser
 
 # %%
+
+# %% [markdown]
+# # Run a simulation
+
+# %%
+sim.set_system_state([31, 4, 18, 82])
+
+# %%
+sim.get_history()
+
+# %%
+sim.system.get_conc_as_dict()
+
+# %%
+sim.system.get_system_conc()
+
+# %%
+
+# %%
+sim.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters
+
+# %%
+sim.plot_history(show_intervals=True)

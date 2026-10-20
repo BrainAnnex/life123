@@ -20,7 +20,7 @@ from life123.bio_sim_3d import BioSim3D
 from life123.collections import (
     CollectionTabular,
     CollectionArray,
-    Collection
+    CollectionGeneric
 )
 from life123.diagnostics import Diagnostics
 from life123.history import (
@@ -66,7 +66,7 @@ __all__ = [
     'HtmlLog',
     'CollectionTabular',
     'CollectionArray',
-    'Collection',
+    'CollectionGeneric',
     'Colors',
     'Diagnostics',
     'Diffusion1D',
