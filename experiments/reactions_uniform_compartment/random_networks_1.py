@@ -22,7 +22,7 @@
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Oct. 20, 2026"
+LAST_REVISED = "Oct. 21, 2026"
 LIFE123_VERSION = "1.0.0rc9"         # Library version this experiment is based on
 
 # %%
@@ -111,14 +111,8 @@ G_list   # kJ/mol
 # %%
 
 # %%
-# Instantiate the simulator with our species and reactions
-sim = ReactionSimulator(reaction_registry=rxns, method="analytic")   # analytic
-
-# %%
-
-# %%
 # Send a plot of the network of reactions to the HTML log file
-sim.plot_reaction_network(log_file=log_file)
+rxns.plot_reaction_network(log_file=log_file)
 
 # %%
 IFrame(log_file, width=1200, height=700)         # You may also open the above log file in a browser
@@ -126,12 +120,19 @@ IFrame(log_file, width=1200, height=700)         # You may also open the above l
 # %%
 
 # %% [markdown]
-# # Run a simulation
+# # Re-run a simulation with various method/approaches
+# #### Always with same initial condition:
 
 # %%
 init_conc = [31, 4, 18, 82]
 
 # %%
+
+# %% [markdown]
+# # Reaction-wise analytic solution, with variable steps
+
+# %%
+sim = ReactionSimulator(reaction_registry=rxns, method="analytic", preset="mid")   # `preset` is to guide the adaptive variable steps
 sim.set_system_state(init_conc)
 
 # %%
@@ -147,30 +148,39 @@ sim.system.get_conc_as_dict()
 sim.system.get_system_conc()
 
 # %%
-sim.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
 
 # %%
-#sim.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters     initial_step=0.00001, 
+sim.single_compartment_react(target_end_time=0.04, variable_steps=True)
+# Using defaults for all other parameters, including in particular the initial step
 
 # %%
 sim.plot_history(show_intervals=True)
 
 # %%
-sim.system_time
-
-# %%
-sim.system.system_state
 
 # %%
 
 # %% [markdown]
-# # Forward Euler
+# # Reaction-wise analytic solution, with fixed steps
+
+# %%
+sim = ReactionSimulator(reaction_registry=rxns, method="analytic", system=init_conc)
+
+# %%
+sim.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
+
+# %%
+sim.plot_history(show_intervals=True)
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # Forward Euler, with fixed steps
 
 # %%
 sim_euler = ReactionSimulator(reaction_registry=rxns, method="forward_euler", system=init_conc) 
-
-# %%
-sim_euler.system.get_conc_as_dict()
 
 # %%
 sim_euler.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
@@ -180,14 +190,13 @@ sim_euler.plot_history(show_intervals=True)
 
 # %%
 
+# %%
+
 # %% [markdown]
-# # Heun
+# # Heun, with fixed steps
 
 # %%
 sim_heun = ReactionSimulator(reaction_registry=rxns, method="heun", system=init_conc) 
-
-# %%
-sim_heun.system.get_conc_as_dict()
 
 # %%
 sim_heun.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)

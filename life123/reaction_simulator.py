@@ -604,11 +604,13 @@ class ReactionSimulator:
                                  variable_steps=True, explain_variable_steps=None,
                                  silent=False, report_interval=0.5) -> dict|None:
         """
-        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
-        based on the INITIAL concentrations stored in self.system
+        Simulate ALL the (previously-registered) reactions in a single uniform ("well-stirred") compartment -
+        based on the INITIAL concentrations stored in `self.system.system_state`
 
         Update the system state and the system time accordingly
-        (object attributes self.system.system and self.system_time)
+        (object attributes `self.system.system_state` and `self.system_time`)
+
+        Collect up concentration/rate history, and optionally diagnostic data
 
         :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
         :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
@@ -998,7 +1000,9 @@ class ReactionSimulator:
                     to the calling module about the next step to best take (whether as a result of an abort,
                     or for other considerations)
 
-        :param delta_time:      The requested time duration of the reaction step
+        :param delta_time:      The requested time duration of the reaction step.
+                                    This value is just a suggested starting point - the actual step
+                                    typically gets reduced dynamically as needed
         :param conc_array:      [OPTIONAL] All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the species, in their array index order.
                                     If not provided, self.system.system is used instead
@@ -1018,7 +1022,10 @@ class ReactionSimulator:
                                        about the next step to best take
         """
         # TODO: no longer pass conc_array .  Use the object variable self.system.system instead
-        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
+        #       Determine whether 1 or multiple "ReactionSimulator" objects are to be used by Bio1D, etc.
+
+        SMALLEST_VALUE_TO_TRY = delta_time / 5000.       # Used to prevent infinite loops   TODO: maybe allow user to specify the factor
+
 
         if conc_array is not None:
             self.system.set_system_state(conc_array)    # For historical reasons, as a convenience to Bio1D, etc.
@@ -1033,17 +1040,15 @@ class ReactionSimulator:
         #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
         #print(f"             delta_time={delta_time}, system={self.system}, ")
 
-
-        recommended_next_step = delta_time     # Baseline value; no reason yet to suggest a change in step size
+        original_delta_time = delta_time        # Save up the original requested value, for error reporting
+        recommended_next_step = delta_time      # Baseline value; no reason yet to suggest a change in step size
 
 
         delta_concentrations = None
 
-        SMALLEST_VALUE_TO_TRY = delta_time / 2000.       # Used to prevent infinite loops
-
         normal_exit = False
 
-        while delta_time > SMALLEST_VALUE_TO_TRY:       # TODO: consider moving the inside of the WHILE loop into a separate function
+        while delta_time > SMALLEST_VALUE_TO_TRY:
             try:    # We want to catch Exceptions that can arise from excessively large time steps
                     #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
                 (delta_concentrations, recommended_next_step) = \
@@ -1094,12 +1099,15 @@ class ReactionSimulator:
         # END while
 
 
-        if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above
-            raise Exception(f"reaction_step_common_variable_step(): unable to complete the reaction step.  "
-                            f"In spite of numerous automated reductions of the time step, "
-                            f"it continues to lead to concentration changes that are considered excessive; "
-                            f"try reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). "
-                            f"Current values: {self.adaptive_steps.thresholds}")
+        if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above,
+                                    # and we have reached the limit of the loop "while delta_time > SMALLEST_VALUE_TO_TRY"
+            raise Exception(f"reaction_step_common_variable_step(): unable to complete the reaction step.  System time is now: {self.system_time:.6g} \n"
+                            f"In spite of numerous automated reductions of the time step "
+                            f"(reduced down to {delta_time:.5g} from the original {original_delta_time:.5g}), \n"
+                            f"it continues to lead to concentration changes that are considered excessive. \n"
+                            f"Try reducing the original time step, or specifying one if you simply went with the default one; use the argument `initial_step=`")
+                            #, and/or increasing the 'abort' thresholds with set_thresholds(). "
+                            #f"Current values: {self.adaptive_steps.thresholds}")
 
 
         # If we get thus far, it's the normal exit of the reaction step
@@ -2497,13 +2505,13 @@ class ReactionSimulator:
 
 
 
-    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
+    def plot_reaction_network(self, log_file :str) -> None:
         """
-        Send a plot of the network of reactions to the HTML log file,
+        Append an interactive plot of the network of reactions to the HTML log file,
         also including a brief summary of all the reactions.
 
         ~~~ EXAMPLE of usage ~~~
-            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
+            plot_reaction_network(log_file="my_file.htm")
 
         :param log_file:            The name of the file into which to place the HTML code
                                         to create the interactive network plot.
@@ -2511,16 +2519,10 @@ class ReactionSimulator:
                                         If the file already exists, it will get overwritten.
                                         (Note: this file will automatically include an internal reference to the JavaScript
                                         file specified in `graphic_component`)
-        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
-                                        an object with the following keys
-                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ReactionRegistry.prepare_graph_network()
         :return:                    None
         """
-        assert graphic_component == "vue_cytoscape_5", \
-            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
-
-        self.reaction_registry.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
+        # Accept the default for the Vue component managing the interactive plot
+        self.reaction_registry.plot_reaction_network(log_file=log_file)
 
 
 
@@ -2617,7 +2619,7 @@ class ReactionSimulator:
                                 for all the reactions that failed the criterion
                                 EXAMPLE:  {False: [3, 6]}
         """
-        # TODO: optionally display last lines in diagnostic data, if available
+        # TODO: optionally display the last few lines from the diagnostic data, if available
 
         if conc is None:
             conc=self.system.get_conc_as_dict()   # Use the current System concentrations, as a dict.

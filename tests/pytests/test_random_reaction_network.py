@@ -4,7 +4,6 @@ from life123.random_reactions import RandomReactionNetwork
 
 
 
-
 def test_constructor():
 
     with pytest.raises(Exception):

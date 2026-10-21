@@ -691,7 +691,7 @@ class ReactionRegistry:
 
     def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
         """
-        Send a plot of the network of reactions to the HTML log file,
+        Append an interactive plot of the network of reactions to the HTML log file,
         also including a brief summary of all the reactions.
 
         :param log_file:            The name of the file into which to place the HTML code
