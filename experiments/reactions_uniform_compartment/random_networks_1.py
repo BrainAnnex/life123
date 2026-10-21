@@ -112,7 +112,7 @@ G_list   # kJ/mol
 
 # %%
 # Instantiate the simulator with our species and reactions
-sim = ReactionSimulator(reaction_registry=rxns, method="heun")   # analytic
+sim = ReactionSimulator(reaction_registry=rxns, method="analytic")   # analytic
 
 # %%
 
@@ -129,10 +129,16 @@ IFrame(log_file, width=1200, height=700)         # You may also open the above l
 # # Run a simulation
 
 # %%
-sim.set_system_state([31, 4, 18, 82])
+init_conc = [31, 4, 18, 82]
+
+# %%
+sim.set_system_state(init_conc)
 
 # %%
 sim.get_history()
+
+# %%
+sim.describe_state()
 
 # %%
 sim.system.get_conc_as_dict()
@@ -141,15 +147,52 @@ sim.system.get_conc_as_dict()
 sim.system.get_system_conc()
 
 # %%
+sim.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
 
 # %%
-sim.single_compartment_react(initial_step=0.00001, target_end_time=1.)   # Using defaults for all other parameters
+#sim.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters     initial_step=0.00001, 
 
 # %%
-sim.system.system_state
+sim.plot_history(show_intervals=True)
 
 # %%
 sim.system_time
 
 # %%
-sim.plot_history(show_intervals=True)
+sim.system.system_state
+
+# %%
+
+# %% [markdown]
+# # Forward Euler
+
+# %%
+sim_euler = ReactionSimulator(reaction_registry=rxns, method="forward_euler", system=init_conc) 
+
+# %%
+sim_euler.system.get_conc_as_dict()
+
+# %%
+sim_euler.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
+
+# %%
+sim_euler.plot_history(show_intervals=True)
+
+# %%
+
+# %% [markdown]
+# # Heun
+
+# %%
+sim_heun = ReactionSimulator(reaction_registry=rxns, method="heun", system=init_conc) 
+
+# %%
+sim_heun.system.get_conc_as_dict()
+
+# %%
+sim_heun.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
+
+# %%
+sim_heun.plot_history(show_intervals=True)
+
+# %%

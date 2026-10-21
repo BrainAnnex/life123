@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -17,193 +17,216 @@
 # ## `U` ("Up-regulator") up-regulates `X` , by sharing a reaction product `D` ("Drain") across 2 separate reactions:   
 # ### `U <-> 2 D` and `X <-> D` (both mostly forward)
 #
-# 1st-order kinetics throughout. 
+# 1st-order kinetics throughout; i.e. `U <-> 2 D` is a HYPOTHETICAL reaction with first-order kinetic in all species.  
+# This experiment also highlights how to use **custom** kinetic reaction models, since one of our reactions doesn't follow mass-action kinetics.
 #
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Oct. 20, 2026"
+LIFE123_VERSION = "1.0.0rc9"     # Library version this experiment is based on
 
-# %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
 
-from life123 import SpeciesRegistry
-from life123 import UniformCompartment
+# %%
+#import sys, os
+#os.getcwd()
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import GraphicLog
+import ipynbname
+from IPython.display import IFrame
 
-# %% tags=[]
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+from life123 import check_version, ReactionSimulator
+from life123.kinetic_models import Custom_Model
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+# %%
+check_version(LIFE123_VERSION)    # To check compatibility
+
+# %%
+# Initialize the HTML logging (for the graphics)
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
+
+# %%
 
 # %% [markdown]
 # ### Initialize the system
 
 # %%
-# Initialize the system
-chem_data = SpeciesRegistry(ids=["U", "X", "D"])
+# Instantiate the simulator and specify the reaction
+sim = ReactionSimulator(preset="fast", 
+                        enable_diagnostics=True) 
 
-# Reaction U <-> 2D , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants="U", products=[(2, "D", 1)],
-                       kF=8., kR=2.)
+# (HYPOTHETICAL!) Reaction U <-> 2D , with custom kinetics: 1st-order for all species
+sim.add_reaction(reactants="U", products=[(2, "D")],
+                 reaction_model="custom",
+                 kinetic_parameters={"kF": 8., "kR": 2.,
+                                     "rate_function": Custom_Model.kinetic_rate_first_order})
 
-# Reaction X <-> D , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants="X", products="D",
-                       kF=6., kR=3.)
+# Elementary Reaction X <-> D
+sim.add_reaction(reactants="X", products="D",
+                 reaction_model="mass action",
+                 kinetic_parameters={"kF": 6., "kR": 3.})
 
-chem_data.describe_reactions()
+# %%
+sim.describe_reactions(detail="summary")
 
-# Send the plot of the reaction network to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+# %%
+# Send a plot of the network of reactions to the HTML log file
+sim.plot_reaction_network(log_file=log_file)
+
+# %%
+IFrame(log_file, width=1200, height=800)         # You may also open the above log file in a browser
+
+# %%
+
+# %%
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionSimulator(species_registry=chem_data, preset ="fast")
-dynamics.set_conc(conc={"U": 50., "X": 100.})
-dynamics.describe_state()
+sim.set_conc(conc={"U": 50., "X": 100.})
+sim.describe_state()
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # 1. Take the initial system to equilibrium
 
 # %%
-dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-
-dynamics.single_compartment_react(initial_step=0.03, target_end_time=0.5,
-                                  variable_steps=True, explain_variable_steps=False)
-
-dynamics.get_history()
+sim.single_compartment_react(initial_step=0.03, target_end_time=0.5)
 
 # %%
-dynamics.conc_data.explain_time_advance()
+sim.get_history()
 
-# %% [markdown] tags=[]
+# %%
+sim.diagnostics.conc_data.explain_time_advance()
+
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['red', 'green', 'gray'])
+# Assign specific colors to each specie
+sim.species_registry.update(species_id="U", plot_color="red")
+sim.species_registry.update(species_id="D", plot_color="gray")
+sim.species_registry.update(species_id="X", plot_color="green")
+
+# %%
+sim.plot_history()
 
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+sim.is_in_equilibrium(rxn_index=1)   # Only 'mass action' reaction models are currently supported
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # 2. Now, let's suddenly increase [U]
 
 # %%
-dynamics.set_single_conc(species_id="U", conc=70., snapshot_funct=True)
-dynamics.describe_state()
+sim.set_single_conc(species_id="U", conc=70.)
+sim.describe_state()
 
 # %%
-dynamics.get_history(tail=3)
+sim.get_history(tail=3)
 
 # %% [markdown]
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(initial_step=0.03, target_end_time=1,
-                                  variable_steps=True)
+sim.single_compartment_react(initial_step=0.03, target_end_time=1)
 
 # %%
-#dynamics.get_history()
-#dynamics.explain_time_advance()
+#sim.get_history()
+#sim.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['red', 'green', 'gray'])
+sim.plot_history()  # The colors set earlier will be used
 
 # %% [markdown]
 # ### The (transiently) high value of [U] led to an increase in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+sim.is_in_equilibrium(rxn_index=1, tolerance=2)
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # 3. Let's again suddenly increase [U]
 
 # %%
-dynamics.set_single_conc(species_id="U", conc=100., snapshot_funct=True)
-dynamics.describe_state()
+sim.set_single_conc(species_id="U", conc=100.)
+sim.describe_state()
 
 # %%
-dynamics.get_history(tail=3)
+sim.get_history(tail=3)
 
 # %% [markdown]
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(initial_step=0.03, target_end_time=1.6,
-                                  variable_steps=True)
+sim.single_compartment_react(initial_step=0.03, target_end_time=1.6)
 
 # %%
-#dynamics.get_history()
-#dynamics.explain_time_advance()
+#sim.get_history()
+#sim.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['red', 'green', 'gray'])
+sim.plot_history()
 
 # %% [markdown]
 # ### The (transiently) high value of [U] again led to an increase in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+sim.is_in_equilibrium(rxn_index=1)       # Only 'mass action' reaction models are currently supported
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # 4. Now, instead, let's DECREASE [U]
 
 # %%
-dynamics.set_single_conc(species_id="U", conc=5., snapshot_funct=True)
-dynamics.describe_state()
+sim.set_single_conc(species_id="U", conc=5.)
+sim.describe_state()
 
 # %%
-dynamics.get_history(tail=3)
+sim.get_history(tail=3)
 
 # %% [markdown]
 # ### Take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(initial_step=0.03, target_end_time=2.3,
-                                  variable_steps=True)
+sim.single_compartment_react(initial_step=0.03, target_end_time=2.3)
 
 # %%
-#dynamics.get_history()
-#dynamics.explain_time_advance()
+#sim.get_history()
+#sim.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['red', 'green', 'gray'])
+sim.plot_history()
 
 # %% [markdown]
 # ### The (transiently) LOW value of [U] led to an DECREASE in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
+sim.is_in_equilibrium(rxn_index=1, explain=False)   # Only 'mass action' reaction models are currently supported
 
 # %%

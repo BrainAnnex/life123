@@ -39,14 +39,6 @@ from life123 import check_version, ReactionSimulator, ReactionKinetics, PlotlyHe
 from life123.kinetic_models import Custom_Model
 
 # %%
-#from experiments.get_notebook_info import get_notebook_basename
-
-#from life123 import SpeciesRegistry as chem
-#from life123 import UniformCompartment
-
-#from life123 import GraphicLog
-
-# %%
 check_version(LIFE123_VERSION)
 
 # %%
@@ -59,7 +51,7 @@ check_version(LIFE123_VERSION)
 uc = ReactionSimulator(preset="fast", 
                        enable_diagnostics=True)     # We call this "uc" because it's a "uniform compartment"
 
-# Reaction A + 2 B <-> Y , with custom kinetics: 1st-order for all species
+# (HYPOTHETICAL!) Reaction A + 2 B <-> Y , with custom kinetics: 1st-order for all species
 uc.add_reaction(reactants=["A" , (2, "B")], products="Y",
                 reaction_model="custom",
                 kinetic_parameters={"kF": 8., "kR": 2.,
