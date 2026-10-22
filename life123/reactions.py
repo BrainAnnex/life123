@@ -152,11 +152,26 @@ class SimulationReaction:
 
 
 
+
+    def __str__(self) -> str:
+        """
+        Provide a string description about this object;
+        automatically invoked when printing it.
+
+        :return:    An informative string
+        """
+        return f'Object "SimulationReaction"\n' \
+               f'    To see its stoichiometry, use: get_stoichiometry()\n' \
+               f'    To see its kinetic parameters, use: get_parameters()\n' \
+               f'    To see its thermodynamic parameters, use: get_thermodynamics()\n'
+
+
+
     def get_parameters(self) -> dict:
         """
         Get the kinetic parameters
 
-        :return:
+        :return:    EXAMPLE: {'kF': 10., 'kR': 2., 'K': 5., 'reversible': True}
         """
         return self.model.get_parameters()
 
@@ -170,6 +185,13 @@ class SimulationReaction:
         :return:    Object of type "ReactionThermodynamics"
         """
         return self.source_object.thermodynamics
+
+
+    def get_stoichiometry(self) -> Stoichiometry:
+        """
+        :return:    Object of type "Stoichiometry"
+        """
+        return self.stoichiometry
 
 
 

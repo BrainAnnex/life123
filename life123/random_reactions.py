@@ -51,13 +51,13 @@ class RandomReactionNetwork:
         #RXN_CHOICES = ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"]
 
         assert type(n_species) == int, \
-            f"RandomReactionNetwork Instantiation: the argument `n_chem` must be an integer, not {type(n_species)}"
+            f"RandomReactionNetwork Instantiation: the argument `n_species` must be an integer, not {type(n_species)}"
 
         assert n_species >= 3, \
-            f"RandomReactionNetwork Instantiation: the number of chemical species must be at least 3 (value passed was {n_species})"
+            f"RandomReactionNetwork Instantiation: the number of species must be at least 3 (value passed was {n_species})"
 
         assert type(n_rxns) == int, \
-            f"RandomReactionNetwork Instantiation: the argument `n_rxns` must be an integer, not {type(n_rxns)}"
+            f"RandomReactionNetwork Instantiation: the number of reactions specified in `n_rxns` must be an integer, not {type(n_rxns)}"
 
 
         self.n_species = n_species
@@ -66,7 +66,7 @@ class RandomReactionNetwork:
 
 
         self.reaction_data = ReactionRegistry(species_registry=self.species_data)   # Object of type ReactionRegistry,
-                                                                                # to manage a list of reactions, and the reaction-specific objects
+                                                                                    # to manage the randomly-generated reactions
 
 
         self.rng = np.random.default_rng(seed=seed)      # A Generator object with Numpy’s default BitGenerator
@@ -75,9 +75,10 @@ class RandomReactionNetwork:
         rxn_types = self.rng.choice(a=RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
         # EXAMPLE: [ReactionSynthesis, ReactionDecomposition, ReactionDecomposition, ReactionSynthesis]
 
-        self.standard_species_enthalpy = {}
+        self.standard_species_enthalpy = {}             # A dictionary of random species enthalpies assigned to each species.
+                                                        # EXAMPLE: { 'A': -10.474684757627816, 'B': 3.4399997584256923}
 
-        self.temp = temp
+        self.temp = temp                                # System temperature in Kelvins
 
         self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
 

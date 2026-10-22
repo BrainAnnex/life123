@@ -28,21 +28,6 @@ class ReactionRegistry:
                                         and then it can be obtained by means of the method get_species_data()
         """
 
-        # TODO: consider adding to argument   "=species=None"
-        """
-        assert (chem_data is not None) or (labels is not None), \
-            "ReactionRegistry() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
-
-        assert (chem_data is None) or (labels is None), \
-            "ReactionRegistry() instantiation: cannot specify both the arguments `chem_data` and `labels`"
-
-        if labels is not None:
-            chem_data = SpeciesRegistry(labels=labels)
-        """
-
-        #assert species_data is not None, \
-            #"ReactionRegistry() instantiation: the arguments `species_data` must be provided, and cannot be None"
-
         self.version = 0        # A mutation counter used for "lazy synchronization" with higher-level modules using this class.
                                 #   Whenever this registry is modified (for example, by adding a reaction),
                                 #   its `version` number gets increased;
@@ -76,12 +61,15 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
+        Provide a string description about this object;
+        automatically invoked when printing it.
 
-        :return:
+        :return:    An informative string
         """
-        return f'Object "ReactionRegistry", with {self.number_of_reactions()} reactions'
+        return f'Object "ReactionRegistry", with {self.number_of_reactions()} reactions.\n' \
+               f'A list of them can be accessed with get_all_reactions()'
 
 
 
@@ -90,7 +78,7 @@ class ReactionRegistry:
         Return the number of registered chemical reactions
         (the number of DERIVED "SimulationReaction" objects)
 
-        :return:                    The number of registered chemical reactions
+        :return:    The number of registered chemical reactions
         """
         return len(self.reaction_list)
 
@@ -108,22 +96,21 @@ class ReactionRegistry:
 
 
 
-    def active_reaction_indices(self) -> [int]:
+    def get_all_reaction_indexes(self) -> [int]:
         """
-        TODO: OBSOLETE
-
         Return a list of the reaction index numbers of all the reactions
 
-        DEPRECATION: no active/inactive distinction is kept anymore.  All reactions are regarded as "active"
-
-        :return:    A list of integers, to identify the active reactions by their indices
+        :return:    A list of integers, to identify all the reactions by their indexes
+        """
+        return list(range(0, self.number_of_reactions()))
         """
         l = []
         for i, rxn in enumerate(self.reaction_list):
-            #if rxn.active:
+            #if rxn.active:     # No longer supported
             l.append(i)
 
         return l
+        """
 
 
 

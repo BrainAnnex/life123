@@ -36,6 +36,7 @@ LIFE123_VERSION = "1.0.0rc9"         # Library version this experiment is based 
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
 import ipynbname
+import numpy as np
 from IPython.display import IFrame
 
 from life123 import check_version, RandomReactionNetwork, ReactionSimulator
@@ -103,8 +104,45 @@ G_list = [rxn.get_thermodynamics().delta_G
 G_list   # kJ/mol
 
 # %%
-# Verify G_list
+# Verify that G_list can be derived as expected from H_list and S_list, at the given temp of 25 C
 [H_list[i] - (25+273.15) * S_list[i] / 1000 for i in range(len(H_list))]
+
+# %%
+
+# %%
+ents = net.standard_species_enthalpy
+ents
+
+# %%
+# C <-> A + D
+ents["A"] + ents["D"] - ents["C"]
+
+# %%
+# 2 C <-> D 
+ents["D"] - 2 * ents["C"]
+
+# %%
+print(net.reaction_data)
+
+# %%
+for rxn in net.reaction_data.get_all_reactions():
+    stoic = rxn.get_stoichiometry()
+    print(stoic)
+    print(rxn.get_thermodynamics())
+    
+    derived_delta_H = 0
+    for sp, coeff in stoic.vector.items():
+        print(f"{coeff} {sp}")
+        delta_H_contribution = coeff * net.standard_species_enthalpy[sp]
+        derived_delta_H += delta_H_contribution
+        
+    print("derived_delta_H: ", derived_delta_H)
+    print("stored delta_H: ", rxn.get_thermodynamics().delta_H)
+    print("discrepancy: ", derived_delta_H -  rxn.get_thermodynamics().delta_H)
+        
+    print()
+
+# %%
 
 # %%
 
@@ -120,7 +158,7 @@ IFrame(log_file, width=1200, height=700)         # You may also open the above l
 # %%
 
 # %% [markdown]
-# # Re-run a simulation with various method/approaches
+# # Run a simulation with various method/approaches
 # #### Always with same initial condition:
 
 # %%
@@ -157,27 +195,56 @@ sim.single_compartment_react(target_end_time=0.04, variable_steps=True)
 sim.plot_history(show_intervals=True)
 
 # %%
+sim.species_index_map.index_to_species
+
+# %%
+st_mat = sim.get_stoichiometric_matrix()
+st_mat
+
+# %% [markdown]
+# #### The 4 rows correspond, respectively, to the species 'A', 'B', 'C', 'D'  
+# For example, the leftmost column represents the reaction `C -> A + D`  (reactant coefficients are negative)
+
+# %%
+net.standard_species_enthalpy
+
+# %%
+species_enthalpy_vector = sim.species_index_map.concentrations_to_array(conc=net.standard_species_enthalpy)
+species_enthalpy_vector
+
+# %%
+np.matmul(species_enthalpy_vector.T, st_mat)
+
+# %%
+np.matmul(species_enthalpy_vector.T, st_mat) - H_list
+
+# %%
 
 # %%
 
 # %% [markdown]
-# # Reaction-wise analytic solution, with fixed steps
+# # From now on, only use FIXED steps : repeat the previous computation with various approaches/methods
 
 # %%
-sim = ReactionSimulator(reaction_registry=rxns, method="analytic", system=init_conc)
+
+# %% [markdown]
+# ## Reaction-wise analytic solution, with fixed steps
 
 # %%
-sim.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
+sim_analytic = ReactionSimulator(reaction_registry=rxns, method="analytic", system=init_conc)
 
 # %%
-sim.plot_history(show_intervals=True)
+sim_analytic.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
+
+# %%
+sim_analytic.plot_history(show_intervals=True)
 
 # %%
 
 # %%
 
 # %% [markdown]
-# # Forward Euler, with fixed steps
+# ## "Forward Euler" method, with fixed steps
 
 # %%
 sim_euler = ReactionSimulator(reaction_registry=rxns, method="forward_euler", system=init_conc) 
@@ -193,7 +260,7 @@ sim_euler.plot_history(show_intervals=True)
 # %%
 
 # %% [markdown]
-# # Heun, with fixed steps
+# ## "Heun" method, with fixed steps
 
 # %%
 sim_heun = ReactionSimulator(reaction_registry=rxns, method="heun", system=init_conc) 

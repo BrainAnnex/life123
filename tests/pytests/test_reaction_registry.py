@@ -34,13 +34,13 @@ def test_active_reaction_indices():
     chem_data = SpeciesRegistry(ids=["A", "B", "C"])
     rxns = ReactionRegistry(chem_data)
 
-    assert rxns.active_reaction_indices() == []
+    assert rxns.get_all_reaction_indexes() == []
 
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action")
-    assert rxns.active_reaction_indices() == [0]
+    assert rxns.get_all_reaction_indexes() == [0]
 
     rxns.add_reaction(reactants=["A", (2, "B")], products="C", reaction_model="mass action")
-    assert rxns.active_reaction_indices() == [0, 1]
+    assert rxns.get_all_reaction_indexes() == [0, 1]
 
 
 

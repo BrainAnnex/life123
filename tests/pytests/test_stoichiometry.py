@@ -1,10 +1,6 @@
-import numpy as np
 import pytest
 from life123.species_registry import SpeciesRegistry
-from life123.reaction_kinetics import ReactionKinetics
-from life123.reactions import Stoichiometry, ReactionThermodynamics, \
-ReactionDefinition, SimulationReaction, MassAction_Model, MichaelisMenten_Model
-from tests.utilities.comparisons import *
+from life123.reactions import Stoichiometry, ReactionDefinition
 
 
 
@@ -49,7 +45,7 @@ def test_to_dict():
 def test_get_reaction_vector():
     # Reaction  2A + 3B + 2 E + F --> 4C  + 5D  + 2 E + F
     st = Stoichiometry({"A": -2, "B": -3, "C": 4, "D": 5}, catalysts=["E", "F"])
-    assert st.get_reaction_vector() == {"A": -2, "B": -3, "C": 4, "D": 5}
+    assert st.get_reaction_vector() == {"A": -2, "B": -3, "C": 4, "D": 5}   # Catalysts don't show up
 
 
     sr = SpeciesRegistry(ids=["A", "B", "C", "D", "R", "P", "Q", "S", "E", "F"])

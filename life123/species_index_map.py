@@ -1,4 +1,6 @@
 from life123.species_registry import SpeciesRegistry
+import numpy as np
+import numpy.typing as npt
 
 
 
@@ -153,6 +155,28 @@ class SpeciesIndexMap:
 
 
 
-    def clear_index(self):
+    def clear_index(self) -> None:
+        """
+        A fresh start on all indexes
+
+        :return:    None
+        """
         self.index_to_species = []
         self.species_to_index = {}
+
+
+
+    def concentrations_to_array(self, conc: dict[str, float], dtype: npt.DTypeLike = float) -> np.ndarray:
+        """
+        Convert a dictionary of species concentrations into a Numpy array,
+        following the species ordering in `self.index_to_species`
+
+        :param conc:    Dictionary mapping species IDs to concentrations
+        :param dtype:   [OPTIONAL] Numpy dtype for the resulting array (default: float)
+        :return:        Concentration array ordered according to `self.index_to_species`
+        """
+        # TODO: pytest
+        return np.array(
+            [conc[species_id] for species_id in self.index_to_species],
+            dtype=dtype
+        )

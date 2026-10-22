@@ -106,7 +106,7 @@ class ReactionSimulator:
                                         passed to the argument `species_index_map`, or
                                         present in the object passed to `uniform_compartment`;
                                         therefore, either of those arguments must also be present
-        :param species_index_map:
+        :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
         :param reaction_registry:   [OPTIONAL] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
                                 If passed, cannot pass either of the args `species_data` nor `names` (those are both part of the "ReactionRegistry" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
@@ -262,9 +262,9 @@ class ReactionSimulator:
 
     #####################################################################################################
 
-    '''                              ~   READ/WRITE   ~                                   '''
+    '''                              ~   READ/WRITE THE SYSTEM STATE  ~                               '''
 
-    def ________READ_WRITE________(DIVIDER):
+    def ________READ_WRITE_SYSTEM_STATE________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -1386,7 +1386,7 @@ class ReactionSimulator:
 
         if rxn_list is None:    # Meaning ALL reactions
             # A list of the reaction indices of all the active reactions
-            rxn_list = self.reaction_registry.active_reaction_indices()
+            rxn_list = self.reaction_registry.get_all_reaction_indexes()
 
 
         # For each applicable reaction, find the needed adjustments ("deltas")
@@ -1992,6 +1992,47 @@ class ReactionSimulator:
                 "set_temp(): allowable values for `units` are 'K' and 'C'"
 
         self.temp = temp
+
+
+
+
+    def get_stoichiometric_matrix(self) -> np.ndarray:
+        """
+        Build the stoichiometric matrix for the reactions in the registry,
+        in the form (Rows: species) x (Columns: reactions)
+
+        Rows follow the species ordering in SpeciesIndexMap.
+        Columns follow the ordering returned by get_all_reactions().
+
+        :return: Integer array, with shape (n_species, n_reactions).
+                 Each column contains the stoichiometric change vector
+                 for one reaction in its defined forward direction.
+        """
+        #TODO: pytest
+        all_rxns = self.reaction_registry.get_all_reactions()      # A list of "SimulationReaction" objects
+
+        n_species = self.system.number_of_system_species()
+        n_reactions = len(all_rxns)
+
+        matrix = np.zeros((n_species, n_reactions), dtype=int)
+
+        for reaction_idx, rxn in enumerate(all_rxns):
+            rxn_dict = rxn.stoichiometry.get_reaction_vector()     # EXAMPLE: {"A": -1, "P": 2, "Q": 1}
+
+            for species_id, coefficient in rxn_dict.items():
+                species_idx = self.species_index_map.index_of(species_id, enforce=False)
+                if species_idx is None:
+                    raise ValueError(
+                        f"Reaction {reaction_idx} references species "
+                        f"{species_id!r}, which is absent from the "
+                        "current system's SpeciesIndexMap."
+                    )
+
+                matrix[species_idx, reaction_idx] = coefficient
+
+        return matrix
+
+
 
 
 

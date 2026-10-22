@@ -68,7 +68,7 @@ class Stoichiometry:
 
 
 
-    def get_reaction_vector(self) -> dict:
+    def get_reaction_vector(self) -> Mapping[str, int]:
         """
         Following Martin Feinberg's "Foundations of Chemical Reaction Network Theory",
         we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
@@ -93,10 +93,10 @@ class Stoichiometry:
         ~~~
 
         :return:    The non-zero components of the reaction vector,
-                        written as a dict mapping of species id to its component value
+                        written as a dict mapping from species id to its component value
         """
         # Note that catalysts, if any, are NOT included
-        return dict(self.vector)
+        return self.vector
 
 
 
