@@ -6,48 +6,55 @@ from life123.units import K, C, J_PER_MOL
 
 
 def test_equilibrium_constant_from_gibbs_energy():
-    assert np.allclose(1., ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = 0, temp = 100))
-    assert np.allclose(1., ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = 0, temp = 2000))
+    assert np.allclose(1., ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = 0, temp = 100))
+    assert np.allclose(1., ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = 0, temp = 2000))
 
-    assert np.allclose(1.00120344711, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = -0.001, temp = 100))
-    assert np.allclose(0.99879799943, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  0.001, temp = 100))
+    assert np.allclose(1.00120344711, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = -0.001, temp = 100))
+    assert np.allclose(0.99879799943, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G =  0.001, temp = 100))
 
-    assert np.allclose(3.32917175365, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 100))
-    assert np.allclose(0.30037501036, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 100))
+    assert np.allclose(3.32917175365, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 100))
+    assert np.allclose(0.30037501036, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 100))
 
-    assert np.allclose(11.0833845653, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 50))
-    assert np.allclose(0.09022514685, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 50))
+    assert np.allclose(11.0833845653, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 50))
+    assert np.allclose(0.09022514685, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 50))
 
-    assert np.allclose(1.27194180118, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 500))
-    assert np.allclose(0.78619949361, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 500))
+    assert np.allclose(1.27194180118, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 500))
+    assert np.allclose(0.78619949361, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 500))
 
-    assert np.allclose(0.78619949361, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = (226.85, C)))
+    assert np.allclose(0.78619949361, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = (226.85, C)))
 
     delta_G = 8.
-    K = ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = 300)
-    assert np.allclose(delta_G, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = K, temp = 300))   # Reverse ops
+    K = ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = 300)
+    assert np.allclose(delta_G, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(K_standard= K, temp = 300))   # Reverse ops
 
 
 
 def test_gibbs_energy_from_equilibrium_constant():
-    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1, temp = 100))
-    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1, temp = 50))
-    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1, temp = 1000))
+    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(K_standard= 1, temp = 100))
+    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(K_standard= 1, temp = 50))
+    assert np.allclose(0, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(K_standard= 1, temp = 1000))
 
-    assert np.allclose(-0.831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 100))
-    assert np.allclose(0.831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 100))
+    assert np.allclose(-0.831446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard= 2.71828182846, temp = 100))
+    assert np.allclose(0.831446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard=1 / 2.71828182846, temp = 100))
 
-    assert np.allclose(-8.31446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 1000))
-    assert np.allclose(8.31446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 1000))
+    assert np.allclose(-8.31446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard= 2.71828182846, temp = 1000))
+    assert np.allclose(8.31446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard=1 / 2.71828182846, temp = 1000))
 
-    assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 10))
-    assert np.allclose(0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 10))
+    assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard= 2.71828182846, temp = 10))
+    assert np.allclose(0.0831446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard=1 / 2.71828182846, temp = 10))
 
-    assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = (-263.15, C)))
+    assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(
+        K_standard= 2.71828182846, temp = (-263.15, C)))
 
     K = 4.2
-    delta_G = ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = K, temp = 273.)
-    assert np.allclose(K, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = 273.))   # Reverse ops
+    delta_G = ThermoDynamics.gibbs_energy_from_standard_equilibrium_constant(K_standard= K, temp = 273.)
+    assert np.allclose(K, ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = 273.))   # Reverse ops
 
 
 

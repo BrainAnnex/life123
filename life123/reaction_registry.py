@@ -34,9 +34,9 @@ class ReactionRegistry:
                                 #   clients of this module can inspect changes when they need to interact with this registry
 
         if species_registry is None:
-            self.species_data = SpeciesRegistry()
+            self.species_registry = SpeciesRegistry()
         else:
-            self.species_data = species_registry
+            self.species_registry = species_registry
 
 
         self.reaction_defn_list = []    # List of "ReactionDefinition" objects
@@ -140,7 +140,7 @@ class ReactionRegistry:
 
         :return:    Object of type "SpeciesRegistry"
         """
-        return self.species_data
+        return self.species_registry
 
 
 
@@ -423,7 +423,7 @@ class ReactionRegistry:
                         "add_reaction(): inconsistent `temp` and `thermodynamic_parameters` arguments"
 
         rxn = ReactionDefinition(reactants=reactants, products=products,
-                                 species_registry=self.species_data,
+                                 species_registry=self.species_registry,
                                  autoregister_species=autoregister_species,
                                  reaction_model=reaction_model,
                                  thermodynamic_parameters=thermodynamic_parameters,
@@ -522,7 +522,7 @@ class ReactionRegistry:
         # If plot colors were registered, show them alongside the species id's
         species_ids_with_colors = []
         for sp_id in species_ids:
-            color = self.species_data.get_value(species_id=sp_id, field="plot_color")
+            color = self.species_registry.get_value(species_id=sp_id, field="plot_color")
             if color:
                 species_ids_with_colors.append(f'"{sp_id}" ({color})')
             else:
@@ -631,11 +631,11 @@ class ReactionRegistry:
             for stoich, species_id in products:
                 #chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
                 # Use the species' "sort_order" attribute as a short unique ID
-                chemical_id = f"C-{self.species_data.get_species(species_id).sort_order}"      # Example: "C-12"
+                chemical_id = f"C-{self.species_registry.get_species(species_id).sort_order}"      # Example: "C-12"
 
                 # Add each product to the graph as a node (if not already present)
                 properties={'name': species_id}
-                if diff := self.species_data.get_value(species_id=species_id, field="diffusion_rate"):
+                if diff := self.species_registry.get_value(species_id=species_id, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node( node_id=chemical_id, labels="Chemical",
                                 properties=properties)
@@ -650,11 +650,11 @@ class ReactionRegistry:
             for stoich, species_id in reactants:
                 #chemical_id = f"C-{self.species_data.get_species_index(species_id)}"      # Example: "C-34"
                 # Use the species' "sort_order" attribute as a short unique ID
-                chemical_id = f"C-{self.species_data.get_species(species_id).sort_order}"   # Example: "C-34"
+                chemical_id = f"C-{self.species_registry.get_species(species_id).sort_order}"   # Example: "C-34"
 
                 # Add each reactant to the graph as a node (if not already present)
                 properties={'name': species_id}
-                if diff := self.species_data.get_value(species_id=species_id, field="diffusion_rate"):
+                if diff := self.species_registry.get_value(species_id=species_id, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node(node_id=chemical_id, labels="Chemical",
                                properties=properties)

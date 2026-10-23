@@ -16,7 +16,7 @@ class PingPongBiBi_Model:
 
 class MassAction_Model:
     """
-    Warning: generally speaking, this is NOT a valid kinetic modeling
+    Caution: generally speaking, this is NOT a valid kinetic modeling
              for any reaction that isn't elementary
     """
 
@@ -25,9 +25,14 @@ class MassAction_Model:
 
 
     def __init__(self, stoichiometry):
+        """
+
+        :param stoichiometry:
+        """
         self.kF: float | None = None
         self.kR: float | None = None
-        self.K: float | None = None
+        self.K: float | None = None     # TODO: change all references to kinetic K to "K_c" (https://goldbook.iupac.org/terms/view/E02177)
+                                        # TODO: change all references to thermodynamics K_eq to "K_standard"
         self.reversible: bool = False   # Model metadata/state
 
         self.derived_pars : set[str] = set()    # Set of names of parameters that were DERIVED - i.e.
@@ -128,6 +133,8 @@ class MassAction_Model:
 
 
         # ---- kF + kR known: derive K (and check consistency with the given K, if applicable) -------------------
+
+        # TODO: maybe introduce function  concentration_equilibrium_constant_from_rate_constants()
 
         if (kF is not None) and (kR is not None):
 

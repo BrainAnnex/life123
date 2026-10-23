@@ -39,14 +39,14 @@ class ThermoDynamics:
 
 
     @classmethod
-    def equilibrium_constant_from_gibbs_energy(cls, delta_G :float, temp :float|tuple) -> float:
+    def standard_equilibrium_constant_from_gibbs_energy(cls, delta_G :float, temp : float | tuple) -> float:
         """
         Compute a reaction's equilibrium constant from its change in Gibbs Free Energy,
         at the specified temperature
 
         :param delta_G: Change in Gibbs Free Energy (from reactants to products), in kJ/mol
         :param temp:    In degrees Kelvin, or in pair format such as (25, C)
-        :return:        The reaction's equilibrium constant
+        :return:        The reaction's standard equilibrium constant (dimensionless)
         """
         temp = standardize_units(temp, dimension="temperature")
         return math.exp(- delta_G / (cls.R * temp))
@@ -54,18 +54,18 @@ class ThermoDynamics:
 
 
     @classmethod
-    def gibbs_energy_from_equilibrium_constant(cls, K :float, temp :float|tuple) -> float:
+    def gibbs_energy_from_standard_equilibrium_constant(cls, K_standard :float, temp : float | tuple) -> float:
         """
         Compute a reaction's change in its Gibbs Free Energy from its equilibrium constant,
         at the specified temperature
 
-        :param K:       The reaction's equilibrium constant
-        :param temp:    In degrees Kelvin, or in pair format such as (25, C)
-        :return:        The reaction's change in Gibbs Free Energy (from reactants to products),
-                            in kJ/mol
+        :param K_standard:  The reaction's standard equilibrium constant (dimensionless)
+        :param temp:        In degrees Kelvin, or in pair format such as (25, C)
+        :return:            The reaction's change in Gibbs Free Energy (from reactants to products),
+                                in kJ/mol
         """
         temp = standardize_units(temp, dimension="temperature")
-        return -cls.R * temp * math.log(K)      # Natural log
+        return -cls.R * temp * math.log(K_standard)      # Natural log
 
 
 
@@ -151,7 +151,7 @@ class ThermoDynamics:
 
         if (K is not None):
             # If the temperature is set, compute the change in Gibbs Free Energy
-            delta_G_derived = cls.gibbs_energy_from_equilibrium_constant(K = K, temp = temp)
+            delta_G_derived = cls.gibbs_energy_from_standard_equilibrium_constant(K_standard= K, temp = temp)
             if delta_G is None:
                 delta_G = delta_G_derived
             else:   # If already present (passed as argument), make sure that the two match!
@@ -178,7 +178,7 @@ class ThermoDynamics:
             if K is None:
                 # Compute the equilibrium constant (from the thermodynamic data)
                 # Note: no need to do it if K is present, because we ALREADY checked for consistency
-                K = ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = temp)
+                K = ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = temp)
 
             # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
             if (delta_H is None) and (delta_S is not None):

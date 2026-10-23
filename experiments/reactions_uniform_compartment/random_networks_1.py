@@ -61,7 +61,7 @@ log_file
 net = RandomReactionNetwork(n_species=4, n_rxns=7, seed=47242315, thermodynamic_ruggedness=0.2)
 
 # %%
-net.species_data.get_all_species_ids()
+net.species_registry.get_all_species_ids()
 
 # %% [markdown]
 # #### The above species id's were auto-generated

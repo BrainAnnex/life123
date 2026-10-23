@@ -17,12 +17,12 @@ class RandomReactionNetwork:
         """
         :param n_species:           Integer >=3, with the desired number of chemicals species
         :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
-        :param relative_rxn_prob:   [OPTIONAL] A 3-element list with the relative probability
-                                        of each of the 3 reaction choices that are currently available:
-                                        [ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition]
+        :param relative_rxn_prob:   [OPTIONAL] A 2-element list with the relative probability
+                                        of each of the 2 reaction choices that are currently available:
+                                        [ReactionSynthesis, ReactionDecomposition]
                                         Probabilities must add up to 1;
                                         if not specified, a uniform distribution is used.
-                                        EXAMPLE:  [0.2, 0.5, 0.3]
+                                        EXAMPLE:  [0.2, 0.8]
         :param seed:                [OPTIONAL] A (large) integer, to guarantee consistent random runs
         :param temp:                [OPTIONAL] Temperature in Kelvins.  By default, 298.15 K
         :param thermodynamic_ruggedness: [OPTIONAL] It affects the magnitudes of the random reactions delta Gibbs energy values,
@@ -34,7 +34,7 @@ class RandomReactionNetwork:
                                                     1	    20	    moderate
                                                     1.5	    30	    broad chemistry
                                                     2	    40	    rugged chemistry
-                                            A value of 40.4145 for sigma has the effect of
+                                            For example, a value of 40.4145 for sigma has the effect of
                                             making the derived SD for the REACTION delta_H value to be sqrt(3) * sigma = 70 kJ/mol
                                             For more details, see random_species_enthalpy()
 
@@ -44,11 +44,16 @@ class RandomReactionNetwork:
 
         self.kB_over_h = 2.08366191233e10 # K-1 s-1
                                 # Boltzmann constant / Plank constant
-                                # Boltzmann constant = 1.380649 × 10-23 J K-1
-                                # Plank constant = 6.62607015 × 10-34 J s
+                                #       Boltzmann constant = 1.380649 × 10-23 J K-1
+                                #       Plank constant = 6.62607015 × 10-34 J s
 
-        RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # Available reaction classes
+        self.RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # Available reaction classes
         #RXN_CHOICES = ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"]
+        if relative_rxn_prob is not None:
+            assert len(relative_rxn_prob) == len(self.RXN_CHOICES), \
+                f"If arg `relative_rxn_prob` is provided, it must be a list with {len(relative_rxn_prob)} entries"
+        self.relative_rxn_prob = relative_rxn_prob
+
 
         assert type(n_species) == int, \
             f"RandomReactionNetwork Instantiation: the argument `n_species` must be an integer, not {type(n_species)}"
@@ -62,17 +67,17 @@ class RandomReactionNetwork:
 
         self.n_species = n_species
         self.n_rxns = n_rxns
-        self.species_data = SpeciesRegistry(n_species=n_species)        # Object of type "SpeciesRegistry", with info on the individual chemical species
+        self.species_registry = SpeciesRegistry(n_species=n_species)        # Object of type "SpeciesRegistry", with info on the individual chemical species
 
 
-        self.reaction_data = ReactionRegistry(species_registry=self.species_data)   # Object of type ReactionRegistry,
+        self.reaction_data = ReactionRegistry(species_registry=self.species_registry)   # Object of type ReactionRegistry,
                                                                                     # to manage the randomly-generated reactions
 
 
         self.rng = np.random.default_rng(seed=seed)      # A Generator object with Numpy’s default BitGenerator
 
         # Select each of the reactions types for the reactions (using the relative probabilities, if available)
-        rxn_types = self.rng.choice(a=RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
+        rxn_types = self.rng.choice(a=self.RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
         # EXAMPLE: [ReactionSynthesis, ReactionDecomposition, ReactionDecomposition, ReactionSynthesis]
 
         self.standard_species_enthalpy = {}             # A dictionary of random species enthalpies assigned to each species.
@@ -84,9 +89,80 @@ class RandomReactionNetwork:
 
 
 
+    def _generate_reaction_candidate(self) -> str:
+        """
+        Randomly pick a reaction type from the list of choices in `self.RXN_CHOICES`
+        The object variable `self.relative_rxn_prob`, if set, determines the relative probabilities
+
+        :return:    A string that is one of the entries of self.RXN_CHOICES ;
+                        EXAMPLE: "ReactionSynthesis"
+        """
+        rxn_type = self.rng.choice(a=self.RXN_CHOICES, size=1, p=self.relative_rxn_prob)
+        return rxn_type
+
+
+
+    def _assign_species_to_rxn(self, reaction_type :str, all_species_ids :[str]) -> (list, list):
+        """
+        From the pool of available species, randomly assign reactants and products to
+        the specified type of reaction.
+
+        Along the way, assign compatible number of atoms to each one, and modify the species id
+        to be of the form 'X (n)' , where n is the total number of atoms
+
+        Note: validation checks are assumed to be done in the calling function
+
+        :param reaction_type:   One of the following reaction types:
+                                    "ReactionSynthesis", "ReactionDecomposition"
+        :param all_species_ids: All the species id's for the random network we're building
+        :return:                The pair (reactants, products),
+                                    where each element is a list of species id's
+                                    EXAMPLE (for a synthesis reaction):    (['C', 'C'], ['A'])
+        """
+        n_reactants = 1
+        n_products = 1
+
+        if reaction_type == "ReactionDecomposition":
+            n_products = 2      # The only scenario leading to 2 products
+        elif reaction_type == "ReactionSynthesis":
+            n_reactants = 2     # The only scenario leading to 2 reactants
+        else:
+            raise Exception(f"Only `ReactionDecomposition` and `ReactionSynthesis` are currently allowed; "
+                            f"you requested `{reaction_type}`")
+
+
+        # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
+        reactants = self.rng.choice(a=all_species_ids, size=n_reactants, replace=True)
+
+        # Likewise, random selection of products are with replacement, to allow reactions such as A -> 2 B
+        # However, do NOT pick the products from the pool of reactants that were used in this reaction!
+        available_pool = [c for c in all_species_ids
+                          if c not in reactants]         # EXAMPLE: ['X', 'Y']
+        #print(available_pool)
+
+        products = self.rng.choice(a=available_pool, size=n_products, replace=True)
+
+        reactants = reactants.tolist()  # Converts both the container (numpy.ndarray) and the element types (numpy.str_),
+                                        # so as to get a python list of strings
+        products = products.tolist()
+
+        return reactants, products
+
+
+
+    def _atomic_accounting(self, reactants: list[str], products: list[str]):
+        """
+
+        :param reactants:   EXAMPLE: ['C', 'C']
+        :param products:    EXAMPLE: ['A']
+        :return:
+        """
+        pass
+
+
     def setup_random_reactions(self, rxn_types :list[str], verbose=False) -> None:
         """
-        Create a network of randon reactions
+        Create a network of random reactions, and populate with them the registry `self.reaction_data`
 
         :param rxn_types:   List of names of reaction classes.
                                 EXAMPLE: ["ReactionSynthesis", "ReactionDecomposition", "ReactionDecomposition"]
@@ -95,7 +171,7 @@ class RandomReactionNetwork:
         """
         MAX_ATTEMPTS = 6        # To avoid infinite loops
 
-        all_chems = self.species_data.get_all_species_ids()             # Get all the id's of the species we're using
+        all_chems = self.species_registry.get_all_species_ids()             # Get all the id's of the species we're using
         # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3", ...
 
         k_diffusion_limit = 1e9  # Smoluchowski diffusion limit for bimolecular reactions
@@ -103,13 +179,13 @@ class RandomReactionNetwork:
         for r in rxn_types:
             # For each reaction to create.  EXAMPLE: "ReactionSynthesis"
             #print(f"Attempting to add reaction of type: {r}")
-            reactants, products = self._assign_chems_to_rxn(r, all_chems)
+            reactants, products = self._assign_species_to_rxn(r, all_chems)
             #print(f"    Tentatively considering reactants: {reactants} | products: {products}")
 
             n_attempts = 1
             # Prevent re-adding reactions that identically occurred before
             while n_attempts <= MAX_ATTEMPTS and self._already_used(reactants, products):
-                reactants, products = self._assign_chems_to_rxn(r, all_chems)
+                reactants, products = self._assign_species_to_rxn(r, all_chems)
                 #print(f"    the previous combination had already been used.  Tentatively considering new "
                 #      f"reactants: {reactants} | products: {products}")
                 n_attempts += 1
@@ -161,51 +237,6 @@ class RandomReactionNetwork:
         :return:     List of objects of type "SimulationReaction"
         """
         return self.reaction_data.get_all_reactions()
-
-
-
-    def _assign_chems_to_rxn(self, reaction_type :str, all_chem_labels :[str]) -> (list, list):
-        """
-        From the pool of available chemicals, randomly assign reactants and products to
-        the specified type of reaction.
-
-        Note: validation checks are assumed to be done in the calling function
-
-        :param reaction_type:   One of the following reaction types:
-                                    "ReactionSynthesis", "ReactionDecomposition"
-        :param all_chem_labels: All the chemical labels for the random network we're building
-        :return:                The pair (reactants, products),
-                                    where each element is a list of chemical labels
-                                    EXAMPLE (for a synthesis reaction):    (['C', 'C'], ['A'])
-        """
-        n_reactants = 1
-        n_products = 1
-
-        if reaction_type == "ReactionDecomposition":
-            n_products = 2      # The only scenario leading to 2 products
-        elif reaction_type == "ReactionSynthesis":
-            n_reactants = 2     # The only scenario leading to 2 reactants
-        else:
-            raise Exception(f"Only `ReactionDecomposition` and `ReactionSynthesis` are currently allowed; "
-                            f"you requested `{reaction_type}`")
-
-
-        # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
-        reactants = self.rng.choice(a=all_chem_labels, size=n_reactants, replace=True)
-
-        # Likewise, random selection of products are with replacement, to allow reactions such as A -> 2 B
-        # However, do NOT pick the products from the pool of reactants that were used in this reaction!
-        available_pool = [c for c in all_chem_labels
-                             if c not in reactants]         # EXAMPLE: ['X', 'Y']
-        #print(available_pool)
-
-        products = self.rng.choice(a=available_pool, size=n_products, replace=True)
-
-        reactants = reactants.tolist()  # Converts both the container (numpy.ndarray) and the element types (numpy.str_),
-                                        # so as to get a python list of strings
-        products = products.tolist()
-
-        return reactants, products
 
 
 
@@ -360,7 +391,8 @@ class RandomReactionNetwork:
 
     def random_reaction_entropy(self, reaction_type :str) -> float:
         """
-        Attempt to provide plausible random entropy values for non-enzymatic small-molecule aqueous reactions.
+        Attempt to provide plausible random entropy values
+        for non-enzymatic small-molecule aqueous reactions.
 
         Current starting point (to further verify):
 

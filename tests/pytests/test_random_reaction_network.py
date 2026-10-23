@@ -28,8 +28,8 @@ def test_constructor():
         except Exception:
             pass
 
-    assert net.species_data.number_of_species() == 3
-    assert net.species_data.get_all_species_ids() == ['A', 'B', 'C']
+    assert net.species_registry.number_of_species() == 3
+    assert net.species_registry.get_all_species_ids() == ['A', 'B', 'C']
 
     # Verify that all possible reactions (or their reverse ones) were indeed generated,
     # with no consideration for stoichiometry
@@ -55,10 +55,37 @@ def test_constructor_2():
 
 
 
-def test__assign_chems_to_rxn():
+def test__generate_reaction_candidate():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1)
+    n_synthesis = 0
+    for i in range(100):
+        rxn_type = net._generate_reaction_candidate()
+        assert rxn_type in net.RXN_CHOICES
+        if rxn_type == 'ReactionSynthesis':
+            n_synthesis += 1
+
+    #print(n_synthesis)
+    assert n_synthesis == 50    # Should be about 1/2 of the total count
+
+
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=573931,
+                                relative_rxn_prob=[0.1, 0.9])
+    n_synthesis = 0
+    for i in range(100):
+        rxn_type = net._generate_reaction_candidate()
+        assert rxn_type in net.RXN_CHOICES
+        if rxn_type == 'ReactionSynthesis':
+            n_synthesis += 1
+
+    #print(n_synthesis)
+    assert n_synthesis == 9    # Should be about 1/10 of the total count
+
+
+
+def test__assign_species_to_rxn():
     net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.species_data.get_all_species_ids()
-    assert all_chem_labels == ["A", "B", "C"]
+    all_species_ids = net.species_registry.get_all_species_ids()
+    assert all_species_ids == ["A", "B", "C"]
 
     for _ in range(20):
         '''
@@ -75,29 +102,29 @@ def test__assign_chems_to_rxn():
         assert r1 != p1
         '''
 
-        result = net._assign_chems_to_rxn("ReactionSynthesis", all_chem_labels=all_chem_labels)
+        result = net._assign_species_to_rxn("ReactionSynthesis", all_species_ids=all_species_ids)
         assert len(reactants := result[0]) == 2
         r1, r2 = reactants
-        assert r1 in all_chem_labels
-        assert r2 in all_chem_labels
+        assert r1 in all_species_ids
+        assert r2 in all_species_ids
 
         assert len(products := result[1]) == 1
         p1 = products[0]
-        assert p1 in all_chem_labels
+        assert p1 in all_species_ids
 
         assert r1 != p1
         assert r2 != p1
 
 
-        result = net._assign_chems_to_rxn("ReactionDecomposition", all_chem_labels=all_chem_labels)
+        result = net._assign_species_to_rxn("ReactionDecomposition", all_species_ids=all_species_ids)
         assert len(reactants := result[0]) == 1
         r1 = reactants[0]
-        assert r1 in all_chem_labels
+        assert r1 in all_species_ids
 
         assert len(products := result[1]) == 2
         p1, p2 = products
-        assert p1 in all_chem_labels
-        assert p2 in all_chem_labels
+        assert p1 in all_species_ids
+        assert p2 in all_species_ids
 
         assert r1 != p1
         assert r1 != p2
@@ -106,7 +133,7 @@ def test__assign_chems_to_rxn():
 
 def test_already_used():
     net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.species_data.get_all_species_ids()
+    all_chem_labels = net.species_registry.get_all_species_ids()
     assert all_chem_labels == ["A", "B", "C"]
 
     assert not net._already_used(reactants="A", products="B")
@@ -127,7 +154,7 @@ def test_already_used():
 
     assert not net._already_used(reactants=["A", "C"], products="B")
 
-    net.reaction_data.species_data.add_single_species(species_id="D")
+    net.reaction_data.species_registry.add_single_species(species_id="D")
     assert not net._already_used(reactants=["C", "D"], products="B")
 
     net.reaction_data.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B
