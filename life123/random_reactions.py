@@ -1,9 +1,19 @@
-from life123.species_registry import SpeciesRegistry
+from life123.species_registry import Species, SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
+from life123.reactions import SimulationReaction, ReactionDefinition
+from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
+from typing import NamedTuple
 import math
 import numpy as np
 
+
+
+class ReactionTerm(NamedTuple):
+    # EXAMPLE: (2, "R", 20)     used to indicate a reaction term 2R , with a total atom count of 20 (each species R contains 10 atoms)
+    coeff: int
+    species_id: str
+    atom_count: int
 
 
 class RandomReactionNetwork:
@@ -12,17 +22,11 @@ class RandomReactionNetwork:
     and biologically plausible
     """
 
-    def __init__(self, n_species :int, n_rxns :int, relative_rxn_prob=None, seed=None,
+    def __init__(self, n_species :int, n_rxns :int, seed=None,
                  temp=298.15, thermodynamic_ruggedness = 2.0, verbose=False):
         """
         :param n_species:           Integer >=3, with the desired number of chemicals species
         :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
-        :param relative_rxn_prob:   [OPTIONAL] A 2-element list with the relative probability
-                                        of each of the 2 reaction choices that are currently available:
-                                        [ReactionSynthesis, ReactionDecomposition]
-                                        Probabilities must add up to 1;
-                                        if not specified, a uniform distribution is used.
-                                        EXAMPLE:  [0.2, 0.8]
         :param seed:                [OPTIONAL] A (large) integer, to guarantee consistent random runs
         :param temp:                [OPTIONAL] Temperature in Kelvins.  By default, 298.15 K
         :param thermodynamic_ruggedness: [OPTIONAL] It affects the magnitudes of the random reactions delta Gibbs energy values,
@@ -45,14 +49,11 @@ class RandomReactionNetwork:
         self.kB_over_h = 2.08366191233e10 # K-1 s-1
                                 # Boltzmann constant / Plank constant
                                 #       Boltzmann constant = 1.380649 × 10-23 J K-1
+                                #       Boltzmann constant = 1.380649 × 10-23 J K-1
                                 #       Plank constant = 6.62607015 × 10-34 J s
 
-        self.RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # Available reaction classes
-        #RXN_CHOICES = ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"]
-        if relative_rxn_prob is not None:
-            assert len(relative_rxn_prob) == len(self.RXN_CHOICES), \
-                f"If arg `relative_rxn_prob` is provided, it must be a list with {len(relative_rxn_prob)} entries"
-        self.relative_rxn_prob = relative_rxn_prob
+        self.RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # NOT IN CURRENT USE
+        # Available reaction classes
 
 
         assert type(n_species) == int, \
@@ -67,17 +68,18 @@ class RandomReactionNetwork:
 
         self.n_species = n_species
         self.n_rxns = n_rxns
-        self.species_registry = SpeciesRegistry(n_species=n_species)        # Object of type "SpeciesRegistry", with info on the individual chemical species
+        self.species_registry = SpeciesRegistry(n_species=n_species)    # Object of type "SpeciesRegistry", with info on the individual species
+                                                                        # They will get named "A", "B", "C", ...
 
 
-        self.reaction_data = ReactionRegistry(species_registry=self.species_registry)   # Object of type ReactionRegistry,
+        self.reaction_registry = ReactionRegistry(species_registry=self.species_registry)   # Object of type ReactionRegistry,
                                                                                     # to manage the randomly-generated reactions
 
 
         self.rng = np.random.default_rng(seed=seed)      # A Generator object with Numpy’s default BitGenerator
 
         # Select each of the reactions types for the reactions (using the relative probabilities, if available)
-        rxn_types = self.rng.choice(a=self.RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
+        #rxn_types = self.rng.choice(a=self.RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
         # EXAMPLE: [ReactionSynthesis, ReactionDecomposition, ReactionDecomposition, ReactionSynthesis]
 
         self.standard_species_enthalpy = {}             # A dictionary of random species enthalpies assigned to each species.
@@ -85,51 +87,542 @@ class RandomReactionNetwork:
 
         self.temp = temp                                # System temperature in Kelvins
 
-        self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
+        #self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
 
 
-
+    """
     def _generate_reaction_candidate(self) -> str:
-        """
+        
         Randomly pick a reaction type from the list of choices in `self.RXN_CHOICES`
         The object variable `self.relative_rxn_prob`, if set, determines the relative probabilities
 
         :return:    A string that is one of the entries of self.RXN_CHOICES ;
                         EXAMPLE: "ReactionSynthesis"
-        """
+        
         rxn_type = self.rng.choice(a=self.RXN_CHOICES, size=1, p=self.relative_rxn_prob)
         return rxn_type
+    """
+
+    def foo_OLD(self):
+        # Reaction R1 + R2 <-> P
+        r, p = self._assign_species_to_rxn(self.species_registry.get_all_species_ids())
+
+        r1, r2 = r
+
+        n_r1 = self.get_number_atoms(r1)
+        n_r2 = self.get_number_atoms(r2)
+        n_p = self.get_number_atoms(p)
+
+        # Get the total number of None values appearing in those variables
+        none_count = sum(x is None for x in (n_r1, n_r2, n_p))
+
+        if none_count == 0:
+            # Atom counts are present in all variables; only thing we can do is to verify if compatible
+            return self.validate_atom_count(reactant_counts=(n_r1, n_r2), product_counts=(n_p,))
+        elif none_count == 1:
+            self.assign_single_atom_count(reactants=r, reactant_counts=(n_r1, n_r2),
+                                    products=(p,), product_counts=(n_p,))
+        elif none_count == 2:
+            self.assign_double_atom_count(reactants=r, reactant_counts=(n_r1, n_r2),
+                                    products=(p,), product_counts=(n_p,))
+        else:
+            self.assign_triple_atom_count(reactants=r,
+                                    products=(p,))
+
+
+    def assign_triple_atom_count(self, reactants :tuple,
+                                products :tuple,) -> bool:
+
+        r1, r2 = reactants
+        p, _ = products
+
+        # All values are unset: we have complete freedom to set them as we please
+        self.set_number_atoms(r1, atom_count=16)
+        self.set_number_atoms(r2, atom_count=16)
+        self.set_number_atoms(p, atom_count=32)
+        return True
+
+
+    def assign_single_atom_count(self, reactants :tuple, reactant_counts :tuple,
+                                products :tuple, product_counts :tuple) -> bool:
+        """
+        Exactly one count is missing
+
+        :param reactants:
+        :param reactant_counts:
+        :param products:
+        :param product_counts:
+        :return:                True if successful, or False if not
+        """
+        r1, r2 = reactants
+        n_r1, n_r2 = reactant_counts
+        p, _ = products
+        n_p, _ = product_counts
+
+        if r1 == r2:
+            # Reaction of type 2 R <-> P
+            if n_p is None:
+                # Only n_p is None
+                self.set_number_atoms(p, atom_count = 2*n_r1)
+                return True
+            else:
+                # Only n_r1 (and the identical n_r2) is None
+                if n_p % 2 != 0:    # If odd
+                    return False    # Impossible scenario
+                else:
+                    half_product_count = n_p / 2
+                    self.set_number_atoms(r1, atom_count=half_product_count)
+                    self.set_number_atoms(r2, atom_count=half_product_count)
+                    return True
+
+        else:
+            # Reaction of type R1 + R2 <-> P , with R1 != R2
+            if n_p is None:
+                self.set_number_atoms(p, atom_count=n_r1+n_r2)
+                return True
+            elif n_r1 is None:
+                if n_r2 >= n_p:
+                    return False
+                self.set_number_atoms(r1, atom_count=n_p-n_r2)
+                return True
+            else:
+                # n_r2 is None
+                if n_r1 >= n_p:
+                    return False
+                self.set_number_atoms(r1, atom_count=n_p-n_r1)
+                return True
 
 
 
-    def _assign_species_to_rxn(self, reaction_type :str, all_species_ids :[str]) -> (list, list):
+    def assign_double_atom_count(self, reactants :tuple, reactant_counts :tuple,
+                          products :tuple, product_counts :tuple):
+        """
+        Exactly 2 values are missing
+
+        :param reactants:
+        :param reactant_counts:
+        :param products:
+        :param product_counts:
+        :return:                True if successful, or False if not
+        """
+        r1, r2 = reactants
+        n_r1, n_r2 = reactant_counts
+        p, _ = products
+        n_p, _ = product_counts
+
+        if r1 == r2:
+            # Reaction of type 2 R <-> P
+            if n_r1 is None and n_p is None:
+                # All values are unset: we have complete freedom to set them as we please
+                self.set_number_atoms(r1, atom_count=16)
+                self.set_number_atoms(r2, atom_count=16)
+                self.set_number_atoms(p, atom_count=32)
+                return True
+
+        else:
+            # Reaction of type R1 + R2 <-> P , with R1 != R2
+            if n_p is None:
+                if n_r1 is None:
+                    n_r1 = self.set_number_atoms(r1, atom_count=16)
+                if n_r2 is None:
+                    n_r2 = self.set_number_atoms(r2, atom_count=16)
+                self.set_number_atoms(p, atom_count=n_r1+n_r2)
+                return True
+            elif n_r1 is None:
+                if n_r2 is None:
+                    n_r2 = self.set_number_atoms(r2, atom_count=16)
+                if n_p is None:
+                    n_p = self.set_number_atoms(r2, atom_count=16)
+                self.set_number_atoms(r1, atom_count=n_p-n_r2)
+                return True
+            else:
+                # n_r2 is None
+                if n_r1 is None:
+                    n_r1 = self.set_number_atoms(r1, atom_count=16)
+                if n_p is None:
+                    n_p = self.set_number_atoms(p, atom_count=32)
+                self.set_number_atoms(r2, atom_count=n_p-n_r1)
+                return True
+
+
+
+    def validate_atom_count(self, reactant_counts :tuple, product_counts :tuple):
+        """
+
+        :param reactant_counts:
+        :param product_counts:
+        :return:
+        """
+        return reactant_counts[0] + reactant_counts[1] == product_counts[0]   # TODO: generalize
+
+
+    def set_number_atoms(self, species_id: str, atom_count :int) -> int:
+        """
+        Annotate the Species dataclass associated to the given species id,
+        to record its specified atom count.
+
+        The value is turned into a string, and stored as the "annotation" property.
+
+        :param species_id:
+        :param atom_count:
+        :return:            The atom count passed to it
+        """
+        species = self.species_registry.get_species(species_id)
+        species.annotation = str(atom_count)
+        return atom_count
+
+
+
+    def get_number_atoms(self, species_id: str) -> int:
+        """
+        Look up the number of atoms set for the given species id.
+        If not set, return zero
+
+        :param species_id:
+        :return:
+        """
+        field_value = self.species_registry.get_species(species_id).annotation
+        if field_value == "":   # Not set
+            return 0
+
+        return int(field_value)
+
+
+    def big(self):
+        # Reaction R1 + R2 <-> P
+        rxn = self._assign_species_to_rxn()     # Object of type SimulationReaction
+
+        self._fulfill_reaction(rxn.stoichiometry)
+
+
+
+    def solve_lhs_LONG(self, unset_reactants, total_reactant_atoms, total_product_atoms) -> bool:
+        """
+        In general, this would be an equation of the form SUM[a_i * x_i] + total_reactant_atoms = total_product_atoms
+        i.e.   SUM[a_i * x_i]  = (total_product_atoms - total_reactant_atoms)
+        but the only scenarios we're covering for the lhs are :  x0 + x1  or  2 x0
+
+        :param unset_reactants:
+        :param total_reactant_atoms:
+        :param total_product_atoms:
+        :return:
+        """
+        number_unset_reactants = len(unset_reactants)
+
+        diff = total_product_atoms - total_reactant_atoms
+        if diff <= 0:
+            return False        # No solution exists
+
+        if number_unset_reactants == 1:     # We already handled the case where it's zero
+            # Scenario:  a0 * x0 = diff
+            b0 = unset_reactants[0].coeff
+            if diff % b0 != 0:
+                return False    # No integer solution exists
+            x0 = diff // b0
+            self.set_number_atoms(unset_reactants[0][1], x0)
+            return True
+        elif number_unset_reactants == 2:
+            # Scenario:  a0 * x0 + a1 * x1 = diff, but we only support x0 + x1 = diff
+            assert unset_reactants[0].coeff == 1, "Unsupported reaction stoichiometry"
+            assert unset_reactants[1].coeff == 1, "Unsupported reaction stoichiometry"
+            # We have x0 + x1 = diff
+            if diff < 2:
+                return False    # No solution exists
+            x0 = diff // 2      # Floor division (discard the decimal and rounds down)
+            x1 = diff - x0
+            self.set_number_atoms(unset_reactants[0].species_id, x0)
+            self.set_number_atoms(unset_reactants[1].species_id, x1)
+            return True
+        else:
+            raise Exception("Unsupported reaction stoichiometry")
+
+
+
+    def solve_lhs(self, a_list, alpha, beta) -> None|tuple:
+        """
+        In general, this would be an equation of the form SUM[a_i * x_i] + alpha = beta
+        i.e.   SUM[a_i * x_i]  = (beta - alpha)
+        but the only scenarios we're covering for the summation are :  x0 + x1  or  a0*x0
+
+        :param a_list: Only acceptable values are [1, 1] and [2]
+        :param alpha:
+        :param beta:
+        :return:
+        """
+        a_length = len(a_list)
+
+        assert a_length > 0, "this scenario (empty `a_list`) should be handled by the calling function"
+
+        diff = beta - alpha
+        if diff <= 0:
+            return None        # No solution exists
+
+        if a_length == 1:
+            # Scenario:  a0 * x0 = diff
+            b0 = a_list[0]
+            if diff % b0 != 0:
+                return None     # No integer solution exists
+            x0 = diff // b0
+            return (x0, )
+
+        elif a_length == 2:
+            # Scenario:  a0 * x0 + a1 * x1 = diff, but we only support x0 + x1 = diff
+            assert a_list == [1, 1], f"Unsupported reactant stoichiometry: {a_list}"
+            # We have x0 + x1 = diff
+            if diff < 2:
+                return None     # No solution exists
+            x0 = diff // 2      # Floor division (discard the decimal and rounds down)
+            x1 = diff - x0
+            return (x0, x1)
+        else:
+            raise Exception(f"Unsupported reactant stoichiometry: {a_list}")
+
+
+
+    def solve_both_sides(self, a_list, alpha, b_list, beta) -> None|tuple:
+        """
+        In general, this would be an equation of the form:
+                    SUM[a_i * x_i] + alpha = SUM[b_i * y_i] + beta
+        i.e.:       SUM[a_i * x_i] - SUM[b_i * y_i] = diff  , where diff = (beta - alpha)
+
+        We only support:
+            x0 + x1 + alpha = y0 + beta
+            2 x0    + alpha = y0 + beta
+
+        :param a_list: Only acceptable values are [1, 1] and [2]
+        :param alpha:
+        :param b_list: Only acceptable value is [1]
+        :param beta:
+        :return:
+        """
+        assert len(a_list) > 0, "this scenario (empty `a_list`) should be handled by the calling function"
+        assert len(b_list) > 0, "this scenario (empty `b_list`) should be handled by the calling function"
+
+        diff = beta - alpha
+
+        # We only support:
+        #             x0 + x1 + alpha = y0 + beta
+        #             2 x0    + alpha = y0 + beta
+        assert a_list == [1,1] or a_list == [2], f"Unsupported reactant stoichiometry: {a_list}"
+        assert b_list == [1], f"Unsupported product stoichiometry: {b_list}"
+
+
+        if len(a_list) == 1:
+            # Scenario: 2 x0  + alpha = y0 + beta
+            # ie.:      y0 = 2 x0 - diff
+            # if we set x0 = |diff| + 1 , it will be positive and > 0;
+            # then: y0 = 2 x0 - diff = 2 (|diff| + 1) - diff = (2 |diff| - diff) + 2 will be positive and > 0
+            x0 = abs(diff) + 1
+            y0 = 2 * x0 - diff
+            #self.set_number_atoms(unset_reactants[0].species_id, x0)
+            #self.set_number_atoms(unset_products[0].species_id, y0)
+            return  ( (x0, ), (y0, ) )
+
+        else:   # If we get here, `a_list` is of size 2
+            # Scenario: x0 + x1 + alpha = y0 + beta
+            # i.e.:     x0 + x1 - y0 = diff
+            if diff == 0:
+                # Equation becomes  x0 + x1 - y0 = 0 ; one solution is x0=16, x1=16, y0=32
+                x0 = 16
+                x1 = 16
+                y0 = 32
+            elif diff > 0:
+                # Equation is x0 + x1 - y0 = diff, where diff > 0 ; can simply set all vars to diff
+                x0 = diff
+                x1 = diff
+                y0 = diff
+            else:   # Case diff < 0
+                # Equation is x0 + x1 - y0 = -eps, with eps = -diff
+                # Can be re-written as:  y0 = (x0 + x1) + eps
+                # Since eps > 0, can set x0=eps, x1=eps, y0=3 eps
+                eps = -diff
+                x0 = eps
+                x1 = eps
+                y0 = 3*eps
+
+            #self.set_number_atoms(unset_reactants[0].species_id, x0)
+            #self.set_number_atoms(unset_reactants[1].species_id, x1)
+            #self.set_number_atoms(unset_products[0].species_id, y0)
+            return ( (x0,x1), (y0, ) )
+
+
+
+    def solve_rhs_UNNECESSARY(self, alpha, b_list, beta) -> None | tuple:
+        """
+        In general, this would be an equation of the form:   alpha = SUM[b_i * y_i] + beta
+        i.e.   SUM[b_i * y_i]  = (alpha - beta)
+        but the only scenario we're covering for the rhs are :  y0
+
+        :param alpha:
+        :param b_list:
+        :param beta:
+        :return:
+        """
+
+        diff =  alpha - beta
+        if diff <= 0:
+            return None        # No solution exists
+
+        if number_unset_products == 1:     # We already handled the case where it's zero
+            # Scenario:  b0 * y0 = diff
+            b0 = unset_products[0].coeff
+            assert b0 == 1, "Unsupported reaction stoichiometry"
+            # We have y0 = diff
+            y0 = diff
+            #self.set_number_atoms(unset_products[0].species_id, diff)
+            return (y0, )
+        else:
+            raise Exception("Unsupported reaction stoichiometry")
+
+
+
+    def _fulfill_reaction(self, stoic :Stoichiometry) -> bool:
+        """
+        Only supports reactions of type  R1 + R2 <-> P  or  2 R <-> P
+
+        :param stoic:   Object of type "Stoichiometry"
+        :return:        True if possible, or False otherwise
+        """
+        reactants = stoic.get_reactant_list(exclude_catalysts=True) # EXAMPLE: [(1, "R1"), (1, "R2")]
+                                                                    # EXAMPLE: [(2, "R")]
+
+        products = stoic.get_product_list(exclude_catalysts=True)   # EXAMPLE: [(1, "P")]
+
+
+        reactants_with_counts = [ReactionTerm( coeff=r[0], species_id=r[1], atom_count=r[0] * self.get_number_atoms(r[1]) )
+                                    for r in reactants]
+
+        products_with_counts = [ReactionTerm( coeff=p[0], species_id=p[1], atom_count=p[0] * self.get_number_atoms(p[1]) )
+                                    for p in products]
+        print(f"   reactants_with_counts: {reactants_with_counts} \n   products_with_counts: {products_with_counts}")
+
+        total_reactant_atoms = sum(r.atom_count for r in reactants_with_counts)
+        total_product_atoms  = sum(p.atom_count for p in products_with_counts)
+        print(f"   total_reactant_atoms: {total_reactant_atoms} | total_product_atoms: {total_product_atoms}")
+
+        unset_reactants = [ r  for r in reactants_with_counts if r.atom_count == 0]     # EXAMPLE: [(2, "R", 0)]
+        unset_products =  [ p  for p in products_with_counts if p.atom_count == 0]     # EXAMPLE: [(1, "P", 0)]
+        print(f"   unset_reactants: {unset_reactants} \n   unset_products: {unset_products}")
+
+        unset_reactant_coefficients = [ r.coeff  for r in reactants_with_counts if r.atom_count == 0]       # EXAMPLE: [1, 1]
+        unset_product_coefficients =  [ p.coeff  for p in products_with_counts if p.atom_count == 0]        # EXAMPLE: [2, 1]
+        print(f"   unset_reactant_coefficients: {unset_reactant_coefficients} \n   unset_product_coefficients: {unset_product_coefficients}")
+
+        number_unset_reactants = len(unset_reactants)
+        number_unset_products =  len(unset_products)
+
+
+
+        if number_unset_reactants == 0 and number_unset_products == 0:
+            # No variables to adjust; the only thing we can do is to verify a match
+            return total_reactant_atoms == total_product_atoms
+
+
+        if number_unset_reactants > 0 and number_unset_products == 0:
+            # In general, this would be an equation of the form SUM[a_i * x_i] + total_reactant_atoms = total_product_atoms
+            #   i.e.   SUM[a_i * x_i]  = (total_product_atoms - total_reactant_atoms)
+            #   but the only scenarios we're covering for the lhs are :  x0 + x1  or  2 x0
+            result = self.solve_lhs(a_list=unset_reactant_coefficients, alpha=total_reactant_atoms, beta=total_product_atoms)
+            if result is None:
+                return False
+            for i, x in enumerate(result):
+                self.set_number_atoms(unset_reactants[i].species_id, x)
+            return True
+
+
+        if number_unset_reactants == 0 and number_unset_products > 0:
+            # In general, this would be an equation of the form total_reactant_atoms = SUM[b_i * y_i] + total_product_atoms
+            #   i.e.   SUM[b_i * y_i]  = (total_reactant_atoms - total_product_atoms)
+            #   but the only scenario we're covering for the rhs are :  y0
+            result = self.solve_lhs(a_list=unset_product_coefficients, alpha=total_product_atoms, beta=total_reactant_atoms)
+            if result is None:
+                return False
+            for i, x in enumerate(result):
+                self.set_number_atoms(unset_products[i].species_id, x)
+            return True
+
+
+        if number_unset_reactants > 0 and number_unset_products > 0:
+            # In general, this would be an equation of the form:
+            #           SUM[a_i * x_i] + total_reactant_atoms = SUM[b_i * y_i] + total_product_atoms
+            result = self.solve_both_sides(a_list=unset_reactant_coefficients, alpha=total_reactant_atoms,
+                                           b_list=unset_product_coefficients, beta=total_product_atoms)
+            if result is None:
+                return False
+
+            r, p = result
+            for i, x in enumerate(r):
+                self.set_number_atoms(unset_reactants[i].species_id, x)
+            for i, x in enumerate(p):
+                self.set_number_atoms(unset_products[i].species_id, x)
+            return True
+
+
+        raise Exception("Uncaught scenario")    # TODO: delete
+
+
+
+    def _assign_species_to_rxn(self) -> SimulationReaction:
         """
         From the pool of available species, randomly assign reactants and products to
-        the specified type of reaction.
+        the standard reaction  R + S <-> P  (note that R and S at times get assigned to the same species,
+        and so the reaction form becomes 2 R <-> P)
 
-        Along the way, assign compatible number of atoms to each one, and modify the species id
+        #Along the way, assign compatible number of atoms to each reaction, and modify the species id
+        #to be of the form 'X (n)' , where n is the total number of atoms
+
+        Note: validation checks are assumed to be done in the calling function
+
+        :return:    The corresponding "SimulationReaction" object
+                       The pair (reactants, products),
+                                    where each element is a list of species id's
+                                    EXAMPLE (for a synthesis reaction):    (['C', 'C'], ['A'])
+        """
+        n_reactants = 2     # Note: they might end up being the same species
+        n_products = 1
+
+        # All the species id's available for the random network we're building
+        all_species_ids = self.species_registry.get_all_species_ids()
+
+        # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
+        reactants = self.rng.choice(a=all_species_ids, size=n_reactants, replace=True)
+
+        # Likewise, random selection of products are with replacement, to allow reactions such as A -> 2 B
+        # However, do NOT pick the products from the pool of reactants that were used in this reaction!
+        available_pool = [c for c in all_species_ids
+                          if c not in reactants]         # EXAMPLE: ['X', 'Y']
+        #print(available_pool)
+
+        products = self.rng.choice(a=available_pool, size=n_products, replace=True)
+
+        reactants = reactants.tolist()  # Converts both the container (numpy.ndarray) and the element types (numpy.str_),
+                                        # so as to get a python list of strings
+        products = products.tolist()
+
+        rxn = ReactionDefinition(reactants=reactants, products=products, reaction_model="mass action",
+                                 species_registry=self.species_registry)
+        return rxn.get_simulation_reactions(0)
+
+
+
+    def _assign_species_to_rxn_OLD(self, all_species_ids :[str]) -> (list, list):
+        """
+        From the pool of available species, randomly assign reactants and products to
+        the standard reaction  R + S <-> P  (note that R and S at times get assigned to the same species,
+        and so the reaction form becomes 2 R <-> P)
+
+        Along the way, assign compatible number of atoms to each reaction, and modify the species id
         to be of the form 'X (n)' , where n is the total number of atoms
 
         Note: validation checks are assumed to be done in the calling function
 
-        :param reaction_type:   One of the following reaction types:
-                                    "ReactionSynthesis", "ReactionDecomposition"
         :param all_species_ids: All the species id's for the random network we're building
         :return:                The pair (reactants, products),
                                     where each element is a list of species id's
                                     EXAMPLE (for a synthesis reaction):    (['C', 'C'], ['A'])
         """
-        n_reactants = 1
+        n_reactants = 2     # Note: they might end up being the same species
         n_products = 1
-
-        if reaction_type == "ReactionDecomposition":
-            n_products = 2      # The only scenario leading to 2 products
-        elif reaction_type == "ReactionSynthesis":
-            n_reactants = 2     # The only scenario leading to 2 reactants
-        else:
-            raise Exception(f"Only `ReactionDecomposition` and `ReactionSynthesis` are currently allowed; "
-                            f"you requested `{reaction_type}`")
-
 
         # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
         reactants = self.rng.choice(a=all_species_ids, size=n_reactants, replace=True)
@@ -209,15 +702,15 @@ class RandomReactionNetwork:
             elif r == "ReactionDecomposition":
                 pass        # TODO: apply a diffusion limit to kR
 
-            i = self.reaction_data.add_elementary_reaction(reactants=reactants, products=products,
-                                                           thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
-                                                           #delta_H=delta_enthalpy, delta_S=delta_entropy,
-                                                           kinetic_parameters={"kF": kF},
-                                                           temp=self.temp)
+            i = self.reaction_registry.add_elementary_reaction(reactants=reactants, products=products,
+                                                               thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
+                                                               #delta_H=delta_enthalpy, delta_S=delta_entropy,
+                                                               kinetic_parameters={"kF": kF},
+                                                               temp=self.temp)
 
             if verbose:
                 print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
-                print(self.reaction_data.get_reaction(i).describe(detail="full"))
+                print(self.reaction_registry.get_reaction(i).describe(detail="full"))
 
 
 
@@ -227,7 +720,7 @@ class RandomReactionNetwork:
 
         :return:    Object of type "ReactionRegistry"
         """
-        return self.reaction_data
+        return self.reaction_registry
 
 
 
@@ -236,7 +729,7 @@ class RandomReactionNetwork:
 
         :return:     List of objects of type "SimulationReaction"
         """
-        return self.reaction_data.get_all_reactions()
+        return self.reaction_registry.get_all_reactions()
 
 
 
@@ -263,7 +756,7 @@ class RandomReactionNetwork:
         reactant_set = set(reactants)
         product_set = set(products)
 
-        for rxn in self.reaction_data.reaction_list:
+        for rxn in self.reaction_registry.reaction_list:
             if rxn.stoichiometry.get_reactant_ids() == reactant_set \
                     and set(rxn.stoichiometry.get_product_ids()) == product_set:
                 return True

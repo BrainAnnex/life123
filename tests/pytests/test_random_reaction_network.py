@@ -1,327 +1,225 @@
 import pytest
 import numpy as np
-from life123.random_reactions import RandomReactionNetwork
+from life123.random_reactions import RandomReactionNetwork, ReactionTerm
+from life123.reactions import SimulationReaction
+from life123.stoichiometry import Stoichiometry
+
+
+def test_ReactionTerm():
+    t = ReactionTerm(2, "R", 20)
+
+    assert t[0] == 2
+    assert t.coeff == 2
+
+    assert t[1] == "R"
+    assert t.species_id == "R"
+
+    assert t[2] == 20
+    assert t.atom_count == 20
+
+
+def test_RandomReactionNetwork_CONSTRUCTOR():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0)
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C", "D"]
+
+    # TODO: continue
 
 
 
-def test_constructor():
+def test_set_number_atoms():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C"]
 
-    with pytest.raises(Exception):
-        RandomReactionNetwork()     # Missing arg
+    assert net.set_number_atoms(species_id="A", atom_count=15) == 15
+    sp = net.species_registry.get_species("A")
+    assert sp.annotation == "15"
 
-    with pytest.raises(Exception):
-        RandomReactionNetwork(n_species="not_an_int!", n_rxns=3)  # Bad arg
+    assert net.set_number_atoms(species_id="C", atom_count=7) == 7
+    sp = net.species_registry.get_species("C")
+    assert sp.annotation == "7"
 
-    with pytest.raises(Exception):
-        RandomReactionNetwork(n_species=2, n_rxns=3)  # Too few species
-
-    with pytest.raises(Exception):
-        RandomReactionNetwork(n_species=3, n_rxns=[1, 3])
-
-
-    for _ in range(25):
-        # In some cases, the instantiation of RandomReactionNetwork will give up, because of
-        # the difficulty of creating so many unique reactions from so few chemicals
-        try:
-            net = RandomReactionNetwork(n_species=3, n_rxns=6, relative_rxn_prob=[0.3, 0.7])
-            break
-        except Exception:
-            pass
-
-    assert net.species_registry.number_of_species() == 3
-    assert net.species_registry.get_all_species_ids() == ['A', 'B', 'C']
-
-    # Verify that all possible reactions (or their reverse ones) were indeed generated,
-    # with no consideration for stoichiometry
-    assert net._already_used(reactants="A", products=["B", "C"])
-    assert net._already_used(reactants="B", products=["A", "C"])
-    assert net._already_used(reactants="C", products=["A", "B"])
-    assert net._already_used(reactants="A", products="B")    # This covers A <--> 2 B as well as 2 A <-> B
-    assert net._already_used(reactants="A", products="C")
-    assert net._already_used(reactants="B", products="C")
-
-
-def test_constructor_2():
-    net = RandomReactionNetwork(n_species=5, n_rxns=25, seed=888)
-    for rxn in net.reaction_data.get_all_reactions():
-        reactants = rxn.stoichiometry.get_reactant_ids()
-        products = rxn.stoichiometry.get_product_ids()
-        '''
-        print()
-        print(reactants)
-        print(products)
-        '''
-        assert set(reactants) & set(products) == set()      # The intersection is an empty set
+    assert net.set_number_atoms(species_id="A", atom_count=3) == 3
+    sp = net.species_registry.get_species("A")
+    assert sp.annotation == "3"
 
 
 
-def test__generate_reaction_candidate():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1)
-    n_synthesis = 0
-    for i in range(100):
-        rxn_type = net._generate_reaction_candidate()
-        assert rxn_type in net.RXN_CHOICES
-        if rxn_type == 'ReactionSynthesis':
-            n_synthesis += 1
+def test_get_number_atoms():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0)
 
-    #print(n_synthesis)
-    assert n_synthesis == 50    # Should be about 1/2 of the total count
+    net.set_number_atoms(species_id="A", atom_count=15)
+    assert net.get_number_atoms("A") == 15
 
+    net.set_number_atoms(species_id="C", atom_count=7)
+    assert net.get_number_atoms("C") == 7
 
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=573931,
-                                relative_rxn_prob=[0.1, 0.9])
-    n_synthesis = 0
-    for i in range(100):
-        rxn_type = net._generate_reaction_candidate()
-        assert rxn_type in net.RXN_CHOICES
-        if rxn_type == 'ReactionSynthesis':
-            n_synthesis += 1
+    net.set_number_atoms(species_id="A", atom_count=3)
+    assert net.get_number_atoms("A") == 3
 
-    #print(n_synthesis)
-    assert n_synthesis == 9    # Should be about 1/10 of the total count
+    assert net.get_number_atoms("B") == 0
 
 
 
 def test__assign_species_to_rxn():
-    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_species_ids = net.species_registry.get_all_species_ids()
-    assert all_species_ids == ["A", "B", "C"]
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=123456)
 
-    for _ in range(20):
-        '''
-        # "ReactionUnimolecular" is currently NOT supported
-        result = net._assign_chems_to_rxn("ReactionUnimolecular", all_chem_labels=all_chem_labels)
-        assert len(reactants := result[0]) == 1
-        r1 = reactants[0]
-        assert r1 in all_chem_labels
+    rxn = net._assign_species_to_rxn()
+    assert type(rxn) is SimulationReaction
+    assert rxn.stoichiometry.vector == {'A': -1, 'C': -1, 'D': 1}   # A + C -> D
+    assert rxn.stoichiometry.catalysts == []
 
-        assert len(products := result[1]) == 1
-        p1 = products[0]
-        assert p1 in all_chem_labels
+    rxn = net._assign_species_to_rxn()
+    assert rxn.stoichiometry.vector == {'B': -2, 'A': 1}            # 2 B -> A
 
-        assert r1 != p1
-        '''
+    rxn = net._assign_species_to_rxn()
+    assert rxn.stoichiometry.vector == {'A': -1, 'D': -1, 'B': 1}   # A + D -> B
 
-        result = net._assign_species_to_rxn("ReactionSynthesis", all_species_ids=all_species_ids)
-        assert len(reactants := result[0]) == 2
-        r1, r2 = reactants
-        assert r1 in all_species_ids
-        assert r2 in all_species_ids
+    for i in range(20):
+        rxn = net._assign_species_to_rxn()
+        stoic = rxn.stoichiometry
+        pattern = stoic.reaction_pattern()
+        # 1 or 2 reactant species, 1 product, 0 catalysts
+        assert pattern == (2, 1, 0)  or pattern == (1, 1, 0)
 
-        assert len(products := result[1]) == 1
-        p1 = products[0]
-        assert p1 in all_species_ids
-
-        assert r1 != p1
-        assert r2 != p1
-
-
-        result = net._assign_species_to_rxn("ReactionDecomposition", all_species_ids=all_species_ids)
-        assert len(reactants := result[0]) == 1
-        r1 = reactants[0]
-        assert r1 in all_species_ids
-
-        assert len(products := result[1]) == 2
-        p1, p2 = products
-        assert p1 in all_species_ids
-        assert p2 in all_species_ids
-
-        assert r1 != p1
-        assert r1 != p2
+        r_comp, p_comp = stoic.get_reaction_complexes()
+        # EXAMPLE: r_comp = {"A": 1, "B": 1}   , p_comp = {"P": 1}
+        assert sum(c for sp, c in r_comp.items()) == 2  # Exactly 2 reactants total
+        assert sum(c for sp, c in p_comp.items()) == 1  # Exactly 1 product total
 
 
 
-def test_already_used():
-    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.species_registry.get_all_species_ids()
-    assert all_chem_labels == ["A", "B", "C"]
-
-    assert not net._already_used(reactants="A", products="B")
-    assert not net._already_used(reactants="X", products="Y")
-
-    net.reaction_data.add_elementary_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
-    assert net._already_used(reactants="A", products="B")
-    assert net._already_used(reactants="B", products="A")
-
-    assert net._already_used(reactants="A", products="B")
-    assert net._already_used(reactants="B", products="A")
-    assert not net._already_used(reactants=["A", "B"], products="C")
-
-    net.reaction_data.add_elementary_reaction(reactants=["A", "B"], products="C")  # Reaction 1 : A + B <-> C
-    assert net._already_used(reactants=["A", "B"], products="C")
-    assert net._already_used(reactants=["B", "A"], products="C")
-    assert net._already_used(reactants="C", products=["A", "B"])
-
-    assert not net._already_used(reactants=["A", "C"], products="B")
-
-    net.reaction_data.species_registry.add_single_species(species_id="D")
-    assert not net._already_used(reactants=["C", "D"], products="B")
-
-    net.reaction_data.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B
-    assert net._already_used(reactants=["D", "C"], products="B")
-    assert net._already_used(reactants=["C", "D"], products="B")
-    assert net._already_used(reactants="B", products=["C", "D"])
-
-    assert not net._already_used(reactants="C", products=["D", "A"])
-    net.reaction_data.add_elementary_reaction(reactants="C", products=["D", "A"])  # Reaction 3 : C <-> D + A
-    assert net._already_used(reactants="C", products=["D", "A"])
-    assert net._already_used(reactants=["A", "D"], products="C")
-
-    net.reaction_data.add_elementary_reaction(reactants="D", products=["B", "B"])  # Reaction 3 : D <-> 2 B
-    assert net._already_used(reactants="D", products=["B"])
-    assert net._already_used(reactants="D", products=["B", "B"])
-
-
-
-def test_random_species_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-    H = net.random_species_enthalpy(sigma=40.4145, n=3)
-    assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
-
-    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
-    linear_combo = [np.sum(net.random_species_enthalpy(sigma=40.4145, n=2)) -
-                           net.random_species_enthalpy(sigma=40.4145, n=1)
-                        for _ in range(100)]
-    np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
-    np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
-
-    H = net.random_species_enthalpy(sigma=35., n=1)
-    assert type(H) == np.ndarray
-    assert np.allclose(H, [41.60853089])
-
-    H = net.random_species_enthalpy(sigma=35., n=None)
-    assert type(H) == float
-    assert np.allclose(H, -52.64502861779662)
-
-
-
-def test_random_reaction_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-
-    result_1 = net.random_reaction_enthalpy(reactants=["A", "B"], products="C")
-    #print(net.standard_species_enthalpy)
-
-    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
-    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
-    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
-
-    assert np.allclose(result_1, -0.09060878868225242)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
-    # ΔH = HC − HA − HB
-
-    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "B"])
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-    result_1 = net.random_reaction_enthalpy(reactants=["A", "A"], products="C")
-    assert np.allclose(result_1, 18.64658849823368)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - 2 * net.get_species_enthalpy("A"))
-    # ΔH = HC - 2 HA
-
-    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "A"])
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-
-def test_random_reaction_enthalpy_2():
-    net = RandomReactionNetwork(n_species=20, n_rxns=30, seed=8492342, verbose=False)
-
-    # Extract the delta_H values for all the reactions
-    H_list = [rxn.get_thermodynamics().delta_H
-              for rxn in net.get_reaction_data().get_all_reactions()]
-
-    assert len(H_list) == net.n_rxns
-    #print(np.mean(H_list))
-    #print(np.std(H_list))
-    # Note: the values are subject to change, if changes are made in RandomReactionNetwork's usage of random calls
-    assert np.allclose(np.mean(H_list), 1.134796074882131)  # This will approach 0
-    assert np.allclose(np.std(H_list), 75.23219472302631)   # Roughly around 70
-
-
-
-def test_random_entropy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+def test_solve_lhs():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
 
     with pytest.raises(Exception):
-        net.random_reaction_entropy("Unknown_rxn_type")
-
-    assert np.allclose(net.random_reaction_entropy("ReactionDecomposition"), 33.72761872021661)
-    assert np.allclose(net.random_reaction_entropy("ReactionSynthesis"), -36.99986904436495)
-
-    entropy_list = [net.random_reaction_entropy("ReactionDecomposition") for i in range(100)]
-    assert np.allclose(np.mean(entropy_list), 38.876713159925636)       # This will approach 40
-    assert np.allclose(np.std(entropy_list), 19.606579641379344)        # This will approach 20
-    assert min(entropy_list) >= 0
-    assert max(entropy_list) <= 100
-
-    entropy_list = [net.random_reaction_entropy("ReactionSynthesis") for i in range(100)]
-    assert np.allclose(np.mean(entropy_list), -39.72751726151384)       # This will approach -40
-    assert np.allclose(np.std(entropy_list), 18.754802472647917)        # This will approach 20
-    assert min(entropy_list) >= -100
-    assert max(entropy_list) <= 0
+        net.solve_lhs(a_list=[], alpha=10, beta=20)
 
 
+    # Length 1
+    result = net.solve_lhs(a_list=[1], alpha=10, beta=10)
+    assert result is None
 
-def test_forward_activation_gibbs_energy_normal():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=9538625)
+    result = net.solve_lhs(a_list=[1], alpha=10, beta=11)
+    assert result == (1,)
+
+    result = net.solve_lhs(a_list=[2], alpha=10, beta=11)
+    assert result is None
+
+    result = net.solve_lhs(a_list=[2], alpha=10, beta=12)
+    assert result == (1,)
+
+    result = net.solve_lhs(a_list=[2], alpha=10, beta=13)
+    assert result is None
+
+    result = net.solve_lhs(a_list=[2], alpha=10, beta=20)
+    assert result == (5,)
+
+    result = net.solve_lhs(a_list=[3], alpha=10, beta=22)
+    assert result == (4,)
+
+    result = net.solve_lhs(a_list=[3], alpha=10, beta=23)
+    assert result is None
 
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=40), 69.40655722019214)
+    # Length 2
+    result = net.solve_lhs(a_list=[1,1], alpha=10, beta=10)
+    assert result is None
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=20), 71.37605795182265)
+    with pytest.raises(Exception):
+        net.solve_lhs(a_list=[3,1], alpha=10, beta=20)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=0), 77.09026832411178)
+    with pytest.raises(Exception):
+        net.solve_lhs(a_list=[1,2], alpha=10, beta=20)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-20), 71.46432473759808)
+    result = net.solve_lhs(a_list=[1,1], alpha=10, beta=11)
+    assert result is None
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-40), 74.86038387981017)
+    result = net.solve_lhs(a_list=[1,1], alpha=10, beta=12)
+    assert result == (1,1)
 
-    for _ in range(20):
-         delta_G = net.rng.normal(loc=0, scale=100)
-         result = net.forward_activation_gibbs_energy_normal(delta_G=delta_G)
-         assert result >= 0
-         assert result >= delta_G
+    result = net.solve_lhs(a_list=[1,1], alpha=10, beta=20)
+    assert result == (5,5)
 
-
-
-def test_forward_activation_gibbs_energy_BEP():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=5447061)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=0) == 90
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=12), 79.5437172573611)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=0) == 80
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=12), 75.03655557989254)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=0) == 70
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=12), 44.18724275817719)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=0) == 60
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=12), 53.11334188826283)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=0) == 50
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=12), 31.658362710826765)
-
-    for _ in range(20):
-         delta_G = net.rng.normal(loc=0, scale=100)
-         result = net.forward_activation_gibbs_energy_BEP(delta_G=delta_G, sigma=12)
-         assert result >= 0
-         assert result >= delta_G
+    result = net.solve_lhs(a_list=[1,1], alpha=10, beta=25)
+    assert result == (7,8)
 
 
 
-def test_rate_constant_from_activation_gibbs_energyy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=123)
+def test_solve_both_sides():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
 
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=50, temp=300), 12312.469127155957)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=60, temp=300), 223.472703949188)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=65.743427304, temp=300), 22.3472703949188)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300), 4.056054792471754)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=75, temp=300), 0.5464412521361471)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=80, temp=300), 0.07361785215286852)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=90, temp=300), 0.0013361723233277472)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=100, temp=300), 2.4251678436906198e-05)
+    with pytest.raises(Exception):
+        net.solve_both_sides(a_list=[], alpha=10, b_list=[1], beta=20)
+
+    with pytest.raises(Exception):
+        net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[], beta=20)
+
+    with pytest.raises(Exception):
+        net.solve_both_sides(a_list=[1], alpha=10, b_list=[1], beta=20)
+
+    with pytest.raises(Exception):
+        net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[2], beta=20)
+
+
+    # `a_list` of size 1 : only allowed value is [2]
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=20)
+    assert result == ((11,), (12,))     # Both sides add up to 32
+
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=11)
+    assert result == ((2,), (3,))       # Both sides add up to 14
+
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=10)
+    assert result == ((1,), (2,))       # Both sides add up to 12
+
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=9)
+    assert result == ((2,), (5,))       # Both sides add up to 12
+
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=8)
+    assert result == ((3,), (8,))       # Both sides add up to 16
+
+    result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=0)
+    assert result == ((11,), (32,))       # Both sides add up to 32
+
+
+    # `a_list` of size 1 : only allowed value is [1,1]
+    result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=20)
+    assert result == ((10, 10), (10,))       # Both sides add up to 30
+
+    result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=11)
+    assert result == ((1, 1), (1,))       # Both sides add up to 12
+
+    result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=10)
+    assert result == ((16, 16), (32,))       # Both sides add up to 42
+
+    result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=9)
+    assert result == ((1, 1), (3,))       # Both sides add up to 12
+
+    result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=0)
+    assert result == ((10, 10), (30,))       # Both sides add up to 30
+
+    result = net.solve_both_sides(a_list=[1,1], alpha=0, b_list=[1], beta=0)
+    assert result == ((16, 16), (32,))       # Both sides add up to 32
+    #print(result)
+
+
+
+def test___fulfill_reaction():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
+    # Will initialize 3 species: A, B, C
+
+    stoic = Stoichiometry(vector={"A": -1, "B": -1, "C": 1})    # A + B -> C , all values unset
+    result = net._fulfill_reaction(stoic)
+    assert result
+    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
+                    for sp, coeff in stoic.vector.items())
+    assert check == 0   # Atom accounting is balanced
+
+    result = net._fulfill_reaction(stoic)       # Same reaction, but with the previously set atom counts
+    assert result
+    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
+                    for sp, coeff in stoic.vector.items())
+    assert check == 0   # Atom accounting is balanced
+
+    stoic = Stoichiometry(vector={"A": 1, "B": -1, "C": -1})    # B + C -> A, with the previously set atom counts
+    result = net._fulfill_reaction(stoic)
+    assert not result   # Incompatible counts

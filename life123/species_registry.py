@@ -43,7 +43,8 @@ class Species:
             molecular_weight=43000,
             diffusion_rate=123,
             ec_number="2.5.1.6",
-            metadata={"compartment": "cytosol"}
+            metadata={"compartment": "cytosol"},
+            annotation="repeated experiment"
         )
 
     Notes:

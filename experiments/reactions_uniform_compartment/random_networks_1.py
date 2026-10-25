@@ -122,10 +122,10 @@ ents["A"] + ents["D"] - ents["C"]
 ents["D"] - 2 * ents["C"]
 
 # %%
-print(net.reaction_data)
+print(net.reaction_registry)
 
 # %%
-for rxn in net.reaction_data.get_all_reactions():
+for rxn in net.reaction_registry.get_all_reactions():
     stoic = rxn.get_stoichiometry()
     print(stoic)
     print(rxn.get_thermodynamics())

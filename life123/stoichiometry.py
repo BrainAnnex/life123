@@ -93,14 +93,15 @@ class Stoichiometry:
         ~~~
 
         :return:    The non-zero components of the reaction vector,
-                        written as a dict mapping from species id to its component value
+                        written as a dict mapping from species id to its component value.
+                        EXAMPLE: {"A": -1, "P": 2, "Q": 1}
         """
         # Note that catalysts, if any, are NOT included
         return self.vector
 
 
 
-    def get_reactant_list(self) -> list[tuple]:
+    def get_reactant_list(self, exclude_catalysts=False) -> list[tuple]:
         """
         Return all reactants as a list of pairs
         of the form (stoichiometry coefficient, species id).
@@ -109,11 +110,18 @@ class Stoichiometry:
         EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
                  and self.catalysts is ["E"]
                  then return [(2, "A"), (2, "B"), (1, "E")]
-        :return:
+
+        :param exclude_catalysts:
+        :return:    A list of pairs.  EXAMPLE: [(2, "A"), (2, "B"), (1, "E")]
         """
         # TODO: consider returning a set instead of a list
-        return [  (-v, k) for k,v in self.vector.items() if v < 0]  \
-                + [(1, c) for c in self.catalysts]
+        r_l = [ (-v, k)
+                    for k,v in self.vector.items() if v < 0]
+
+        if exclude_catalysts:
+            return r_l
+
+        return  r_l + [(1, c) for c in self.catalysts]
 
 
 
@@ -132,7 +140,7 @@ class Stoichiometry:
         return s
 
 
-    def get_product_list(self) -> list[tuple]:
+    def get_product_list(self, exclude_catalysts=False) -> list[tuple]:
         """
         Return all products as a list of pairs
         of the form (stoichiometry coefficient, species id).
@@ -141,16 +149,24 @@ class Stoichiometry:
         EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
                  and self.catalysts is ["E"]
                  then return [(3, "P"), (1, "E")]
-        :return:
+
+        :param exclude_catalysts:
+        :return:    A list of pairs.  EXAMPLE: [(3, "P"), (1, "E")]
         """
         # TODO: consider returning a set instead of a list
-        return [   (v, k) for k,v in self.vector.items() if v > 0] \
-                + [(1, c) for c in self.catalysts]
+        p_l = [  (v, k)
+                    for k,v in self.vector.items() if v > 0]
+
+        if exclude_catalysts:
+            return p_l
+
+        return  p_l +  [(1, c) for c in self.catalysts]
+
 
 
     def get_products_as_dict(self) -> dict:
         # TODO: test
-        d = {v : k for k,v in self.vector.items() if v > 0}
+        d = {k: v for k,v in self.vector.items() if v > 0}
         for cat in self.catalysts:
             d[cat] = 1
 
@@ -256,11 +272,13 @@ class Stoichiometry:
 
     def reaction_pattern(self) -> tuple[int, int, int]:
         """
-        Return the triplet (n_reactants, n_products, n_catalysts)
+        Return the triplet (n_reactant_species, n_product_species, n_catalyst_species)
+        The stoichiometry coefficients are NOT considered.
         Catalysts, if present, are counted separated, and NOT included under either "reactants" or "products"
         ~~~
         EXAMPLES:
             The reaction A + B -> C      gives (2, 1, 0)
+            The reaction 2A -> P         gives (1, 1, 0)
             The reaction A + E -> B + E  gives (1, 1, 1)
         ~~~
 

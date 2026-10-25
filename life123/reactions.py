@@ -1144,6 +1144,25 @@ class ReactionDefinition:
 
 
 
+    def get_simulation_reactions(self, index :int|None=None):
+        """
+        Get a tuple of all the derived "ReactionSimulation" objects,
+        or just a single one
+
+        :param index:   [OPTIONAL] Specify we only want 1 specific "ReactionSimulation" object
+        :return:        Tuple of "ReactionSimulation" objects,
+                         or a single "ReactionSimulation" object
+        """
+        if index is None:
+            return self.sim_reactions
+
+        assert 0 <= index < len(self.sim_reactions), \
+            f"get_simulation_reactions(): no {index}-th simulation reaction exists"
+
+        return self.sim_reactions[index]
+
+
+
     def extract_reactant_ids(self) -> set[str]:
         """
         Return the set of ALL the reactant species id's in this reaction

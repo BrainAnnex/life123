@@ -209,6 +209,10 @@ def test_reaction_pattern():
     st = Stoichiometry(vector={"R": -1, "P": 1, "Q": 1})
     assert st.reaction_pattern() == (1, 2, 0)
 
+    # Reaction 2 R -> P
+    st = Stoichiometry(vector={"R": -2, "P": 1})
+    assert st.reaction_pattern() == (1, 1, 0)
+
     # Reaction A + E -> B + E
     st = Stoichiometry(vector={"A": -1, "B": 1}, catalysts=["E"])
     assert st.reaction_pattern() == (1, 1, 1)
