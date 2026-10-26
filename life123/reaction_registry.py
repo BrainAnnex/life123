@@ -493,13 +493,17 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def describe_reactions(self, detail: Literal["minimal", "summary", "full"] = "minimal") -> None:
+    def describe_reactions(self, detail: Literal["minimal", "summary", "full"] = "minimal",
+                           use_labels=False) -> None:
         """
         Print out a user-friendly plain-text form of ALL the reactions.
         If wanting to describe just 1 reaction, use single_reaction_describe()
 
-        :param detail:  [OPTIONAL] A string that is either "minimal", "summary", "full"
-        :return:        None
+        :param detail:      [OPTIONAL] A string that is either "minimal", "summary", "full"
+        :param use_labels:  [OPTIONAL] If True, the Species "label" attribute is used instead of its species id;
+                                in order to use this option, a SpeciesRegistry must have been declared.
+                                Default is False
+        :return:            None
         """
         #TODO: implement a Pandas version
         number_rxns = self.number_of_reactions()
@@ -507,7 +511,7 @@ class ReactionRegistry:
 
         # Print a description of EACH REACTION IN TURN
         for i in range(number_rxns):    #  ALL reactions
-            description = self.single_reaction_describe(rxn_index=i, detail=detail)
+            description = self.single_reaction_describe(rxn_index=i, detail=detail, use_labels=use_labels)
             print(f"{i}: {description}")
 
         species_ids = self.get_species_in_any_reaction(sort=True)   # Sorted list of species id
@@ -537,19 +541,24 @@ class ReactionRegistry:
 
 
 
-    def single_reaction_describe(self, rxn_index: int, detail: Literal["minimal", "summary", "full"] = "summary") -> str:
+    def single_reaction_describe(self, rxn_index: int, detail: Literal["minimal", "summary", "full"] = "summary",
+                                 use_labels=False) -> str:
         """
         Return, as a string, a user-friendly plain-text form of the given reaction
 
         EXAMPLE ("minimal"):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
 
         :param rxn_index:   Integer to identify the reaction of interest
-        :param detail:
+        :param detail:      [OPTIONAL] A string that is either "minimal", "summary", "full"
+        :param use_labels:  [OPTIONAL] If True, the Species "label" attribute is used instead of its species id;
+                                in order to use this option, a SpeciesRegistry must have been declared.
+                                Default is False
+
         :return:            A string with a description of the specified reaction
         """
         rxn_defn = self.reaction_defn_list[rxn_index]
 
-        return rxn_defn.describe(detail)    # Invoke the individual "ReactionDefinition" object
+        return rxn_defn.describe(detail, use_labels=use_labels)    # Invoke the individual "ReactionDefinition" object
 
 
 

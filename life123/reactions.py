@@ -142,7 +142,7 @@ class SimulationReaction:
         self.model = model
         self.stoichiometry: Stoichiometry|None = stoichiometry
 
-        self.source_object = source_object          # Provenance object
+        self.source_object = source_object          # Provenance object (of type ReactionDefinition)
         self.derivation : str | None = derivation
 
         self.analytic_solution_family : str|None = analytic_solution_family
@@ -429,7 +429,7 @@ class ReactionCompiler_MassAction:
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_object:
+        :param source_object:   Provenance info: the "ReactionDefinition" source object
         :param species_registry:
         :return:
         """
@@ -510,7 +510,7 @@ class ReactionCompiler_MichaelisMenten:
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_object:
+        :param source_object:   Provenance info: the "ReactionDefinition" source object
         :param species_registry:
         :param analytic_solution_family:
         :return:
@@ -565,7 +565,7 @@ class ReactionCompiler_SingleSubstrateMechanism:
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_object:
+        :param source_object:       Provenance info: the "ReactionDefinition" source object
         :param species_registry:
         :param analytic_solution_family:
         :return:
@@ -597,7 +597,7 @@ class ReactionCompiler_SingleSubstrateMechanism:
                                             annotation="reaction intermediary from single substrate mechanism")
 
         # Reaction 1: S + E <-> ES
-        st = Stoichiometry(vector={S: -1, E: -1, ES: 1})
+        st = Stoichiometry(vector={S: -1, E: -1, ES: 1}, species_registry=source_object.species_registry)
         m1 = MassAction_Model(stoichiometry=st)
         m1.set_parameters(parameters={"kF": kinetic_parameters.get("k1_F"),
                                       "kR": kinetic_parameters.get("k1_R")})
@@ -605,7 +605,7 @@ class ReactionCompiler_SingleSubstrateMechanism:
                                 source_object=source_object)
 
         # Reaction 2: ES -> P + E
-        st = Stoichiometry(vector={ES: -1, P: 1, E: 1})
+        st = Stoichiometry(vector={ES: -1, P: 1, E: 1}, species_registry=source_object.species_registry)
         m2 = MassAction_Model(stoichiometry=st)
         m2.set_parameters(parameters={"kF": kinetic_parameters.get("k2_F")})
         r2 = SimulationReaction(model=m2, stoichiometry=st,
@@ -625,7 +625,7 @@ class ReactionCompiler_Custom:
         :param stoichiometry:
         :param kinetic_parameters:
         :param thermodynamics_data:
-        :param source_object:
+        :param source_object:       Provenance info: the "ReactionDefinition" source object
         :param species_registry:
         :return:
         """
@@ -896,7 +896,7 @@ class ReactionDefinition:
         """
         # TODO: also accept sets in lieu of lists
         # Parse the reactants and products into a "Stoichiometry" object
-        stoich_obj = Stoichiometry.from_reactants_products(reactants=reactants, products=products)
+        stoich_obj = Stoichiometry.from_reactants_products(reactants=reactants, products=products, species_registry=self.species_registry)
 
         # Check whether all the species in the reaction are registered ones (in the registry passed as argument)
         for species_id in stoich_obj.get_all_species_ids():
@@ -905,7 +905,7 @@ class ReactionDefinition:
                     self.species_registry.add_single_species(species_id=species_id)
                 else:
                     raise Exception(f'ReactionDefinition instantiation: No species with id "{species_id}" exists in the given species registry.  '
-                                    f'To automatically add new species to the registy, use the argument:  autoregister_species=True')
+                                    f'To automatically add new species to the registry, use the argument:  autoregister_species=True')
 
         return stoich_obj
 
@@ -1071,12 +1071,16 @@ class ReactionDefinition:
 
 
 
-    def describe(self, detail: Literal["minimal", "summary", "full"] = "summary") -> str:
+    def describe(self, detail: Literal["minimal", "summary", "full"] = "summary", use_labels=False) -> str:
         """
         Return, as a string, a user-friendly plain-text form of the reaction,
         plus a fair deal of optional information
 
         :param detail:  [OPTIONAL] Either of "minimal", "summary" or "full"
+        :param use_labels:  [OPTIONAL] If True, the Species "label" attribute is used instead of its species id;
+                                in order to use this option, a SpeciesRegistry must have been declared.
+                                Default is False
+
         :return:        A string with a description of this "ReactionDefinition" object
         """
         # TODO: put to good use the new describe() method of the "SimulationReaction" class
@@ -1097,7 +1101,7 @@ class ReactionDefinition:
             sim_rxn = sim_rxn_tuple[0]
             reversible = getattr(sim_rxn.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
 
-        rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
+        rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible, use_labels=use_labels)
 
         if detail == "minimal":
             return rxn_description      # Minimalist description
@@ -1113,7 +1117,7 @@ class ReactionDefinition:
         else:
             rxn_description += ', with no Reaction Model specified'
 
-        if self.id:
+        if self.id is not None:
              rxn_description += f"   (Reaction ID {self.id})"
 
         derived_str = " - derived" if detail == "full" else ""

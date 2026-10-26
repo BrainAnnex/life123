@@ -2,6 +2,7 @@ from __future__ import annotations      # To facilitate type annotations
 import numpy as np
 from typing import Set, Mapping
 from dataclasses import dataclass, field
+from life123.species_registry import SpeciesRegistry
 
 
 
@@ -30,6 +31,10 @@ class Stoichiometry:
 
     catalysts: list[str] = field(default_factory=list)
     # EXAMPLE: ["E"]    (list of species that have a net coefficient of zero in the reaction vector)
+
+    species_registry: SpeciesRegistry = None    # OPTIONAL.  If present, the various species id's will refer
+                                                # to objects in this registry.  However, NOT enforced
+
 
 
     def __post_init__(self) -> None:
@@ -207,7 +212,7 @@ class Stoichiometry:
 
 
 
-    def get_reaction_complexes(self) -> tuple:
+    def get_reaction_complexes(self, use_labels=False) -> tuple:
         """
         It separates the reactants and products in a pair;
         basically (the left-hand side, the right-hand side).
@@ -219,9 +224,18 @@ class Stoichiometry:
                  while product complex is:   2P + Q + E
                  So, this function will return  ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
         ~~
-        :return:    The pair (reactants complex , products complex)
+        :param use_labels:  [OPTIONAL] If True, the Species "label" attribute is used instead of its species id;
+                                in order to use this option, a SpeciesRegistry must have been declared.
+                                Default is False
+        :return:            The pair (reactants complex , products complex).
+                            Each term is a dictionary, indexed by the species id, or optionally by its "label" instead
         """
-        d = self.vector
+        if use_labels:
+            assert self.species_registry is not None, \
+                "get_reaction_complexes(): in order to use labels instead of species id, \n" \
+                "you must first set the `species_registry` attribute of the Stoichiometry data class"
+
+        d = self.vector     # EXAMPLE: EXAMPLE: {"A": -1, "B": 1}
         reactants = {k:-v  for k,v in d.items() if v < 0}
         for cat in self.catalysts:
             reactants[cat] = 1
@@ -230,7 +244,15 @@ class Stoichiometry:
         for cat in self.catalysts:
             products[cat] = 1
 
-        return (reactants, products)
+        if not use_labels:
+            return (reactants, products)
+
+        reactants_by_label = {self.species_registry.get_value(species_id=k, field="label", default=k): v
+                                    for k,v in reactants.items()}
+        products_by_label = {self.species_registry.get_value(species_id=k, field="label", default=k): v
+                                    for k,v in products.items()}
+
+        return (reactants_by_label, products_by_label)
 
 
 
@@ -257,13 +279,17 @@ class Stoichiometry:
 
 
 
-    def standard_chemical_formula(self, reversible=False) -> str:
+    def standard_chemical_formula(self, reversible=False, use_labels=False) -> str:
         """
         Return,  as a string, a user-friendly plain-text form of the reaction
 
+        :param reversible:  [OPTIONAL] If True, a double arrow (<->) is used instead of a single one; default is False
+        :param use_labels:  [OPTIONAL] If True, the Species "label" attribute is used instead of its species id;
+                                in order to use this option, a SpeciesRegistry must have been declared.
+                                Default is False
         :return:
         """
-        reactants, products = self.get_reaction_complexes()
+        reactants, products = self.get_reaction_complexes(use_labels=use_labels)
 
         arrow = " <-> " if reversible else " -> "
 
@@ -386,7 +412,7 @@ class Stoichiometry:
 
 
     @classmethod
-    def from_reactants_products(cls, reactants :list|str, products :list|str) -> Stoichiometry:
+    def from_reactants_products(cls, reactants :list|str, products :list|str, species_registry=None) -> Stoichiometry:
         """
         This serves as an "alternate constructor / factory" for the Stoichiometry dataclass.
         Notice that this is a CLASS method (not a method of an instantiated Stoichiometry object).
@@ -474,4 +500,5 @@ class Stoichiometry:
         return cls(
             vector=vector,
             catalysts=catalysts,
+            species_registry=species_registry
         )

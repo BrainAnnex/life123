@@ -246,7 +246,7 @@ class SpeciesRegistry:
 
         Note: all arguments are optional.  AT MOST, 1 of the following 3 may be passed
 
-        :param ids:         [OPTIONAL] A string, or list or tuple of them.
+        :param ids:         [OPTIONAL] A string, or list or tuple of species id's.
                                 The same value(s) will be used as name and label, unless `name` or `label` is passed as a separate argument (TODO: check)
 
         :param species:     [OPTIONAL] An object of type "Species", or a list or tuple of them.
@@ -457,13 +457,14 @@ class SpeciesRegistry:
 
 
 
-    def get_value(self, species_id :str, field :str):
+    def get_value(self, species_id :str, field :str, default=None):
         """
         If the species isn't found, or if it lacks the requested field (property) name,
-        an Exception is raised
+        an Exception is raised.  Otherwise, return the value (which might be None) of that field
 
         :param species_id:  String with a unique value to identify a species
-        :param field:  The name of the property of interest.  EXAMPLE: "formula"
+        :param field:       The name of the property of interest.  EXAMPLE: "formula"
+        :param default:     [OPTIONAL] A value to return instead of None
         :return:            The value of the above property, for the specified species.
                                 (Note that None may be returned if that happens to be the property value)
         """
@@ -472,6 +473,9 @@ class SpeciesRegistry:
             value = getattr(s, field)
         except:
             raise Exception(f"get_value(): species `{species_id}` has no attribute '{field}'")
+
+        if (value is None) and (default is not None):
+            return default
 
         return value
 
@@ -620,7 +624,8 @@ class SpeciesRegistry:
         :param skip_duplicates: [OPTIONAL] Normally, duplicate labels or duplicate names raise Exception;
                                     however, if True, any such duplicate is silently skipped
         :param kwargs:          [OPTIONAL] Any other argument to pass;
-                                    for list and explanations, see under the class `Species`
+                                    EXAMPLE:   label="metK", categories=["protein", "enzyme"]
+                                    For the full list and explanations, see under the class `Species`
         :return:                An object of class `Species`, representing the newly-registered species;
                                     however, if it already exists (and skip_duplicates=True), None is returned
         """

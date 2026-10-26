@@ -58,7 +58,7 @@ def test_reaction_step_1b():
     result = bio.reactions.single_reaction_describe(0, detail="full")
     assert result == \
         """A <-> B
-        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"
+        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"   (Reaction ID 0)
         Thermodynamics - passed:  (Temp = 25 C)
         Thermodynamics - derived:  (delta_G = -1.0051 kJ/mol | K_eq = 1.5 | Temp = 25 C)
         Kinetics - passed:  (kF = 3 | kR = 2)

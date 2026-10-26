@@ -153,8 +153,8 @@ def test_get_reactions_participating_in():
 
 
 def test_add_reaction():
-    chem_data = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
-    rxns = ReactionRegistry(chem_data)
+    species_registry = SpeciesRegistry(ids=["A", "B", "C", "D", "E", "F"])
+    rxns = ReactionRegistry(species_registry)
 
     assert rxns.number_of_reactions() == 0
     assert len(rxns.reaction_defn_list) == 0
@@ -185,12 +185,12 @@ def test_add_reaction():
 
     r = rxns.get_reaction(0)        # Get the 0-th (and only so far) reaction
     assert type(r) == SimulationReaction
-    assert r.stoichiometry == Stoichiometry({"A": -1, "B": 1})
+    assert r.stoichiometry == Stoichiometry({"A": -1, "B": 1}, species_registry=species_registry)
 
     r_defn = rxns.reaction_defn_list[0]
     assert type(r_defn) == ReactionDefinition
     assert r_defn.id == 0
-    assert r_defn.stoichiometry == Stoichiometry({"A": -1, "B": 1})
+    assert r_defn.stoichiometry == Stoichiometry({"A": -1, "B": 1}, species_registry=species_registry)
 
     assert rxns.active_chemicals == {"A", "B"}
 
@@ -221,8 +221,8 @@ def test_add_reaction():
     r_1 = rxns.get_reaction(1)
     r_defn_1 = rxns.reaction_defn_list[1]
 
-    assert r_1.stoichiometry == Stoichiometry({"B": -2, "C": 5})
-    assert r_defn_1.stoichiometry == Stoichiometry({"B": -2, "C": 5})
+    assert r_1.stoichiometry == Stoichiometry({"B": -2, "C": 5}, species_registry=species_registry)
+    assert r_defn_1.stoichiometry == Stoichiometry({"B": -2, "C": 5}, species_registry=species_registry)
 
     expected_kinetics = {'kF': 9, 'kR': 7, 'K': 1.285714285714, 'reversible': True, 'rate_function': None}
     # Note:  K derived as:  9/7
@@ -249,8 +249,8 @@ def test_add_reaction():
     r_2 = rxns.get_reaction(2)
     r_defn_2 = rxns.reaction_defn_list[2]
 
-    assert r_2.stoichiometry == Stoichiometry({"D": -2, "C": 1})
-    assert r_defn_2.stoichiometry == Stoichiometry({"D": -2, "C": 1})
+    assert r_2.stoichiometry == Stoichiometry({"D": -2, "C": 1}, species_registry=species_registry)
+    assert r_defn_2.stoichiometry == Stoichiometry({"D": -2, "C": 1}, species_registry=species_registry)
 
     expected_kinetics = {'kF': 11, 'kR': 13, 'K': 0.84615384615, 'reversible': True}
     # Note:  K derived as:  11/13
@@ -275,7 +275,7 @@ def test_add_reaction():
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
 
     r_3 = rxns.get_reaction(3)
-    assert r_3.stoichiometry == Stoichiometry({"A": -1, "B": -2, "C": 3, "D": 1})
+    assert r_3.stoichiometry == Stoichiometry({"A": -1, "B": -2, "C": 3, "D": 1}, species_registry=species_registry)
 
 
     # Check the reactions we have added
@@ -324,12 +324,12 @@ def test_add_elementary_reaction():
 
 
 def test_register_reaction():
-    chem_data = SpeciesRegistry()
-    rxns = ReactionRegistry(chem_data)
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_registry)
 
     # A -> B
     r_uni_AB = ReactionDefinition(reactants="A", products="B",
-                                  species_registry=chem_data, autoregister_species=True,
+                                  species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF": 11., "kR":13.},
                                   thermodynamic_parameters={"temp": 200})
@@ -339,7 +339,7 @@ def test_register_reaction():
 
     r = rxns.get_reaction(0)        # Get the 0-th (and only so far) reaction
     assert type(r) == SimulationReaction
-    assert r.stoichiometry == Stoichiometry({"A": -1, "B": 1})
+    assert r.stoichiometry == Stoichiometry({"A": -1, "B": 1}, species_registry=species_registry)
 
     r_defn = rxns.reaction_defn_list[0]
     assert type(r_defn) == ReactionDefinition
@@ -361,7 +361,7 @@ def test_register_reaction():
 
     # C -> D
     r_uni_CD = ReactionDefinition(reactants="C", products="D",
-                                  species_registry=chem_data, autoregister_species=True,
+                                  species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF": 10.},
                                   thermodynamic_parameters={"delta_H": 0.005, "delta_S": 0.4, "temp": 200})
@@ -371,7 +371,7 @@ def test_register_reaction():
 
     r = rxns.get_reaction(1)        # Get the 0-th (and only so far) reaction
     assert type(r) == SimulationReaction
-    assert r.stoichiometry == Stoichiometry({"C": -1, "D": 1})
+    assert r.stoichiometry == Stoichiometry({"C": -1, "D": 1}, species_registry=species_registry)
 
     r_defn = rxns.reaction_defn_list[1]
     assert type(r_defn) == ReactionDefinition

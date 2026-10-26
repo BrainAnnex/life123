@@ -143,7 +143,7 @@ def test_get_all_species_ids():
 
 
 
-def test_get_reaction_complexes():
+def test_get_reaction_complexes_1():
     st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"])
 
     assert st.get_reaction_complexes() == ( {"A": 1, "E": 1} ,  {"P": 2, "Q": 1, "E": 1} )
@@ -167,6 +167,21 @@ def test_get_reaction_complexes():
     rxn = ReactionDefinition(reactants=["A", (2, "B"), "E", "A"], products=[(3, "P"), "Q", "E"],
                              species_registry=sr)
     assert rxn.stoichiometry.get_reaction_complexes() == ({"A": 2, "B": 2, "E": 1}, {"P": 3, "Q": 1, "E": 1})
+
+
+def test_get_reaction_complexes_2():
+    sp_reg = SpeciesRegistry()
+    sp_reg.add_single_species(species_id="A", label="A-red")
+
+    st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"], species_registry=sp_reg)
+
+    sp_reg.add_single_species(species_id="P", label="P-white")
+    sp_reg.add_single_species(species_id="E", label="E-black")
+    sp_reg.add_single_species(species_id="Q", label=None)
+    # Note: NOT setting a label for `Q`
+
+    assert st.get_reaction_complexes(use_labels=True) == \
+                    ( {"A-red": 1, "E-black": 1} ,  {"P-white": 2, "Q": 1, "E-black": 1} )
 
 
 

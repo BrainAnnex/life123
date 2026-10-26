@@ -1,6 +1,5 @@
-from life123.species_registry import Species, SpeciesRegistry
+from life123.species_registry import SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
-from life123.reactions import SimulationReaction, ReactionDefinition
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
 from typing import NamedTuple
@@ -208,7 +207,8 @@ class RandomReactionNetwork:
             f" because you are requesting a large number of reactions ({self.n_rxns}), " \
             f"relative to the {self.n_species} available species"
 
-        return Stoichiometry.from_reactants_products(reactants=reactants, products=products)
+        return Stoichiometry.from_reactants_products(reactants=reactants, products=products,
+                                                     species_registry=self.species_registry)
 
 
 
@@ -319,7 +319,7 @@ class RandomReactionNetwork:
 
     def solve_lhs(self, a_list, alpha :int, beta :int) -> None|tuple:
         """
-        In general, this would be an equation of the form SUM[a_i * x_i] + alpha = beta
+        In general, this would be an equation of the form ∑[a_i * x_i] + alpha = beta
 
         but the only scenarios we're covering for the summation are :  x0 + x1  or  a0*x0
 
@@ -368,7 +368,7 @@ class RandomReactionNetwork:
     def solve_both_sides(self, a_list, alpha :int, b_list, beta :int) -> None|tuple:
         """
         Find an integer solution (NOT generally unique) to an equation of the form:
-                    SUM[a_i * x_i] + alpha = SUM[b_i * y_i] + beta
+                    ∑[a_i * x_i] + alpha = ∑[b_i * y_i] + beta
         where the x_i's and the y_i's are the unknowns.  All ather values are given integers.
 
         We currently only support:
@@ -376,7 +376,7 @@ class RandomReactionNetwork:
             2 x0    + alpha = y0 + beta
 
         :param a_list:  List representing vector [a0, a1, a2, ...]
-                            Only acceptable values are [1, 1] and [2]
+                            Only acceptable values are 1-element lists, and [1, 1]
         :param alpha:
         :param b_list:  Only acceptable value is [1]
         :param beta:
@@ -393,7 +393,6 @@ class RandomReactionNetwork:
         # We only support:
         #             x0 + x1 + alpha = y0 + beta
         #             2 x0    + alpha = y0 + beta
-        #assert a_list == [1,1] or a_list == [2], f"Unsupported reactant stoichiometry: {a_list}"
         assert len(a_list) == 1 or a_list == [1,1], f"Unsupported reactant stoichiometry: {a_list}"
         assert b_list == [1], f"Unsupported product stoichiometry: {b_list}"
 

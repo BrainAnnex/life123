@@ -414,6 +414,7 @@ def test_get_value():
     assert sr.get_value(species_id="A", field="ec_number") == "2.5.1.6"
     assert sr.get_value(species_id="A", field="charge") == 0
     assert sr.get_value(species_id="A", field="diffusion_rate") is None
+    assert sr.get_value(species_id="A", field="diffusion_rate", default=0) == 0
 
 
 

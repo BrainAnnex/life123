@@ -72,7 +72,7 @@ def test_generate_multiple_random_reactions():
     assert net.reaction_registry.number_of_reactions() == 1
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
-    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})   # 2 D -> C
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1}, species_registry=net.species_registry)   # 2 D -> C
     assert net.species_registry.get_species('C').annotation == "32"
     assert net.species_registry.get_species('D').annotation == "16"
 
@@ -82,9 +82,9 @@ def test_generate_multiple_random_reactions():
     assert net.reaction_registry.number_of_reactions() == 2
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
-    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})           # 2 D -> C
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1}, species_registry=net.species_registry)           # 2 D -> C
     r = rxns[1]
-    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})  # B + A -> D
+    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1}, species_registry=net.species_registry)  # B + A -> D
     assert net.species_registry.get_species('A').annotation == "8"
     assert net.species_registry.get_species('B').annotation == "8"
     assert net.species_registry.get_species('C').annotation == "32"
@@ -96,11 +96,11 @@ def test_generate_multiple_random_reactions():
     assert net.reaction_registry.number_of_reactions() == 3
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
-    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})           # 2 D -> C
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1}, species_registry=net.species_registry)           # 2 D -> C
     r = rxns[1]
-    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})  # B + A -> D
+    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1}, species_registry=net.species_registry)  # B + A -> D
     r = rxns[2]
-    assert r.stoichiometry == Stoichiometry(vector={'B': -2, 'D': 1})           # 2 B -> D
+    assert r.stoichiometry == Stoichiometry(vector={'B': -2, 'D': 1}, species_registry=net.species_registry)           # 2 B -> D
     # All atom counts same as before
     assert net.species_registry.get_species('A').annotation == "8"
     assert net.species_registry.get_species('B').annotation == "8"
@@ -131,10 +131,9 @@ def test_generate_multiple_random_reactions():
     """
     net = RandomReactionNetwork(n_species=16, n_rxns=40, seed=987654321)
     net.generate_multiple_random_reactions()
-    print(net.species_registry.as_recordset())
-    net.reaction_registry.describe_reactions(detail="minimal")
-
-    #net.reaction_registry.describe_reactions(detail="summary")
+    #print(net.species_registry.as_recordset())
+    net.reaction_registry.describe_reactions(detail="minimal", use_labels=True)
+    #net.reaction_registry.describe_reactions(detail="summary", use_labels=True)
     """
 
 
@@ -143,22 +142,22 @@ def test_generate_new_consistent_unique_reaction():
     net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
 
     st = net.generate_new_consistent_unique_reaction()
-    assert st == Stoichiometry(vector={'D': -2, 'C': 1})             # 2 D -> C
+    assert st == Stoichiometry(vector={'D': -2, 'C': 1}, species_registry=net.species_registry) # 2 D -> C
     assert net.check_atom_count_consistency(st)
     net.reaction_registry.add_elementary_reaction(reactants=[(2, "D")], products="C")
 
     st = net.generate_new_consistent_unique_reaction()
-    assert st == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})    # B + A -> D
+    assert st.vector == {'B': -1, 'A': -1, 'D': 1}      # B + A -> D
     assert net.check_atom_count_consistency(st)
     net.reaction_registry.add_elementary_reaction(reactants=["B", "A"], products="D")
 
     st = net.generate_new_consistent_unique_reaction()
-    assert st == Stoichiometry(vector={'B': -2, 'D': 1})            # 2 B -> D
+    assert st.vector == {'B': -2, 'D': 1}               # 2 B -> D
     assert net.check_atom_count_consistency(st)
     net.reaction_registry.add_elementary_reaction(reactants=[(2, "B")], products="D")
 
     st = net.generate_new_consistent_unique_reaction()
-    assert st == Stoichiometry(vector={'A': -2, 'D': 1})            # 2 A <-> D
+    assert st.vector == {'A': -2, 'D': 1}           # 2 A <-> D
     assert net.check_atom_count_consistency(st)
     net.reaction_registry.add_elementary_reaction(reactants=[(2, "A")], products="D")
 
@@ -173,13 +172,13 @@ def test_generate_new_unique_reaction():
     net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
 
     st = net.generate_new_unique_reaction()
-    assert st == Stoichiometry(vector={'D': -2, 'C': 1}, catalysts=[])  # 2 D -> C
+    assert st == Stoichiometry(vector={'D': -2, 'C': 1}, catalysts=[], species_registry=net.species_registry)  # 2 D -> C
 
     st = net.generate_new_unique_reaction()
-    assert st == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1}, catalysts=[]) # B + A -> D
+    assert st.vector == {'B': -1, 'A': -1, 'D': 1}      # B + A -> D
 
     st = net.generate_new_unique_reaction()
-    assert st == Stoichiometry(vector={'A': -1, 'B': -1, 'C': 1}, catalysts=[]) # A + B -> C
+    assert st.vector == {'A': -1, 'B': -1, 'C': 1}      # A + B -> C
 
 
 

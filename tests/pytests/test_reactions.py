@@ -61,10 +61,10 @@ def test_CONSTRUCTOR_SimulationReaction():
 
 
 def test_determine_reaction_rate_1():
-    sr = SpeciesRegistry(ids=["A", "B"])
+    species_registry = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction A <-> B , with "mass action"
-    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=species_registry,
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF": 20., "kR": 2.})
 
@@ -80,7 +80,7 @@ def test_determine_reaction_rate_1():
 
     # Reaction A + B -> C , with "mass action"
     rxn_defn = ReactionDefinition(reactants=["A", "B"], products="C",
-                             species_registry=sr, autoregister_species=True,
+                             species_registry=species_registry, autoregister_species=True,
                              reaction_model="mass action", kinetic_parameters={"kF": 20})
 
     sim_rxn = rxn_defn.sim_reactions[0]
@@ -94,7 +94,7 @@ def test_determine_reaction_rate_1():
 
 
     # Reaction A -> B + C , with "mass action"
-    rxn_defn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants="A", products=["B", "C"], species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 20})
 
     sim_rxn = rxn_defn.sim_reactions[0]
@@ -108,11 +108,11 @@ def test_determine_reaction_rate_1():
 
 
     # Reaction  2A <-> B , with "mass action"
-    rxn_defn = ReactionDefinition(reactants=[(2, "A")], products="B", species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants=[(2, "A")], products="B", species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 5, "kR": 2})
 
     sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.stoichiometry == Stoichiometry({"A": -2, "B": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry({"A": -2, "B": 1}, species_registry=species_registry)
 
     init_conc = {"A": 4.5, "B": 6.}
     result = sim_rxn.determine_reaction_rate(conc_dict=init_conc)
@@ -130,11 +130,11 @@ def test_determine_reaction_rate_1():
 
 
     # Reaction  B <-> 2C , with "mass action"
-    rxn_defn = ReactionDefinition(reactants="B", products=[(2, "C")], species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants="B", products=[(2, "C")], species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 4, "kR": 2})
 
     sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.stoichiometry == Stoichiometry({"B": -1, "C": 2})
+    assert sim_rxn.stoichiometry == Stoichiometry({"B": -1, "C": 2}, species_registry=species_registry)
     result = sim_rxn.determine_reaction_rate(conc_dict={"B": 5., "C": 4})
     assert np.allclose(result, 4. * 5. - 2. * 4. **2)           # -12.0
 
@@ -275,10 +275,10 @@ def test_determine_reaction_rate_3():
 
 def test_step_simulation_1():
     # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
-    sr = SpeciesRegistry(ids=["A", "B"])
+    species_registry = SpeciesRegistry(ids=["A", "B"])
 
     # Reaction : A <-> B
-    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=species_registry,
                                   reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
 
@@ -307,7 +307,7 @@ def test_step_simulation_1():
 
 
     # Reaction : A -> B  (no reverse reaction)
-    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr,
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=species_registry,
                                   reaction_model="mass action", kinetic_parameters={"kF": 3.})
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
 
@@ -334,12 +334,12 @@ def test_step_simulation_1():
 
 
     # Reaction : A + B <-> C
-    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2})
 
     sim_rxn = rxn_defn.sim_reactions[0]
     assert sim_rxn.analytic_solution_family == "TWO_TO_ONE"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": -1, "C": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": -1, "C": 1}, species_registry=species_registry)
 
     conc_initial = {"A": 10, "B": 50, "C": 20}
     delta, rate = sim_rxn.step_simulation(delta_time=0.002, conc_dict=conc_initial)
@@ -350,7 +350,7 @@ def test_step_simulation_1():
 
 
     # Reaction : C <-> A + B
-    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=sr, autoregister_species=True,
+    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=species_registry, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
 
     sim_rxn = rxn_defn.sim_reactions[0]
@@ -520,7 +520,7 @@ def test_CONSTRUCTOR_ReactionDefinition_1():
 
     # Reaction E + S -> P + E
     rxn_defn = ReactionDefinition(reactants=["S", "E"], products=["P", "E"], species_registry=sr)
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"])
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'S': -1, 'P': 1}, catalysts=["E"], species_registry=sr)
     assert rxn_defn.analytic_solution_family is None
     assert rxn_defn.reaction_category == "Enzymatic"
 
@@ -533,7 +533,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sr = SpeciesRegistry()
     rxn_defn = ReactionDefinition(id=942, reactants="R", products="P", species_registry=sr, autoregister_species=True,
                                   reaction_model="mass action", kinetic_parameters={"kF": 20, "kR": 4})
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1}, species_registry=sr)
     assert rxn_defn.source_kinetic_parameters == {"kF": 20, "kR": 4}
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=5, derived_pars={'K_eq'})
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
@@ -546,7 +546,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert type(sim_rxn.model) == MassAction_Model
     assert sim_rxn.source_object.id == 942
     assert sim_rxn.derivation == "direct"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"R": -1, "P": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"R": -1, "P": 1}, species_registry=sr)
     assert sim_rxn.model.get_parameters() == {'kF': 20, 'kR': 4, 'K': 5.0, 'reversible': True}
     assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
@@ -559,7 +559,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
                     reaction_model="mass action",
                     kinetic_parameters={"kF": 10, "kR": 2})
     assert rxn_defn.species_registry == sr
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=sr)
     assert rxn_defn.reaction_model == "mass action"
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn_defn.reaction_category == "Unimolecular rearrangement/isomerization"
@@ -573,7 +573,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert type(sim_rxn.model) == MassAction_Model
     assert sim_rxn.source_object.id == 8
     assert sim_rxn.derivation == "direct"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=sr)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
 
@@ -588,7 +588,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
                                   reaction_model="michaelis menten",
                                   kinetic_parameters={'kM': 2, 'kcat': 5})
     assert rxn_defn.species_registry == sr
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=sr)
     assert rxn_defn.reaction_model == "michaelis menten"
     assert rxn_defn.source_kinetic_parameters == {'kM': 2, 'kcat': 5}
 
@@ -597,7 +597,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert sim_rxn.source_object.id == 17
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=sr)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'kM': 2, 'kcat': 5, 'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S'}
 
@@ -628,7 +628,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
                              reaction_model="single substrate mechanism",
                              kinetic_parameters={"k1_F": 10, "k1_R": 2, "k2_F": 3})
     assert rxn_defn.species_registry == sr
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=sr)
     assert rxn_defn.reaction_model == "single substrate mechanism"
     assert rxn_defn.source_kinetic_parameters == {"k1_F": 10, "k1_R": 2, "k2_F": 3}
 
@@ -639,13 +639,13 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
     assert sim_rxn_1.source_object.id == 123
-    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
+    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
     assert sim_rxn_2.source_object.id == 123
-    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
+    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
     assert sr.number_of_species() == 4    # 1 species was automatically added
@@ -662,7 +662,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     rxn_defn = ReactionDefinition(reactants="R", products="P", species_registry=sr, autoregister_species=True)
 
     assert set(rxn_defn.species_registry.get_all_species_ids()) == {"R", "P"}
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1}, species_registry=rxn_defn.species_registry)
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=None, delta_S=None, delta_G=None, K_eq=None)
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn_defn.reaction_category == "Unimolecular rearrangement/isomerization"
@@ -676,7 +676,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
                                   reaction_model="mass action",
                                   kinetic_parameters={"kF":10})
     assert rxn_defn.species_registry == sr
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=rxn_defn.species_registry)
     assert rxn_defn.reaction_model == "mass action"
     assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
     assert rxn_defn.reaction_category == "Unimolecular rearrangement/isomerization"
@@ -691,7 +691,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert type(sim_rxn.model) == MassAction_Model
     assert sim_rxn.source_object.id == 41
     assert sim_rxn.derivation == "direct"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
     assert sim_rxn.model.derived_pars == {'K', 'kR', 'reversible'}
 
@@ -711,7 +711,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert type(sim_rxn.model) == MassAction_Model
     assert sim_rxn.source_object.id == 42
     assert sim_rxn.derivation == "direct"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1})
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 0, 'K': math.inf, 'reversible': False}
     assert sim_rxn.model.derived_pars == {'K', 'reversible'}
 
@@ -719,7 +719,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     # Reaction R -> P + Q, with "mass action"
     rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
                                   thermodynamic_parameters={"delta_H": 5, "delta_S": -3})
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1}, species_registry=rxn_defn.species_registry)
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=None, K_eq=None, derived_pars=set())
     assert rxn_defn.analytic_solution_family == "ONE_TO_TWO"
     assert rxn_defn.reaction_category == "Unimolecular decomposition"
@@ -743,7 +743,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert sim_rxn.source_object.id == 43
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"Sub": -1, "Prod": 1}, catalysts=["Enz"])
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"Sub": -1, "Prod": 1}, catalysts=["Enz"], species_registry=rxn_defn.species_registry)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'Enz', 'Product': 'Prod', 'Substrate': 'Sub', 'kM': 2, 'kcat': 3}
     assert sim_rxn.model.derived_pars == set()
@@ -771,7 +771,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert sim_rxn.source_object.id == 44
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"])
+    assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=rxn_defn.species_registry)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S', 'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
     assert sim_rxn.model.derived_pars == {'kM', 'kcat'}
@@ -806,13 +806,13 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
     assert sim_rxn_1.source_object.id == 43
-    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1})
+    assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
     assert sim_rxn_2.source_object.id == 43
-    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1})
+    assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
     assert sr.number_of_species() == 4    # 1 species was automatically added
@@ -829,7 +829,7 @@ def test_CONSTRUCTOR_ReactionDefinition_4():
     # Reaction R -> P + Q
     rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"], species_registry=sr, autoregister_species=True,
                                   thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100})
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1}, species_registry=sr)
     assert rxn_defn.source_thermodynamic_parameters == {"delta_H": 5, "delta_S": -3, "temp": 100}
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
                                                              K_eq=0.0017045829244452543, temp=100,
@@ -851,7 +851,7 @@ def test_CONSTRUCTOR_ReactionDefinition_4():
                                   thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100},
                                   reaction_model="mass action", kinetic_parameters={"kF": 10})
 
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1}, species_registry=sr)
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
                                                              K_eq=0.0017045829244452543, temp=100,
                                                              derived_pars={"delta_G", "K_eq"})
@@ -869,7 +869,7 @@ def test_CONSTRUCTOR_ReactionDefinition_4():
                                   thermodynamic_parameters={"delta_H": 5, "delta_S": -3, "temp": 100},
                                   reaction_model="mass action", kinetic_parameters={"kF": 10, "kR": 5866.537706433048})
 
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'R': -1, 'P': 1, 'Q': 1}, species_registry=sr)
     assert rxn_defn.thermodynamics == ReactionThermodynamics(delta_H=5, delta_S=-3, delta_G=5.3,
                                                              K_eq=0.0017045829244452543, temp=100,
                                                              derived_pars={"delta_G", "K_eq"})
@@ -892,7 +892,7 @@ def test_CONSTRUCTOR_ReactionDefinition_4():
     assert rxn_defn.stoichiometry.get_reactant_list() == [(1, "A")]
     assert rxn_defn.stoichiometry.get_product_list()  == [(2, "B")]
 
-    assert rxn_defn.stoichiometry == Stoichiometry(vector={'A': -1, 'B': 2})
+    assert rxn_defn.stoichiometry == Stoichiometry(vector={'A': -1, 'B': 2}, species_registry=sr)
 
     assert math.isclose(rxn_defn.thermodynamics.delta_H, 0.005)
     assert math.isclose(rxn_defn.thermodynamics.delta_S, 0.4)
@@ -935,7 +935,7 @@ def test_describe():
 
     assert rxn_defn.describe(detail="full") ==  \
         'R <-> P\n'  \
-        '        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"\n'  \
+        '        Unimolecular rearrangement/isomerization reaction, with Reaction Model: "mass action"   (Reaction ID 0)\n'  \
         '        Thermodynamics - passed:  (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | Temp = -173.1 C)\n'  \
         '        Thermodynamics - derived:  (delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K_eq = 0.38206 | Temp = -173.1 C)\n'  \
         '        Kinetics - passed:  (kF = 10)\n'  \
@@ -989,7 +989,7 @@ def test_describe():
 
     assert rxn_defn.describe(detail="full") ==  \
         'CH4 + 2 O2 -> CO2 + 2 H2O\n'  \
-        '        General one-step reaction, with no Reaction Model specified\n'  \
+        '        General one-step reaction, with no Reaction Model specified   (Reaction ID 0)\n'  \
         '        Thermodynamics - passed: None\n'  \
         '        Thermodynamics - derived: None\n'  \
         '        Kinetics - passed: None\n'  \
