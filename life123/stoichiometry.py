@@ -44,10 +44,11 @@ class Stoichiometry:
             assert coeff != 0, f"Stoichiometry instantiation: coefficients cannot be zero (species \"{sp}\") - " \
             f"if you want to specify an enzyme/catalyst, pass it as a list to the argument `catalysts`"
 
-        if self.get_reactant_list() == []:
-            print("WARNING: no reactants are present in this stoichiometry")
-        if self.get_product_list() == []:
-            print("WARNING: no products are present in this stoichiometry")
+        assert self.get_reactant_list(exclude_catalysts=True) != [], \
+            f"Stoichiometry instantiation: no reactants are present in this stoichiometry ({self.vector})"
+
+        assert self.get_product_list(exclude_catalysts=True) != [], \
+            f"Stoichiometry instantiation: no products are present in this stoichiometry ({self.vector})"
 
 
 
@@ -237,7 +238,7 @@ class Stoichiometry:
         """
         Return a user-friendly form of a "complex" (a side of a chemical equation)
 
-        EXAMPLE:  turn {"Fe": 1,  "Cl": 2]  into  "Fe + 2 Cl"
+        EXAMPLE:  turn {"Fe": 1, "Cl": 2}  into  "Fe + 2 Cl"
 
         :param complex:     A dictionary encoding either side of a chemical equation
         :return:            A string with a user-friendly form of a side of a chemical equation
@@ -388,7 +389,7 @@ class Stoichiometry:
     def from_reactants_products(cls, reactants :list|str, products :list|str) -> Stoichiometry:
         """
         This serves as an "alternate constructor / factory" for the Stoichiometry dataclass.
-        Notice that this is a CLASS method.
+        Notice that this is a CLASS method (not a method of an instantiated Stoichiometry object).
         ~~~
         EXAMPLE:
             stoich_obj = Stoichiometry.from_reactants_products(reactants="A", products=["B", (2,"C")])
@@ -401,6 +402,7 @@ class Stoichiometry:
                                 whenever strings are used, the stoichiometry coefficient is taken to be 1
         :return:            A dataclass object of type "Stoichiometry"
         """
+        # TODO: also accept sets in lieu of lists
         assert reactants is not None, \
             "from_reactants_products(): the argument `reactants` is a required one"
         if type(reactants) == str:

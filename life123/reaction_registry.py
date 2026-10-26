@@ -84,7 +84,7 @@ class ReactionRegistry:
 
 
 
-    def get_all_reactions(self):
+    def get_all_reactions(self) -> list:
         """
         Return the list of all the "simulation reactions" that have been created.
         Note: this number might be higher than the number of reactions specified by the user,
@@ -322,13 +322,15 @@ class ReactionRegistry:
         optionally including its kinetic and/or thermodynamic data.
         All the involved chemicals can be either previously registered, or not.
 
-        :param reactants:       A string or pair of strings; for reactions such as 2 A -> P, pass ["A", "A"]
-        :param products:        A string or pair of strings; for reactions such as A -> 2 P, pass ["P", "P"]
+        :param reactants:           A string or pair of strings; for reactions such as 2 A -> P, pass ["A", "A"]
+        :param products:            A string or pair of strings; for reactions such as A -> 2 P, pass ["P", "P"]
 
-        :param temp:            [OPTIONAL] Temperature in Kelvins
+        :param thermodynamic_parameters:    [OPTIONAL]
+        :param temp:                [OPTIONAL] Temperature in Kelvins
+        :param kinetic_parameters:  [OPTIONAL]
 
-        :return:                Integer index of the newly-added reaction
-                                    (in the list self.reaction_list, stored as object variable)
+        :return:                    Integer index of the newly-added reaction
+                                        (in the list self.reaction_list, stored as object variable)
         """
         # Turn `reactants` and `products` into lists, if not already lists
         if type(reactants) == str:
@@ -345,18 +347,9 @@ class ReactionRegistry:
             n_products = len(products)
             assert n_products <= 2
 
-        # Determine the reaction type from the number of reactants and products
-        # TODO: turn into a method
-        if n_reactants == 1 and n_products == 1:
-            reaction_type = "ReactionUnimolecular"
-        elif n_reactants == 2 and n_products == 1:
-            reaction_type = "ReactionSynthesis"
-        elif n_reactants == 1 and n_products == 2:
-            reaction_type = "ReactionDecomposition"
-        else:
-            raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to an elementary reaction")
-
-        #print(f"add_elementary_reaction(): adding reaction of type `{reaction_type}`")
+        # Check the plausibility of this really being an elementary reaction
+        if (n_reactants, n_products) not in [(1,1), (2,1), (1,2)]:
+            raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products don't generally correspond to an elementary reaction")
 
         return self.add_reaction(reactants=reactants, products=products,
                                  reaction_model="mass action",
@@ -532,7 +525,7 @@ class ReactionRegistry:
 
 
         #if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"^-----  Species involved in the above reactions: {species_ids}")
+        print(f"------>  Species involved in the above reactions: {species_ids}")
         '''
         else:
             print(f"Species involved in the above reactions (not counting enzymes): {chem_labels}")

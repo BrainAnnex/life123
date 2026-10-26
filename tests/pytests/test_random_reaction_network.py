@@ -60,31 +60,156 @@ def test_get_number_atoms():
 
 
 
+def test_generate_multiple_random_reactions():
+
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+    net.generate_multiple_random_reactions()
+    assert net.reaction_registry.number_of_reactions() == 0
+
+
+    net = RandomReactionNetwork(n_species=4, n_rxns=1, seed=1234)
+    net.generate_multiple_random_reactions()
+    assert net.reaction_registry.number_of_reactions() == 1
+    rxns = net.reaction_registry.get_all_reactions()
+    r = rxns[0]
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})   # 2 D -> C
+    assert net.species_registry.get_species('C').annotation == "32"
+    assert net.species_registry.get_species('D').annotation == "16"
+
+
+    net = RandomReactionNetwork(n_species=4, n_rxns=2, seed=1234)
+    net.generate_multiple_random_reactions()
+    assert net.reaction_registry.number_of_reactions() == 2
+    rxns = net.reaction_registry.get_all_reactions()
+    r = rxns[0]
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})           # 2 D -> C
+    r = rxns[1]
+    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})  # B + A -> D
+    assert net.species_registry.get_species('A').annotation == "8"
+    assert net.species_registry.get_species('B').annotation == "8"
+    assert net.species_registry.get_species('C').annotation == "32"
+    assert net.species_registry.get_species('D').annotation == "16"
+
+
+    net = RandomReactionNetwork(n_species=4, n_rxns=3, seed=1234)
+    net.generate_multiple_random_reactions()
+    assert net.reaction_registry.number_of_reactions() == 3
+    rxns = net.reaction_registry.get_all_reactions()
+    r = rxns[0]
+    assert r.stoichiometry == Stoichiometry(vector={'D': -2, 'C': 1})           # 2 D -> C
+    r = rxns[1]
+    assert r.stoichiometry == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})  # B + A -> D
+    r = rxns[2]
+    assert r.stoichiometry == Stoichiometry(vector={'B': -2, 'D': 1})           # 2 B -> D
+    # All atom counts same as before
+    assert net.species_registry.get_species('A').annotation == "8"
+    assert net.species_registry.get_species('B').annotation == "8"
+    assert net.species_registry.get_species('C').annotation == "32"
+    assert net.species_registry.get_species('D').annotation == "16"
+
+
+    net = RandomReactionNetwork(n_species=6, n_rxns=4, seed=987654321)
+    net.generate_multiple_random_reactions()
+    assert net.reaction_registry.number_of_reactions() == 4
+    rxns = net.reaction_registry.get_all_reactions()
+    assert rxns[0].stoichiometry.vector == {'E': -1, 'B': -1, 'F': 1}  # E + B -> F
+    assert rxns[1].stoichiometry.vector == {'B': -1, 'F': -1, 'A': 1}  # B + F -> A
+    assert rxns[2].stoichiometry.vector == {'B': -1, 'C': -1, 'F': 1}  # B + C -> F
+    assert rxns[3].stoichiometry.vector == {'F': -1, 'C': -1, 'A': 1}  # F + C -> A
+
+    assert net.species_registry.get_species('A').annotation == "48"
+    assert net.species_registry.get_species('B').annotation == "16"
+    assert net.species_registry.get_species('C').annotation == "16"
+    assert net.species_registry.get_species('D').annotation == ""   # Not participating in any reaction
+    assert net.species_registry.get_species('E').annotation == "16"
+    assert net.species_registry.get_species('F').annotation == "32"
+
+    assert net.species_registry.get_species('A').label == "A(48)"
+    assert net.species_registry.get_species('D').label == "D"
+    assert net.species_registry.get_species('F').label == "F(32)"
+
+    """
+    net = RandomReactionNetwork(n_species=16, n_rxns=40, seed=987654321)
+    net.generate_multiple_random_reactions()
+    print(net.species_registry.as_recordset())
+    net.reaction_registry.describe_reactions(detail="minimal")
+
+    #net.reaction_registry.describe_reactions(detail="summary")
+    """
+
+
+
+def test_generate_new_consistent_unique_reaction():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+
+    st = net.generate_new_consistent_unique_reaction()
+    assert st == Stoichiometry(vector={'D': -2, 'C': 1})             # 2 D -> C
+    assert net.check_atom_count_consistency(st)
+    net.reaction_registry.add_elementary_reaction(reactants=[(2, "D")], products="C")
+
+    st = net.generate_new_consistent_unique_reaction()
+    assert st == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1})    # B + A -> D
+    assert net.check_atom_count_consistency(st)
+    net.reaction_registry.add_elementary_reaction(reactants=["B", "A"], products="D")
+
+    st = net.generate_new_consistent_unique_reaction()
+    assert st == Stoichiometry(vector={'B': -2, 'D': 1})            # 2 B -> D
+    assert net.check_atom_count_consistency(st)
+    net.reaction_registry.add_elementary_reaction(reactants=[(2, "B")], products="D")
+
+    st = net.generate_new_consistent_unique_reaction()
+    assert st == Stoichiometry(vector={'A': -2, 'D': 1})            # 2 A <-> D
+    assert net.check_atom_count_consistency(st)
+    net.reaction_registry.add_elementary_reaction(reactants=[(2, "A")], products="D")
+
+
+    with pytest.raises(Exception):
+        # Repeated failures to find a new reaction consistent with atom-count assignments so far
+        net.generate_new_consistent_unique_reaction()
+
+
+
+def test_generate_new_unique_reaction():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+
+    st = net.generate_new_unique_reaction()
+    assert st == Stoichiometry(vector={'D': -2, 'C': 1}, catalysts=[])  # 2 D -> C
+
+    st = net.generate_new_unique_reaction()
+    assert st == Stoichiometry(vector={'B': -1, 'A': -1, 'D': 1}, catalysts=[]) # B + A -> D
+
+    st = net.generate_new_unique_reaction()
+    assert st == Stoichiometry(vector={'A': -1, 'B': -1, 'C': 1}, catalysts=[]) # A + B -> C
+
+
+
 def test__assign_species_to_rxn():
     net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=123456)
 
-    rxn = net._assign_species_to_rxn()
-    assert type(rxn) is SimulationReaction
-    assert rxn.stoichiometry.vector == {'A': -1, 'C': -1, 'D': 1}   # A + C -> D
-    assert rxn.stoichiometry.catalysts == []
+    reactants, products = net._assign_species_to_rxn()
+    # Generates A + C -> D
+    assert reactants == ['A', 'C']
+    assert products == ['D']
 
-    rxn = net._assign_species_to_rxn()
-    assert rxn.stoichiometry.vector == {'B': -2, 'A': 1}            # 2 B -> A
 
-    rxn = net._assign_species_to_rxn()
-    assert rxn.stoichiometry.vector == {'A': -1, 'D': -1, 'B': 1}   # A + D -> B
+    reactants, products = net._assign_species_to_rxn()
+    # Generates 2 B -> A
+    assert reactants == ['B', 'B']
+    assert products == ['A']
+
+    reactants, products = net._assign_species_to_rxn()
+    # Generates  A + D -> B
+    assert reactants == ['A', 'D']
+    assert products == ['B']
+
 
     for i in range(20):
-        rxn = net._assign_species_to_rxn()
-        stoic = rxn.stoichiometry
-        pattern = stoic.reaction_pattern()
-        # 1 or 2 reactant species, 1 product, 0 catalysts
-        assert pattern == (2, 1, 0)  or pattern == (1, 1, 0)
+        reactants, products = net._assign_species_to_rxn()
 
-        r_comp, p_comp = stoic.get_reaction_complexes()
-        # EXAMPLE: r_comp = {"A": 1, "B": 1}   , p_comp = {"P": 1}
-        assert sum(c for sp, c in r_comp.items()) == 2  # Exactly 2 reactants total
-        assert sum(c for sp, c in p_comp.items()) == 1  # Exactly 1 product total
+        # 2 reactants (same or different species), 1 product
+        assert len(reactants) == 2
+        assert len(products) == 1
+
 
 
 
@@ -155,33 +280,42 @@ def test_solve_both_sides():
         net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[], beta=20)
 
     with pytest.raises(Exception):
-        net.solve_both_sides(a_list=[1], alpha=10, b_list=[1], beta=20)
-
-    with pytest.raises(Exception):
         net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[2], beta=20)
 
 
-    # `a_list` of size 1 : only allowed value is [2]
+    # `a_list` of size 1
+    # Solving a0 * x0 + alpha = b0 * y0 + beta
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=20)
-    assert result == ((11,), (12,))     # Both sides add up to 32
+    assert result == ((26,), (42,))     # Both sides add up to 62
+    assert 2 * 26 + 10 == 1 * 42 + 20
 
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=11)
-    assert result == ((2,), (3,))       # Both sides add up to 14
+    assert result == ((17,), (33,))       # Both sides add up to 44
 
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=10)
-    assert result == ((1,), (2,))       # Both sides add up to 12
+    assert result == ((16,), (32,))
+
+    result = net.solve_both_sides(a_list=[2], alpha=0, b_list=[1], beta=0)
+    assert result == ((16,), (32,))
 
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=9)
-    assert result == ((2,), (5,))       # Both sides add up to 12
+    assert result == ((17,), (35,))
 
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=8)
-    assert result == ((3,), (8,))       # Both sides add up to 16
+    assert result == ((18,), (38,))
 
     result = net.solve_both_sides(a_list=[2], alpha=10, b_list=[1], beta=0)
-    assert result == ((11,), (32,))       # Both sides add up to 32
+    assert result == ((26,), (62,))
 
 
-    # `a_list` of size 1 : only allowed value is [1,1]
+    result = net.solve_both_sides(a_list=[1], alpha=10, b_list=[1], beta=20)
+    assert result == ((26,), (16,))     # Both sides add up to 36
+
+    result = net.solve_both_sides(a_list=[1], alpha=16, b_list=[1], beta=0)
+    assert result == ((32,), (48,))     # Both sides add up to 48
+
+
+    # `a_list` of size 2 : only allowed value is [1,1]
     result = net.solve_both_sides(a_list=[1,1], alpha=10, b_list=[1], beta=20)
     assert result == ((10, 10), (10,))       # Both sides add up to 30
 
@@ -199,7 +333,7 @@ def test_solve_both_sides():
 
     result = net.solve_both_sides(a_list=[1,1], alpha=0, b_list=[1], beta=0)
     assert result == ((16, 16), (32,))       # Both sides add up to 32
-    #print(result)
+
 
 
 
@@ -216,10 +350,56 @@ def test___fulfill_reaction():
 
     result = net._fulfill_reaction(stoic)       # Same reaction, but with the previously set atom counts
     assert result
+    assert net.check_atom_count_consistency(stoic)  # Atom accounting is balanced
+    """
     check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
                     for sp, coeff in stoic.vector.items())
     assert check == 0   # Atom accounting is balanced
+    """
 
     stoic = Stoichiometry(vector={"A": 1, "B": -1, "C": -1})    # B + C -> A, with the previously set atom counts
     result = net._fulfill_reaction(stoic)
     assert not result   # Incompatible counts
+
+
+
+def test__already_used():
+    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
+    all_chem_labels = net.species_registry.get_all_species_ids()
+    assert all_chem_labels == ["A", "B", "C"]
+
+    assert not net._already_used(reactants="A", products="B")
+    assert not net._already_used(reactants="X", products="Y")
+
+    net.reaction_registry.add_elementary_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
+    assert net._already_used(reactants="A", products="B")
+    assert net._already_used(reactants="B", products="A")
+
+    assert net._already_used(reactants="A", products="B")
+    assert net._already_used(reactants="B", products="A")
+    assert not net._already_used(reactants=["A", "B"], products="C")
+
+    net.reaction_registry.add_elementary_reaction(reactants=["A", "B"], products="C")  # Reaction 1 : A + B <-> C
+    assert net._already_used(reactants=["A", "B"], products="C")
+    assert net._already_used(reactants=["B", "A"], products="C")
+    assert net._already_used(reactants="C", products=["A", "B"])
+
+    assert not net._already_used(reactants=["A", "C"], products="B")
+
+    net.reaction_registry.species_registry.add_single_species(species_id="D")
+    assert not net._already_used(reactants=["C", "D"], products="B")
+
+    net.reaction_registry.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B
+    assert net._already_used(reactants=["D", "C"], products="B")
+    assert net._already_used(reactants=["C", "D"], products="B")
+    assert net._already_used(reactants="B", products=["C", "D"])
+
+    assert not net._already_used(reactants="C", products=["D", "A"])
+    net.reaction_registry.add_elementary_reaction(reactants="C", products=["D", "A"])  # Reaction 3 : C <-> D + A
+    assert net._already_used(reactants="C", products=["D", "A"])
+    assert net._already_used(reactants=["A", "D"], products="C")
+
+    net.reaction_registry.add_elementary_reaction(reactants="D", products=["B", "B"])  # Reaction 3 : D <-> 2 B
+    assert net._already_used(reactants="D", products=["B"])
+    assert net._already_used(reactants="D", products=["B", "B"])
+    assert net._already_used(reactants="B", products=["D", "D"])

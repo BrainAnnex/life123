@@ -131,47 +131,6 @@ def test__assign_species_to_rxn():
 
 
 
-def test_already_used():
-    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.species_registry.get_all_species_ids()
-    assert all_chem_labels == ["A", "B", "C"]
-
-    assert not net._already_used(reactants="A", products="B")
-    assert not net._already_used(reactants="X", products="Y")
-
-    net.reaction_registry.add_elementary_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
-    assert net._already_used(reactants="A", products="B")
-    assert net._already_used(reactants="B", products="A")
-
-    assert net._already_used(reactants="A", products="B")
-    assert net._already_used(reactants="B", products="A")
-    assert not net._already_used(reactants=["A", "B"], products="C")
-
-    net.reaction_registry.add_elementary_reaction(reactants=["A", "B"], products="C")  # Reaction 1 : A + B <-> C
-    assert net._already_used(reactants=["A", "B"], products="C")
-    assert net._already_used(reactants=["B", "A"], products="C")
-    assert net._already_used(reactants="C", products=["A", "B"])
-
-    assert not net._already_used(reactants=["A", "C"], products="B")
-
-    net.reaction_registry.species_registry.add_single_species(species_id="D")
-    assert not net._already_used(reactants=["C", "D"], products="B")
-
-    net.reaction_registry.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B
-    assert net._already_used(reactants=["D", "C"], products="B")
-    assert net._already_used(reactants=["C", "D"], products="B")
-    assert net._already_used(reactants="B", products=["C", "D"])
-
-    assert not net._already_used(reactants="C", products=["D", "A"])
-    net.reaction_registry.add_elementary_reaction(reactants="C", products=["D", "A"])  # Reaction 3 : C <-> D + A
-    assert net._already_used(reactants="C", products=["D", "A"])
-    assert net._already_used(reactants=["A", "D"], products="C")
-
-    net.reaction_registry.add_elementary_reaction(reactants="D", products=["B", "B"])  # Reaction 3 : D <-> 2 B
-    assert net._already_used(reactants="D", products=["B"])
-    assert net._already_used(reactants="D", products=["B", "B"])
-
-
 
 def test_random_species_enthalpy():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)

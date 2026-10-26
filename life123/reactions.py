@@ -819,6 +819,10 @@ class ReactionDefinition:
         :param kinetic_parameters: [OPTIONAL] A dictionary with entries based on `reaction_model`
 
         """
+        # TODO: also accept sets in lieu of lists for `reactants`/`products`
+        #TODO: also accept a single `stoichiometry` argument, in lieu of `reactants`/`products`
+        #      (and use it in random_reactions.py)
+
         self.name = name    # An arbitrary string attached to this reaction
                             #       (for example, a name or annotations)
         self.id = id        # Typically, an autoincrement managed by the "SpeciesRegistry" object
@@ -890,6 +894,7 @@ class ReactionDefinition:
                                             if False, an Exception is raised if encountering un-registered species
         :return:                        A "Stoichiometry" object
         """
+        # TODO: also accept sets in lieu of lists
         # Parse the reactants and products into a "Stoichiometry" object
         stoich_obj = Stoichiometry.from_reactants_products(reactants=reactants, products=products)
 

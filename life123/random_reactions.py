@@ -90,175 +90,12 @@ class RandomReactionNetwork:
         #self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
 
 
-    """
-    def _generate_reaction_candidate(self) -> str:
-        
-        Randomly pick a reaction type from the list of choices in `self.RXN_CHOICES`
-        The object variable `self.relative_rxn_prob`, if set, determines the relative probabilities
-
-        :return:    A string that is one of the entries of self.RXN_CHOICES ;
-                        EXAMPLE: "ReactionSynthesis"
-        
-        rxn_type = self.rng.choice(a=self.RXN_CHOICES, size=1, p=self.relative_rxn_prob)
-        return rxn_type
-    """
-
-    def foo_OLD(self):
-        # Reaction R1 + R2 <-> P
-        r, p = self._assign_species_to_rxn(self.species_registry.get_all_species_ids())
-
-        r1, r2 = r
-
-        n_r1 = self.get_number_atoms(r1)
-        n_r2 = self.get_number_atoms(r2)
-        n_p = self.get_number_atoms(p)
-
-        # Get the total number of None values appearing in those variables
-        none_count = sum(x is None for x in (n_r1, n_r2, n_p))
-
-        if none_count == 0:
-            # Atom counts are present in all variables; only thing we can do is to verify if compatible
-            return self.validate_atom_count(reactant_counts=(n_r1, n_r2), product_counts=(n_p,))
-        elif none_count == 1:
-            self.assign_single_atom_count(reactants=r, reactant_counts=(n_r1, n_r2),
-                                    products=(p,), product_counts=(n_p,))
-        elif none_count == 2:
-            self.assign_double_atom_count(reactants=r, reactant_counts=(n_r1, n_r2),
-                                    products=(p,), product_counts=(n_p,))
-        else:
-            self.assign_triple_atom_count(reactants=r,
-                                    products=(p,))
-
-
-    def assign_triple_atom_count(self, reactants :tuple,
-                                products :tuple,) -> bool:
-
-        r1, r2 = reactants
-        p, _ = products
-
-        # All values are unset: we have complete freedom to set them as we please
-        self.set_number_atoms(r1, atom_count=16)
-        self.set_number_atoms(r2, atom_count=16)
-        self.set_number_atoms(p, atom_count=32)
-        return True
-
-
-    def assign_single_atom_count(self, reactants :tuple, reactant_counts :tuple,
-                                products :tuple, product_counts :tuple) -> bool:
-        """
-        Exactly one count is missing
-
-        :param reactants:
-        :param reactant_counts:
-        :param products:
-        :param product_counts:
-        :return:                True if successful, or False if not
-        """
-        r1, r2 = reactants
-        n_r1, n_r2 = reactant_counts
-        p, _ = products
-        n_p, _ = product_counts
-
-        if r1 == r2:
-            # Reaction of type 2 R <-> P
-            if n_p is None:
-                # Only n_p is None
-                self.set_number_atoms(p, atom_count = 2*n_r1)
-                return True
-            else:
-                # Only n_r1 (and the identical n_r2) is None
-                if n_p % 2 != 0:    # If odd
-                    return False    # Impossible scenario
-                else:
-                    half_product_count = n_p / 2
-                    self.set_number_atoms(r1, atom_count=half_product_count)
-                    self.set_number_atoms(r2, atom_count=half_product_count)
-                    return True
-
-        else:
-            # Reaction of type R1 + R2 <-> P , with R1 != R2
-            if n_p is None:
-                self.set_number_atoms(p, atom_count=n_r1+n_r2)
-                return True
-            elif n_r1 is None:
-                if n_r2 >= n_p:
-                    return False
-                self.set_number_atoms(r1, atom_count=n_p-n_r2)
-                return True
-            else:
-                # n_r2 is None
-                if n_r1 >= n_p:
-                    return False
-                self.set_number_atoms(r1, atom_count=n_p-n_r1)
-                return True
-
-
-
-    def assign_double_atom_count(self, reactants :tuple, reactant_counts :tuple,
-                          products :tuple, product_counts :tuple):
-        """
-        Exactly 2 values are missing
-
-        :param reactants:
-        :param reactant_counts:
-        :param products:
-        :param product_counts:
-        :return:                True if successful, or False if not
-        """
-        r1, r2 = reactants
-        n_r1, n_r2 = reactant_counts
-        p, _ = products
-        n_p, _ = product_counts
-
-        if r1 == r2:
-            # Reaction of type 2 R <-> P
-            if n_r1 is None and n_p is None:
-                # All values are unset: we have complete freedom to set them as we please
-                self.set_number_atoms(r1, atom_count=16)
-                self.set_number_atoms(r2, atom_count=16)
-                self.set_number_atoms(p, atom_count=32)
-                return True
-
-        else:
-            # Reaction of type R1 + R2 <-> P , with R1 != R2
-            if n_p is None:
-                if n_r1 is None:
-                    n_r1 = self.set_number_atoms(r1, atom_count=16)
-                if n_r2 is None:
-                    n_r2 = self.set_number_atoms(r2, atom_count=16)
-                self.set_number_atoms(p, atom_count=n_r1+n_r2)
-                return True
-            elif n_r1 is None:
-                if n_r2 is None:
-                    n_r2 = self.set_number_atoms(r2, atom_count=16)
-                if n_p is None:
-                    n_p = self.set_number_atoms(r2, atom_count=16)
-                self.set_number_atoms(r1, atom_count=n_p-n_r2)
-                return True
-            else:
-                # n_r2 is None
-                if n_r1 is None:
-                    n_r1 = self.set_number_atoms(r1, atom_count=16)
-                if n_p is None:
-                    n_p = self.set_number_atoms(p, atom_count=32)
-                self.set_number_atoms(r2, atom_count=n_p-n_r1)
-                return True
-
-
-
-    def validate_atom_count(self, reactant_counts :tuple, product_counts :tuple):
-        """
-
-        :param reactant_counts:
-        :param product_counts:
-        :return:
-        """
-        return reactant_counts[0] + reactant_counts[1] == product_counts[0]   # TODO: generalize
 
 
     def set_number_atoms(self, species_id: str, atom_count :int) -> int:
         """
-        Annotate the Species dataclass associated to the given species id,
+        Annotate the Species dataclass associated to the given species id
+        (in the context of the species registry stored in `self.species_registry`)
         to record its specified atom count.
 
         The value is turned into a string, and stored as the "annotation" property.
@@ -288,197 +125,114 @@ class RandomReactionNetwork:
         return int(field_value)
 
 
-    def big(self):
+
+    def generate_multiple_random_reactions(self) -> None:
+        """
+        Generate `self.n_rxns` random reaction that are all fairly different from one another,
+        and in the process assign arbitrary but consistent numbers of atams to each involved species.
+        NO thermodynamic or kinetic parameters yet set.
+
+        :return:    None
+        """
+        for _ in range(self.n_rxns):
+            stoic = self.generate_new_consistent_unique_reaction()
+
+            self.reaction_registry.add_elementary_reaction(reactants=stoic.get_reactant_list(),
+                                                           products=stoic.get_product_list())
+
+
+
+    def generate_new_consistent_unique_reaction(self) -> Stoichiometry:
+        """
+        Also modifies the `annotation` property of the affected Species objects
+        :return:
+        """
+        MAX_TRIES = 30        # To avoid infinite loops
+
+        print(f"\ngenerate_new_consistent_unique_reaction(): generating a new unique reaction...")
+        stoic = self.generate_new_unique_reaction()
+        print(f"generate_new_consistent_unique_reaction(): now attempting to assign/verify assignment of atom counts to tentative new reaction with vector {stoic.vector}")
+
+
+        n_attempts = 1
+        # Prevent adding reactions that can't be fit into a balanced atomic-count accounting
+        while (n_attempts <= MAX_TRIES) and (not self._fulfill_reaction(stoic=stoic)):
+            print(f"generate_new_consistent_unique_reaction(): the previous tentative reaction CANNOT be fit into a balanced atomic-count accounting. Generating new one...")
+            stoic = self.generate_new_unique_reaction()
+            print(f"    Attempting to validate atom count in new reaction with vector {stoic.vector}")
+            n_attempts += 1
+        assert n_attempts <= MAX_TRIES, \
+            f"Giving up after {n_attempts} attempts.  It's proving very hard to generate new random reactions fit into a balanced atomic-count accounting.  " \
+            f"It probably means your are requesting a large number of reactions ({self.n_rxns}), " \
+            f"relative to the {self.n_species} available species"
+
+
+        debug_info = ""
+        for sp_id in stoic.get_all_species_ids():
+            species_object = self.species_registry.get_species(sp_id)
+            atom_count = species_object.annotation      # A string
+            debug_info += f"| {sp_id} : {atom_count} "
+            if species_object.label == sp_id:
+                # If label is unchanged from its original value
+                species_object.label += f"({atom_count})"
+
+
+        print(f"    validated atom count: {stoic.standard_chemical_formula(reversible=True)}  {debug_info}")
+
+        return stoic
+
+
+
+    def generate_new_unique_reaction(self) -> Stoichiometry:
+        """
+        Reaction of type R1 + R2 <-> P, or 2 R <-> P,
+        sufficiently different from all previously generated reactions
+
+        :return:    An object of type "Stoichiometry" for the proposed new reaction
+        """
+        MAX_ATTEMPTS = 6        # To avoid infinite loops
+
         # Reaction R1 + R2 <-> P
-        rxn = self._assign_species_to_rxn()     # Object of type SimulationReaction
+        reactants, products  = self._assign_species_to_rxn()
+        print(f"generate_new_unique_reaction(): Tentatively considering reactants: {reactants} | products: {products}")
 
-        self._fulfill_reaction(rxn.stoichiometry)
+        n_attempts = 1
+        # Prevent re-adding reactions that identically occurred before
+        while (n_attempts <= MAX_ATTEMPTS) and (self._already_used(reactants, products)):
+            reactants, products = self._assign_species_to_rxn()
+            print(f"    [!] the previous combination had already been used.  Tentatively considering new "
+                  f"reactants: {reactants} | products: {products}")
+            n_attempts += 1
+        assert n_attempts <= MAX_ATTEMPTS, \
+            f"Giving up after {n_attempts} attempts.  It's proving very hard to generate random reactions that don't repeat," \
+            f" because you are requesting a large number of reactions ({self.n_rxns}), " \
+            f"relative to the {self.n_species} available species"
+
+        return Stoichiometry.from_reactants_products(reactants=reactants, products=products)
 
 
 
-    def solve_lhs_LONG(self, unset_reactants, total_reactant_atoms, total_product_atoms) -> bool:
+    def check_atom_count_consistency(self, stoic :Stoichiometry) -> bool:
         """
-        In general, this would be an equation of the form SUM[a_i * x_i] + total_reactant_atoms = total_product_atoms
-        i.e.   SUM[a_i * x_i]  = (total_product_atoms - total_reactant_atoms)
-        but the only scenarios we're covering for the lhs are :  x0 + x1  or  2 x0
+        Check whether atom accounting is balanced
+        across a reaction with the given stoichiometry
 
-        :param unset_reactants:
-        :param total_reactant_atoms:
-        :param total_product_atoms:
+        :param stoic:
         :return:
         """
-        number_unset_reactants = len(unset_reactants)
-
-        diff = total_product_atoms - total_reactant_atoms
-        if diff <= 0:
-            return False        # No solution exists
-
-        if number_unset_reactants == 1:     # We already handled the case where it's zero
-            # Scenario:  a0 * x0 = diff
-            b0 = unset_reactants[0].coeff
-            if diff % b0 != 0:
-                return False    # No integer solution exists
-            x0 = diff // b0
-            self.set_number_atoms(unset_reactants[0][1], x0)
-            return True
-        elif number_unset_reactants == 2:
-            # Scenario:  a0 * x0 + a1 * x1 = diff, but we only support x0 + x1 = diff
-            assert unset_reactants[0].coeff == 1, "Unsupported reaction stoichiometry"
-            assert unset_reactants[1].coeff == 1, "Unsupported reaction stoichiometry"
-            # We have x0 + x1 = diff
-            if diff < 2:
-                return False    # No solution exists
-            x0 = diff // 2      # Floor division (discard the decimal and rounds down)
-            x1 = diff - x0
-            self.set_number_atoms(unset_reactants[0].species_id, x0)
-            self.set_number_atoms(unset_reactants[1].species_id, x1)
-            return True
-        else:
-            raise Exception("Unsupported reaction stoichiometry")
-
-
-
-    def solve_lhs(self, a_list, alpha, beta) -> None|tuple:
-        """
-        In general, this would be an equation of the form SUM[a_i * x_i] + alpha = beta
-        i.e.   SUM[a_i * x_i]  = (beta - alpha)
-        but the only scenarios we're covering for the summation are :  x0 + x1  or  a0*x0
-
-        :param a_list: Only acceptable values are [1, 1] and [2]
-        :param alpha:
-        :param beta:
-        :return:
-        """
-        a_length = len(a_list)
-
-        assert a_length > 0, "this scenario (empty `a_list`) should be handled by the calling function"
-
-        diff = beta - alpha
-        if diff <= 0:
-            return None        # No solution exists
-
-        if a_length == 1:
-            # Scenario:  a0 * x0 = diff
-            b0 = a_list[0]
-            if diff % b0 != 0:
-                return None     # No integer solution exists
-            x0 = diff // b0
-            return (x0, )
-
-        elif a_length == 2:
-            # Scenario:  a0 * x0 + a1 * x1 = diff, but we only support x0 + x1 = diff
-            assert a_list == [1, 1], f"Unsupported reactant stoichiometry: {a_list}"
-            # We have x0 + x1 = diff
-            if diff < 2:
-                return None     # No solution exists
-            x0 = diff // 2      # Floor division (discard the decimal and rounds down)
-            x1 = diff - x0
-            return (x0, x1)
-        else:
-            raise Exception(f"Unsupported reactant stoichiometry: {a_list}")
-
-
-
-    def solve_both_sides(self, a_list, alpha, b_list, beta) -> None|tuple:
-        """
-        In general, this would be an equation of the form:
-                    SUM[a_i * x_i] + alpha = SUM[b_i * y_i] + beta
-        i.e.:       SUM[a_i * x_i] - SUM[b_i * y_i] = diff  , where diff = (beta - alpha)
-
-        We only support:
-            x0 + x1 + alpha = y0 + beta
-            2 x0    + alpha = y0 + beta
-
-        :param a_list: Only acceptable values are [1, 1] and [2]
-        :param alpha:
-        :param b_list: Only acceptable value is [1]
-        :param beta:
-        :return:
-        """
-        assert len(a_list) > 0, "this scenario (empty `a_list`) should be handled by the calling function"
-        assert len(b_list) > 0, "this scenario (empty `b_list`) should be handled by the calling function"
-
-        diff = beta - alpha
-
-        # We only support:
-        #             x0 + x1 + alpha = y0 + beta
-        #             2 x0    + alpha = y0 + beta
-        assert a_list == [1,1] or a_list == [2], f"Unsupported reactant stoichiometry: {a_list}"
-        assert b_list == [1], f"Unsupported product stoichiometry: {b_list}"
-
-
-        if len(a_list) == 1:
-            # Scenario: 2 x0  + alpha = y0 + beta
-            # ie.:      y0 = 2 x0 - diff
-            # if we set x0 = |diff| + 1 , it will be positive and > 0;
-            # then: y0 = 2 x0 - diff = 2 (|diff| + 1) - diff = (2 |diff| - diff) + 2 will be positive and > 0
-            x0 = abs(diff) + 1
-            y0 = 2 * x0 - diff
-            #self.set_number_atoms(unset_reactants[0].species_id, x0)
-            #self.set_number_atoms(unset_products[0].species_id, y0)
-            return  ( (x0, ), (y0, ) )
-
-        else:   # If we get here, `a_list` is of size 2
-            # Scenario: x0 + x1 + alpha = y0 + beta
-            # i.e.:     x0 + x1 - y0 = diff
-            if diff == 0:
-                # Equation becomes  x0 + x1 - y0 = 0 ; one solution is x0=16, x1=16, y0=32
-                x0 = 16
-                x1 = 16
-                y0 = 32
-            elif diff > 0:
-                # Equation is x0 + x1 - y0 = diff, where diff > 0 ; can simply set all vars to diff
-                x0 = diff
-                x1 = diff
-                y0 = diff
-            else:   # Case diff < 0
-                # Equation is x0 + x1 - y0 = -eps, with eps = -diff
-                # Can be re-written as:  y0 = (x0 + x1) + eps
-                # Since eps > 0, can set x0=eps, x1=eps, y0=3 eps
-                eps = -diff
-                x0 = eps
-                x1 = eps
-                y0 = 3*eps
-
-            #self.set_number_atoms(unset_reactants[0].species_id, x0)
-            #self.set_number_atoms(unset_reactants[1].species_id, x1)
-            #self.set_number_atoms(unset_products[0].species_id, y0)
-            return ( (x0,x1), (y0, ) )
-
-
-
-    def solve_rhs_UNNECESSARY(self, alpha, b_list, beta) -> None | tuple:
-        """
-        In general, this would be an equation of the form:   alpha = SUM[b_i * y_i] + beta
-        i.e.   SUM[b_i * y_i]  = (alpha - beta)
-        but the only scenario we're covering for the rhs are :  y0
-
-        :param alpha:
-        :param b_list:
-        :param beta:
-        :return:
-        """
-
-        diff =  alpha - beta
-        if diff <= 0:
-            return None        # No solution exists
-
-        if number_unset_products == 1:     # We already handled the case where it's zero
-            # Scenario:  b0 * y0 = diff
-            b0 = unset_products[0].coeff
-            assert b0 == 1, "Unsupported reaction stoichiometry"
-            # We have y0 = diff
-            y0 = diff
-            #self.set_number_atoms(unset_products[0].species_id, diff)
-            return (y0, )
-        else:
-            raise Exception("Unsupported reaction stoichiometry")
+        # TODO: pytest
+        check = sum(coeff * int(self.species_registry.get_species(sp).annotation)
+                    for sp, coeff in stoic.vector.items())
+        return check == 0   # Atom accounting is balanced
 
 
 
     def _fulfill_reaction(self, stoic :Stoichiometry) -> bool:
         """
         Only supports reactions of type  R1 + R2 <-> P  or  2 R <-> P
+
+        Along the way, assign compatible number of atoms to each species in the reaction,
+        and modify the species "label" property to be of the form 'X (n)' , where n is its total number of atoms
 
         :param stoic:   Object of type "Stoichiometry"
         :return:        True if possible, or False otherwise
@@ -494,19 +248,19 @@ class RandomReactionNetwork:
 
         products_with_counts = [ReactionTerm( coeff=p[0], species_id=p[1], atom_count=p[0] * self.get_number_atoms(p[1]) )
                                     for p in products]
-        print(f"   reactants_with_counts: {reactants_with_counts} \n   products_with_counts: {products_with_counts}")
+        #print(f"   reactants_with_counts: {reactants_with_counts} \n   products_with_counts: {products_with_counts}")
 
         total_reactant_atoms = sum(r.atom_count for r in reactants_with_counts)
         total_product_atoms  = sum(p.atom_count for p in products_with_counts)
-        print(f"   total_reactant_atoms: {total_reactant_atoms} | total_product_atoms: {total_product_atoms}")
+        #print(f"   total_reactant_atoms: {total_reactant_atoms} | total_product_atoms: {total_product_atoms}")
 
         unset_reactants = [ r  for r in reactants_with_counts if r.atom_count == 0]     # EXAMPLE: [(2, "R", 0)]
         unset_products =  [ p  for p in products_with_counts if p.atom_count == 0]     # EXAMPLE: [(1, "P", 0)]
-        print(f"   unset_reactants: {unset_reactants} \n   unset_products: {unset_products}")
+        #print(f"   unset_reactants: {unset_reactants} \n   unset_products: {unset_products}")
 
         unset_reactant_coefficients = [ r.coeff  for r in reactants_with_counts if r.atom_count == 0]       # EXAMPLE: [1, 1]
         unset_product_coefficients =  [ p.coeff  for p in products_with_counts if p.atom_count == 0]        # EXAMPLE: [2, 1]
-        print(f"   unset_reactant_coefficients: {unset_reactant_coefficients} \n   unset_product_coefficients: {unset_product_coefficients}")
+        #print(f"   unset_reactant_coefficients: {unset_reactant_coefficients} \n   unset_product_coefficients: {unset_product_coefficients}")
 
         number_unset_reactants = len(unset_reactants)
         number_unset_products =  len(unset_products)
@@ -562,14 +316,139 @@ class RandomReactionNetwork:
 
 
 
-    def _assign_species_to_rxn(self) -> SimulationReaction:
+
+    def solve_lhs(self, a_list, alpha :int, beta :int) -> None|tuple:
+        """
+        In general, this would be an equation of the form SUM[a_i * x_i] + alpha = beta
+
+        but the only scenarios we're covering for the summation are :  x0 + x1  or  a0*x0
+
+        :param a_list:  Only acceptable values are [1, 1] and [2]
+        :param alpha:
+        :param beta:
+        :return:        If no solution exists, return None; otherwise, return a solution as a tuple
+                            (x0,x1,...)
+        """
+        # Equation can be re-stated as:
+        #   SUM[a_i * x_i]  = diff, where diff = (beta - alpha)
+
+        a_length = len(a_list)
+
+        assert a_length > 0, "this scenario (empty `a_list`) should be handled by the calling function"
+
+        diff = beta - alpha
+        if diff <= 0:
+            return None        # No solution exists
+
+        if a_length == 1:
+            # Scenario:  a0 * x0 = diff
+            a0 = a_list[0]
+            if diff % a0 != 0:
+                return None     # No integer solution exists
+            x0 = diff // a0
+            assert a0*x0 + alpha == beta
+            return (x0, )
+
+        elif a_length == 2:
+            # Scenario:  a0 * x0 + a1 * x1 = diff, but we only support x0 + x1 = diff
+            assert a_list == [1, 1], f"Unsupported reactant stoichiometry: {a_list}"
+            # a0 = 1, a1 = 1
+            # We have x0 + x1 = diff
+            if diff < 2:
+                return None     # No solution exists
+            x0 = diff // 2      # Floor division (discard the decimal and rounds down)
+            x1 = diff - x0
+            assert x0 + x1 + alpha == beta
+            return (x0, x1)
+        else:
+            raise Exception(f"Unsupported reactant stoichiometry: {a_list}")
+
+
+
+    def solve_both_sides(self, a_list, alpha :int, b_list, beta :int) -> None|tuple:
+        """
+        Find an integer solution (NOT generally unique) to an equation of the form:
+                    SUM[a_i * x_i] + alpha = SUM[b_i * y_i] + beta
+        where the x_i's and the y_i's are the unknowns.  All ather values are given integers.
+
+        We currently only support:
+            x0 + x1 + alpha = y0 + beta
+            2 x0    + alpha = y0 + beta
+
+        :param a_list:  List representing vector [a0, a1, a2, ...]
+                            Only acceptable values are [1, 1] and [2]
+        :param alpha:
+        :param b_list:  Only acceptable value is [1]
+        :param beta:
+        :return:        If no solution exists, return None; otherwise, return a solution in the form
+                            ( (x0,x1,...) , (y0,y1,... ) )
+        """
+        assert len(a_list) > 0, "this scenario (empty `a_list`) should be handled by the calling function"
+        assert len(b_list) > 0, "this scenario (empty `b_list`) should be handled by the calling function"
+
+        # Equation can be re-stated as:
+        #       SUM[a_i * x_i] - SUM[b_i * y_i] = diff  , where diff = (beta - alpha)
+        diff = beta - alpha
+
+        # We only support:
+        #             x0 + x1 + alpha = y0 + beta
+        #             2 x0    + alpha = y0 + beta
+        #assert a_list == [1,1] or a_list == [2], f"Unsupported reactant stoichiometry: {a_list}"
+        assert len(a_list) == 1 or a_list == [1,1], f"Unsupported reactant stoichiometry: {a_list}"
+        assert b_list == [1], f"Unsupported product stoichiometry: {b_list}"
+
+
+        if len(a_list) == 1:    # Currently, only supporting [2]
+            # Scenario: a0 * x0  + alpha = y0 + beta
+            # ie.:      y0 = a0 * x0 - diff
+            # if we set x0 = |diff| + C , with C > 0, it will be positive and > 0;
+            # then: y0 = a0 * x0 - diff = a0 (|diff| + C) - diff = (a0 |diff| - diff) + a0*C will be positive and > 0
+            # For the arbitrary constant C we'll use 16: bigger numbers make downstream accounting easier
+
+            a0 = a_list[0]
+
+            # Scenario: 2 x0  + alpha = y0 + beta
+            # ie.:      y0 = 2 x0 - diff
+            # if we set x0 = |diff| + 1 , it will be positive and > 0;
+            # then: y0 = 2 x0 - diff = 2 (|diff| + 1) - diff = (2 |diff| - diff) + 2 will be positive and > 0
+            # Instead of adding 1, we'll add 16, to get bigger numbers, which make downstream accounting easier
+            x0 = abs(diff) + 16
+            y0 = a0 * x0 - diff
+            assert a0 * x0 + alpha == 1 * y0 + beta
+            return  ( (x0, ), (y0, ) )
+
+        else:   # If we get here, `a_list` is of size 2, and specifically is [1,1]
+            # Scenario: x0 + x1 + alpha = y0 + beta
+            # i.e.:     x0 + x1 - y0 = diff
+            if diff == 0:
+                # Equation becomes  x0 + x1 - y0 = 0 ; one solution is x0=16, x1=16, y0=32
+                x0 = 16
+                x1 = 16
+                y0 = 32
+            elif diff > 0:
+                # Equation is x0 + x1 - y0 = diff, where diff > 0 ; can simply set all vars to diff
+                x0 = diff
+                x1 = diff
+                y0 = diff
+            else:   # Case diff < 0
+                # Equation is x0 + x1 - y0 = -eps, with eps = -diff
+                # Can be re-written as:  y0 = (x0 + x1) + eps
+                # Since eps > 0, can set x0=eps, x1=eps, y0=3 eps
+                eps = -diff
+                x0 = eps
+                x1 = eps
+                y0 = 3*eps
+
+            assert x0 + x1 + alpha == y0 + beta
+            return ( (x0,x1), (y0, ) )
+
+
+
+    def _assign_species_to_rxn(self) -> tuple:
         """
         From the pool of available species, randomly assign reactants and products to
         the standard reaction  R + S <-> P  (note that R and S at times get assigned to the same species,
         and so the reaction form becomes 2 R <-> P)
-
-        #Along the way, assign compatible number of atoms to each reaction, and modify the species id
-        #to be of the form 'X (n)' , where n is the total number of atoms
 
         Note: validation checks are assumed to be done in the calling function
 
@@ -599,61 +478,11 @@ class RandomReactionNetwork:
                                         # so as to get a python list of strings
         products = products.tolist()
 
-        rxn = ReactionDefinition(reactants=reactants, products=products, reaction_model="mass action",
-                                 species_registry=self.species_registry)
-        return rxn.get_simulation_reactions(0)
-
-
-
-    def _assign_species_to_rxn_OLD(self, all_species_ids :[str]) -> (list, list):
-        """
-        From the pool of available species, randomly assign reactants and products to
-        the standard reaction  R + S <-> P  (note that R and S at times get assigned to the same species,
-        and so the reaction form becomes 2 R <-> P)
-
-        Along the way, assign compatible number of atoms to each reaction, and modify the species id
-        to be of the form 'X (n)' , where n is the total number of atoms
-
-        Note: validation checks are assumed to be done in the calling function
-
-        :param all_species_ids: All the species id's for the random network we're building
-        :return:                The pair (reactants, products),
-                                    where each element is a list of species id's
-                                    EXAMPLE (for a synthesis reaction):    (['C', 'C'], ['A'])
-        """
-        n_reactants = 2     # Note: they might end up being the same species
-        n_products = 1
-
-        # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
-        reactants = self.rng.choice(a=all_species_ids, size=n_reactants, replace=True)
-
-        # Likewise, random selection of products are with replacement, to allow reactions such as A -> 2 B
-        # However, do NOT pick the products from the pool of reactants that were used in this reaction!
-        available_pool = [c for c in all_species_ids
-                          if c not in reactants]         # EXAMPLE: ['X', 'Y']
-        #print(available_pool)
-
-        products = self.rng.choice(a=available_pool, size=n_products, replace=True)
-
-        reactants = reactants.tolist()  # Converts both the container (numpy.ndarray) and the element types (numpy.str_),
-                                        # so as to get a python list of strings
-        products = products.tolist()
-
         return reactants, products
 
 
 
-    def _atomic_accounting(self, reactants: list[str], products: list[str]):
-        """
-
-        :param reactants:   EXAMPLE: ['C', 'C']
-        :param products:    EXAMPLE: ['A']
-        :return:
-        """
-        pass
-
-
-    def setup_random_reactions(self, rxn_types :list[str], verbose=False) -> None:
+    def setup_random_reactions_OLD(self, rxn_types :list[str], verbose=False) -> None:
         """
         Create a network of random reactions, and populate with them the registry `self.reaction_data`
 
@@ -739,7 +568,7 @@ class RandomReactionNetwork:
         have already been used in a previously-generated random reaction,
         or in its reverse reaction.
 
-        The stoichiometry is not taken into account because, for example, if we already
+        The stoichiometry is NOT taken into account because, for example, if we already
         utilized D -> C , we do not want to generate D -> 2 C ,
         and thus regard it as "already used".
 
@@ -748,6 +577,7 @@ class RandomReactionNetwork:
             already_used(self, reactants="A", products="B") will be True
             already_used(self, reactants="B", products="A") will be True
             already_used(self, reactants=["A", "A'], products="B") will be True
+            already_used(self, reactants=["B", "B'], products="A") will be True
 
         :param reactants:   A list of the reactant species id's in the reaction to look up
         :param products:    A list of the products species id's in the reaction to look up
