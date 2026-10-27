@@ -197,11 +197,15 @@ class SimulationReaction:
 
     def set_parameters(self, parameters :dict, derived_pars=None) -> None:
         """
-        Set the kinetic parameters (won't affect other existing values not passed here)
+        Validate and set the passed kinetic parameters,
+        as well as any others derivable from them.
 
-        :param parameters:
+        Any existing values will be updated as applicable.
+        Unaffected values will be left unchanged.
+
+        :param parameters:      # EXAMPLE: {"kF": 1.234}
         :param derived_pars:
-        :return:
+        :return:                None
         """
         self.model.set_parameters(parameters=parameters, derived_pars=derived_pars)
 

@@ -81,55 +81,127 @@ class RandomReactionNetwork:
         #rxn_types = self.rng.choice(a=self.RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
         # EXAMPLE: [ReactionSynthesis, ReactionDecomposition, ReactionDecomposition, ReactionSynthesis]
 
+
+        self.temp = temp                                # System temperature in Kelvins
+
+
+        # The following "standard" species values are for accounting purpose,
+        # to ensure thermodynamic consistency across reaction cycles
         self.standard_species_enthalpy = {}             # A dictionary of random species enthalpies assigned to each species.
                                                         # EXAMPLE: { 'A': -10.474684757627816, 'B': 3.4399997584256923}
 
-        self.temp = temp                                # System temperature in Kelvins
+        self.standard_species_entropy = {}             # A dictionary of random species enthalpies assigned to each species.
+
+
 
         #self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
 
 
 
 
-    def set_number_atoms(self, species_id: str, atom_count :int) -> int:
+    def setup_random_reactions_OLD(self, rxn_types :list[str], verbose=False) -> None:
         """
-        Annotate the Species dataclass associated to the given species id
-        (in the context of the species registry stored in `self.species_registry`)
-        to record its specified atom count.
+        Create a network of random reactions, and populate with them the registry `self.reaction_data`
 
-        The value is turned into a string, and stored as the "annotation" property.
-
-        :param species_id:
-        :param atom_count:
-        :return:            The atom count passed to it
+        :param rxn_types:   List of names of reaction classes.
+                                EXAMPLE: ["ReactionSynthesis", "ReactionDecomposition", "ReactionDecomposition"]
+        :param verbose:
+        :return:            None
         """
-        species = self.species_registry.get_species(species_id)
-        species.annotation = str(atom_count)
-        return atom_count
+        MAX_ATTEMPTS = 6        # To avoid infinite loops
+
+        all_chems = self.species_registry.get_all_species_ids()             # Get all the id's of the species we're using
+        # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3", ...
+
+        k_diffusion_limit = 1e9  # Smoluchowski diffusion limit for bimolecular reactions
+
+        for r in rxn_types:
+            # For each reaction to create.  EXAMPLE: "ReactionSynthesis"
+            #print(f"Attempting to add reaction of type: {r}")
+            reactants, products = self._assign_species_to_rxn(r, all_chems)
+            #print(f"    Tentatively considering reactants: {reactants} | products: {products}")
+
+            n_attempts = 1
+            # Prevent re-adding reactions that identically occurred before
+            while n_attempts <= MAX_ATTEMPTS and self._already_used(reactants, products):
+                reactants, products = self._assign_species_to_rxn(r, all_chems)
+                #print(f"    the previous combination had already been used.  Tentatively considering new "
+                #      f"reactants: {reactants} | products: {products}")
+                n_attempts += 1
+            assert n_attempts <= MAX_ATTEMPTS, \
+                f"Giving up after {n_attempts} attempts.  It seems that you are requesting such a large number of reactions ({self.n_rxns}), " \
+                f"relative to the {self.n_species} available chemicals, that random reactions would be repeating"
+
+
+            delta_enthalpy = self.random_reaction_enthalpy(reactants, products)
+            delta_entropy = self.random_reaction_entropy(reaction_type=r)
+
+            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
+                                                                                   delta_S=delta_entropy,
+                                                                                   temp=self.temp)
+
+            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
+            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                                temp=self.temp)
+            if r == "ReactionSynthesis":
+                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
+            elif r == "ReactionDecomposition":
+                pass        # TODO: apply a diffusion limit to kR
+
+            i = self.reaction_registry.add_elementary_reaction(reactants=reactants, products=products,
+                                                               thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
+                                                               #delta_H=delta_enthalpy, delta_S=delta_entropy,
+                                                               kinetic_parameters={"kF": kF},
+                                                               temp=self.temp)
+
+            if verbose:
+                print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
+                print(self.reaction_registry.get_reaction(i).describe(detail="full"))
 
 
 
-    def get_number_atoms(self, species_id: str) -> int:
-        """
-        Look up the number of atoms set for the given species id.
-        If not set, return zero
+    def set_thermodynamics(self):
 
-        :param species_id:
-        :return:
-        """
-        field_value = self.species_registry.get_species(species_id).annotation
-        if field_value == "":   # Not set
-            return 0
+        r = "ReactionSynthesis"
+        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
 
-        return int(field_value)
+        for rxn in self.reaction_registry.get_all_reactions():
+            reactants = rxn.get_stoichiometry().get_reactant_ids()
+            products = rxn.get_stoichiometry().get_product_ids()
+
+            delta_enthalpy = self.random_reaction_enthalpy(reactants=reactants, products=products)
+            delta_entropy = self.random_reaction_entropy(reaction_type=r)
+
+            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
+                                                                                   delta_S=delta_entropy,
+                                                                                   temp=self.temp)
+
+            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
+            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                                temp=self.temp)
+            if r == "ReactionSynthesis":
+                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
+            elif r == "ReactionDecomposition":
+                raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
+
+
+            rxn.get_thermodynamics().delta_H = delta_enthalpy
+            rxn.get_thermodynamics().delta_S = delta_entropy
+            rxn.get_thermodynamics().delta_G = delta_gibbs_energy
+            rxn.get_thermodynamics().set_temperature(self.temp)     # This also acts as a validation
+
+            rxn.set_parameters(parameters={"kF": kF})
 
 
 
     def generate_multiple_random_reactions(self) -> None:
         """
-        Generate `self.n_rxns` random reaction that are all fairly different from one another,
+        Generate the stored (`self.n_rxns`) number of random reactions:
+        they are all different from one another,
         and in the process assign arbitrary but consistent numbers of atams to each involved species.
         NO thermodynamic or kinetic parameters yet set.
+
+        Populate `self.reaction_registry` with the newly-generated reactions
 
         :return:    None
         """
@@ -224,6 +296,39 @@ class RandomReactionNetwork:
         check = sum(coeff * int(self.species_registry.get_species(sp).annotation)
                     for sp, coeff in stoic.vector.items())
         return check == 0   # Atom accounting is balanced
+
+
+
+    def get_number_atoms(self, species_id: str) -> int:
+        """
+        Look up the number of atoms set for the given species id.
+        If not set, return zero
+
+        :param species_id:
+        :return:
+        """
+        field_value = self.species_registry.get_species(species_id).annotation
+        if field_value == "":   # Not set
+            return 0
+
+        return int(field_value)
+
+
+    def set_number_atoms(self, species_id: str, atom_count :int) -> int:
+        """
+        Annotate the Species dataclass associated to the given species id
+        (in the context of the species registry stored in `self.species_registry`)
+        to record its specified atom count.
+
+        The value is turned into a string, and stored as the "annotation" property.
+
+        :param species_id:
+        :param atom_count:
+        :return:            The atom count passed to it
+        """
+        species = self.species_registry.get_species(species_id)
+        species.annotation = str(atom_count)
+        return atom_count
 
 
 
@@ -480,68 +585,6 @@ class RandomReactionNetwork:
         return reactants, products
 
 
-
-    def setup_random_reactions_OLD(self, rxn_types :list[str], verbose=False) -> None:
-        """
-        Create a network of random reactions, and populate with them the registry `self.reaction_data`
-
-        :param rxn_types:   List of names of reaction classes.
-                                EXAMPLE: ["ReactionSynthesis", "ReactionDecomposition", "ReactionDecomposition"]
-        :param verbose:
-        :return:            None
-        """
-        MAX_ATTEMPTS = 6        # To avoid infinite loops
-
-        all_chems = self.species_registry.get_all_species_ids()             # Get all the id's of the species we're using
-        # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3", ...
-
-        k_diffusion_limit = 1e9  # Smoluchowski diffusion limit for bimolecular reactions
-
-        for r in rxn_types:
-            # For each reaction to create.  EXAMPLE: "ReactionSynthesis"
-            #print(f"Attempting to add reaction of type: {r}")
-            reactants, products = self._assign_species_to_rxn(r, all_chems)
-            #print(f"    Tentatively considering reactants: {reactants} | products: {products}")
-
-            n_attempts = 1
-            # Prevent re-adding reactions that identically occurred before
-            while n_attempts <= MAX_ATTEMPTS and self._already_used(reactants, products):
-                reactants, products = self._assign_species_to_rxn(r, all_chems)
-                #print(f"    the previous combination had already been used.  Tentatively considering new "
-                #      f"reactants: {reactants} | products: {products}")
-                n_attempts += 1
-            assert n_attempts <= MAX_ATTEMPTS, \
-                f"Giving up after {n_attempts} attempts.  It seems that you are requesting such a large number of reactions ({self.n_rxns}), " \
-                f"relative to the {self.n_species} available chemicals, that random reactions would be repeating"
-
-
-            delta_enthalpy = self.random_reaction_enthalpy(reactants, products)
-            delta_entropy = self.random_reaction_entropy(reaction_type=r)
-
-            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
-                                                                                   delta_S=delta_entropy,
-                                                                                   temp=self.temp)
-
-            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
-            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
-                                                                temp=self.temp)
-            if r == "ReactionSynthesis":
-                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
-            elif r == "ReactionDecomposition":
-                pass        # TODO: apply a diffusion limit to kR
-
-            i = self.reaction_registry.add_elementary_reaction(reactants=reactants, products=products,
-                                                               thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
-                                                               #delta_H=delta_enthalpy, delta_S=delta_entropy,
-                                                               kinetic_parameters={"kF": kF},
-                                                               temp=self.temp)
-
-            if verbose:
-                print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
-                print(self.reaction_registry.get_reaction(i).describe(detail="full"))
-
-
-
     def get_reaction_data(self) -> ReactionRegistry:
         """
         Extract and return an object containing all the reactions
@@ -597,6 +640,16 @@ class RandomReactionNetwork:
 
         return False
 
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   THERMODYNAMICS  ~                                       '''
+
+    def ________THERMODYNAMICS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def random_species_enthalpy(self, sigma=None, n=None) -> np.ndarray | float:
@@ -676,8 +729,8 @@ class RandomReactionNetwork:
         and v_i is the stoichiometric coefficient (negative for reactants,
         and positive for products)
 
-        :param reactants:   A list of the labels of the reactants
-        :param products:    A list of the labels of the reaction products
+        :param reactants:   A list of the species id's of the reactants
+        :param products:    A list of the species id's of the reaction products
         :return:            A random value for the change in enthalpy of the given reaction, in kJ/mol,
                                 normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
                                 thermodynamically consistent with all the previous random reactions added so far

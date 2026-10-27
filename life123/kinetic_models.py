@@ -73,7 +73,8 @@ class MassAction_Model:
         Validate and set the passed kinetic parameters,
         as well as any others derivable from them.
 
-        Any existing values will be updated as applicable
+        Any existing values will be updated as applicable.
+        Unaffected values will be left unchanged.
 
         :param parameters:
         :param derived_pars:
