@@ -21,7 +21,7 @@ class Stoichiometry:
 
     vector: Mapping[str, int]
     # Signed stoichiometric reaction vector.
-    # Maps species id -> signed stoichiometric coefficient.
+    # Maps species id -> signed stoichiometric coefficient (aka stoichiometric number)
     # Reactants are negative; products are positive.
     # Catalysts are not represented here, since their net coefficient is zero.
     # The signed coefficients ν_i, given a set of species X_i,
@@ -33,7 +33,7 @@ class Stoichiometry:
     # EXAMPLE: ["E"]    (list of species that have a net coefficient of zero in the reaction vector)
 
     species_registry: SpeciesRegistry = None    # OPTIONAL.  If present, the various species id's will refer
-                                                # to objects in this registry.  However, NOT enforced
+                                                # to objects in this registry.  However, their existence is NOT enforced
 
 
 
@@ -41,7 +41,8 @@ class Stoichiometry:
         """
         Automatically invoked by the constructor, just before it terminates.
 
-        Enforce non zero values in argument `coefficients`
+        Enforce non zero values in the signed stoichiometric coefficients;
+        also enforce the presence of at least 1 reactant and 1 product
 
         :return: None
         """
@@ -49,10 +50,10 @@ class Stoichiometry:
             assert coeff != 0, f"Stoichiometry instantiation: coefficients cannot be zero (species \"{sp}\") - " \
             f"if you want to specify an enzyme/catalyst, pass it as a list to the argument `catalysts`"
 
-        assert self.get_reactant_list(exclude_catalysts=True) != [], \
+        assert self.get_reactant_terms() != [], \
             f"Stoichiometry instantiation: no reactants are present in this stoichiometry ({self.vector})"
 
-        assert self.get_product_list(exclude_catalysts=True) != [], \
+        assert self.get_product_terms() != [], \
             f"Stoichiometry instantiation: no products are present in this stoichiometry ({self.vector})"
 
 
@@ -61,7 +62,7 @@ class Stoichiometry:
         """
         Return a dictionary form of the stoichiometry,
         mapping all species id's to their SIGNED stoichiometric coefficients.
-        IMPORTANT: catalysts, if any, carry a net signed stoichiometric coefficient of zero
+        IMPORTANT: catalysts, if any, carry a net signed stoichiometric coefficient of zero.
 
         :return:    A dictionary with the mapping of the species id's
                     to their signed stoichiometric coefficients
@@ -80,7 +81,7 @@ class Stoichiometry:
         we define the "reaction vector" of a reaction y -> y' (where y any y' are vectors)
         as:  y' - y
 
-        IMPORTANT: Note that catalysts, if any, are NOT included.
+        IMPORTANT: Note that CATALYSTS, if any, are NOT included.
 
         The component of (y′ − y) corresponding to species s is  y′_s − y_s,
         i.e the difference between the stoichiometric coefficient of s in the product complex y′ (the right-hand side of the reaction)
@@ -107,6 +108,42 @@ class Stoichiometry:
 
 
 
+
+    def get_reactant_ids(self, exclude_catalysts=False) -> set[str]:
+        """
+        Return the set of all reactant species id's
+
+        :param exclude_catalysts:   [OPTIONAL] If True, any involved catalysts will be excluded;
+                                        by default, False
+        :return:                    The set of all reactant species id's
+        """
+        # TODO: always exclude catalysts
+        s = { k for k,v in self.vector.items()  if v < 0 }    #  Set construction
+
+        if not exclude_catalysts:
+            s |= { c for c in self.catalysts}   # Set union
+
+        return s
+
+
+    def get_reactant_terms(self) -> set[tuple[int, str]]:
+        """
+        Return all reactants as a set of pairs
+        of the form (stoichiometry coefficient, species id).
+        Each pair is a stoichiometric term, or more explicitly, a stoichiometric-coefficient/species pair.
+
+        Catalysts, if any, are NOT included.
+        ~~~
+        EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
+                 then return { (2, "A"), (2, "B") }
+
+        :return:    A set of pairs.
+                        EXAMPLE: { (2, "A"), (2, "B") }
+        """
+        return { (-v, k)
+                    for k,v in self.vector.items() if v < 0 }
+
+
     def get_reactant_list(self, exclude_catalysts=False) -> list[tuple]:
         """
         Return all reactants as a list of pairs
@@ -117,10 +154,12 @@ class Stoichiometry:
                  and self.catalysts is ["E"]
                  then return [(2, "A"), (2, "B"), (1, "E")]
 
-        :param exclude_catalysts:
-        :return:    A list of pairs.  EXAMPLE: [(2, "A"), (2, "B"), (1, "E")]
+        :param exclude_catalysts:   [OPTIONAL] If True, any involved catalysts will be excluded;
+                                        by default, False
+        :return:                    A list of pairs.
+                                        EXAMPLE: [(2, "A"), (2, "B"), (1, "E")]
         """
-        # TODO: consider returning a set instead of a list
+        # TODO: being phased out in favor of get_reactant_terms()
         r_l = [ (-v, k)
                     for k,v in self.vector.items() if v < 0]
 
@@ -131,19 +170,37 @@ class Stoichiometry:
 
 
 
-    def get_reactant_ids(self, exclude_catalysts=False) -> Set[str]:
+    def get_product_ids(self, exclude_catalysts=False) -> set[str]:
         """
-        Return the set of all reactant species id's
+        Return the set of all product species id's
 
         :param exclude_catalysts:
         :return:
         """
-        s = { k for k,v in self.vector.items()  if v < 0 }    #  Set construction
+        s = { k for k,v in self.vector.items()  if v > 0 }    #  Set construction
 
         if not exclude_catalysts:
             s |= { c for c in self.catalysts}   # Set union
 
         return s
+
+
+    def get_product_terms(self) -> set[tuple[int, str]]:
+        """
+        Return all products as a set of pairs
+        of the form (stoichiometry coefficient, species id).
+        Each pair is a stoichiometric term, or more explicitly, a stoichiometric-coefficient/species pair.
+
+        Catalysts, if any, are NOT included.
+        ~~~
+        EXAMPLE: if self.vector is {"A": -2, "B":- 2, "P": 3}
+                 then return { (3, "P") }
+
+        :return:    A set of pairs.
+                        EXAMPLE: { (3, "P") }
+        """
+        return { (v, k)
+                    for k,v in self.vector.items() if v > 0 }
 
 
     def get_product_list(self, exclude_catalysts=False) -> list[tuple]:
@@ -159,7 +216,7 @@ class Stoichiometry:
         :param exclude_catalysts:
         :return:    A list of pairs.  EXAMPLE: [(3, "P"), (1, "E")]
         """
-        # TODO: consider returning a set instead of a list
+        # TODO: being phased out in favor of get_product_terms()
         p_l = [  (v, k)
                     for k,v in self.vector.items() if v > 0]
 
@@ -177,21 +234,6 @@ class Stoichiometry:
             d[cat] = 1
 
         return d
-
-
-    def get_product_ids(self, exclude_catalysts=False) -> Set[str]:
-        """
-        Return the set of all product species id's
-
-        :param exclude_catalysts:
-        :return:
-        """
-        s = { k for k,v in self.vector.items()  if v > 0 }    #  Set construction
-
-        if not exclude_catalysts:
-            s |= { c for c in self.catalysts}   # Set union
-
-        return s
 
 
 

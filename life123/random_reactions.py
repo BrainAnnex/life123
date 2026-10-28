@@ -2,13 +2,14 @@ from life123.species_registry import SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
-from typing import NamedTuple
+from typing import NamedTuple, Mapping
 import math
 import numpy as np
 
 
 
 class ReactionTerm(NamedTuple):
+    # A Stoichiometric Term that also stores the total atom count
     # EXAMPLE: (2, "R", 20)     used to indicate a reaction term 2R , with a total atom count of 20 (each species R contains 10 atoms)
     coeff: int
     species_id: str
@@ -133,7 +134,7 @@ class RandomReactionNetwork:
                 f"relative to the {self.n_species} available chemicals, that random reactions would be repeating"
 
 
-            delta_enthalpy = self.random_reaction_enthalpy(reactants, products)
+            delta_enthalpy = self.random_reaction_enthalpy_OLD(reactants, products)
             delta_entropy = self.random_reaction_entropy(reaction_type=r)
 
             delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
@@ -160,16 +161,18 @@ class RandomReactionNetwork:
 
 
 
-    def set_thermodynamics(self):
+    def assign_thermodynamics(self):
 
-        r = "ReactionSynthesis"
+        r = "ReactionSynthesis"     # The only type currently supported
         k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
 
         for rxn in self.reaction_registry.get_all_reactions():
-            reactants = rxn.get_stoichiometry().get_reactant_ids()
-            products = rxn.get_stoichiometry().get_product_ids()
+            #print("Assigning thermodynamic data to reaction ", rxn.describe("minimal"))
 
-            delta_enthalpy = self.random_reaction_enthalpy(reactants=reactants, products=products)
+            #reactant_terms = rxn.get_stoichiometry().get_reactant_terms()    # EXAMPLE: { (2, "R") }
+            #product_terms = rxn.get_stoichiometry().get_product_terms()      # EXAMPLE: { (1, "P") }
+
+            delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=rxn.get_stoichiometry().get_reaction_vector())
             delta_entropy = self.random_reaction_entropy(reaction_type=r)
 
             delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
@@ -184,19 +187,25 @@ class RandomReactionNetwork:
             elif r == "ReactionDecomposition":
                 raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
 
+            thermo = {"delta_H": delta_enthalpy, "delta_S": delta_entropy, "delta_G": delta_gibbs_energy}
 
+            # This also acts as a validation
+            rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo, temp=self.temp)
+
+            """
             rxn.get_thermodynamics().delta_H = delta_enthalpy
             rxn.get_thermodynamics().delta_S = delta_entropy
             rxn.get_thermodynamics().delta_G = delta_gibbs_energy
-            rxn.get_thermodynamics().set_temperature(self.temp)     # This also acts as a validation
+            rxn.get_thermodynamics().set_temperature(self.temp)     
+            """
 
             rxn.set_parameters(parameters={"kF": kF})
 
 
 
-    def generate_multiple_random_reactions(self) -> None:
+    def generate_multiple_random_reactions(self, n_rxns :int) -> None:
         """
-        Generate the stored (`self.n_rxns`) number of random reactions:
+        Generate the given number of random reactions:
         they are all different from one another,
         and in the process assign arbitrary but consistent numbers of atams to each involved species.
         NO thermodynamic or kinetic parameters yet set.
@@ -205,7 +214,9 @@ class RandomReactionNetwork:
 
         :return:    None
         """
-        for _ in range(self.n_rxns):
+        self.n_rxns = n_rxns
+
+        for _ in range(n_rxns):
             stoic = self.generate_new_consistent_unique_reaction()
 
             self.reaction_registry.add_elementary_reaction(reactants=stoic.get_reactant_list(),
@@ -662,13 +673,15 @@ class RandomReactionNetwork:
         and with the given value for the standard deviation sigma.
 
         EXAMPLE: a value of 40.4145 for sigma has the effect of making the derived SD
-        of the sum of 3 random values to be about
-        sqrt(3) * sigma = 70 kJ/mol
-        For example, the sum of 3 random values comes up in determining
-        the reaction enthalpy changes in reactions such as  A + B <-> C ,
-        as computed by random_reaction_enthalpy()
-        [But in the case of reactions such as 2 A <-> C, the reaction enthalpy change
-        would be sqrt(2**2 + 1) * sigma = sqrt(5) * sigma = 90.4 kJ/mol]
+            of the signed sum of 3 random values to be about
+            sqrt(3) * sigma = 70 kJ/mol
+            For example, the signed sum of 3 random values comes up in determining
+            the reaction enthalpy changes in reactions such as  A + B <-> C ,
+            as computed by random_reaction_enthalpy()
+            [But in the case of reactions such as 2 A <-> C, the reaction enthalpy change
+            would be sqrt(2**2 + 1) * sigma = sqrt(5) * sigma = 90.4 kJ/mol]
+
+            The average of the signed sum of the 3 random values is zero
 
         :param sigma:   [OPTIONAL] The standard deviation of the (zero-centered)
                             normal distribution used to generate all the values.
@@ -704,7 +717,7 @@ class RandomReactionNetwork:
 
 
 
-    def random_reaction_enthalpy(self, reactants :[str], products :[str]):
+    def random_reaction_enthalpy_OLD(self, reactants :[str], products :[str]):
         """
         Attempt to provide a plausible regime for non-enzymatic small-molecule aqueous reactions,
         and thermodynamically consistent with all the previous random reactions added so far.
@@ -761,6 +774,46 @@ class RandomReactionNetwork:
             reaction_enthalpy = reaction_enthalpy + h_1 + h_2
 
         return reaction_enthalpy
+
+
+
+    def random_reaction_enthalpy(self, reaction_vector :Mapping[str, int]):
+        """
+        Attempt to provide a plausible regime for non-enzymatic small-molecule aqueous reactions,
+        and thermodynamically consistent with all the previous random reactions added so far.
+
+        It aims to randomly generate reaction ΔH values that are normally-distributed, with a mean of zero,
+        and a standard deviation of roughly 70-90 kJ/mol
+
+        With σ ≈ 70 kJ/mol for ΔH:
+            ~68% of reactions fall within ±70 kJ/mol    (one standard deviation from the mean)
+            ~95% within ±140 kJ/mol                     (2 standard deviations from the mean)
+
+        That is the plausible range for non-enzymatic small-molecule chemistry.  [TODO: FURTHER VERIFY]
+
+        So, statistically:
+            - You'll get many moderate reactions
+            - Some strongly exothermic/endothermic ones
+
+        For a given elementary reaction, specified by its reactants and products,
+        compute the Sum_i[v_i * H0_i] ,
+        where i ranges over all the species in the reaction,
+        H0_i is the standard enthalpy of that species,
+        and v_i is the stoichiometric coefficient (negative for reactants,
+        and positive for products)
+
+        :param reaction_vector: The non-zero components of the reaction vector,
+                                    written as a dict mapping from species id to its component value.
+                                    EXAMPLE: {"A": -1, "P": 2, "Q": 1}
+
+        :return:            A random value for the change in enthalpy of the given reaction, in kJ/mol,
+                                normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
+                                thermodynamically consistent with all the previous random reactions added so far
+        """
+        return sum([coeff * self.get_species_enthalpy(sp)
+                                    for sp, coeff in reaction_vector.items()]
+                  )
+
 
 
 

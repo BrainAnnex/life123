@@ -125,14 +125,14 @@ class ThermoDynamics:
 
 
     @classmethod
-    def extract_thermodynamic_data(cls, temp, K=None, delta_H=None, delta_S=None, delta_G=None) -> dict:
+    def extract_thermodynamic_data(cls, temp, K_eq=None, delta_H=None, delta_S=None, delta_G=None) -> dict:
         """
         Given the system temperature, and any combination of thermodynamic data,
         verify the consistency of the given data,
         and derive whatever is missing and can be derived
 
         :param temp:    System's temperature, in degree Kelvins
-        :param K:       [OPTIONAL] The reaction's equilibrium constant
+        :param K_eq:    [OPTIONAL] The reaction's equilibrium constant
         :param delta_H: [OPTIONAL] The reaction's change in Enthalpy (from reactants to products),
                             in kJ/mol           NOTE it's KILO-Joules
         :param delta_S: [OPTIONAL] The reaction's change in Entropy (from reactants to products),
@@ -149,9 +149,9 @@ class ThermoDynamics:
             "extract_thermodynamic_data(): a temperature value (in K) must be passed to argument `temp`"
 
 
-        if (K is not None):
+        if (K_eq is not None):
             # If the temperature is set, compute the change in Gibbs Free Energy
-            delta_G_derived = cls.gibbs_energy_from_standard_equilibrium_constant(K_standard= K, temp = temp)
+            delta_G_derived = cls.gibbs_energy_from_standard_equilibrium_constant(K_standard= K_eq, temp = temp)
             if delta_G is None:
                 delta_G = delta_G_derived
             else:   # If already present (passed as argument), make sure that the two match!
@@ -175,10 +175,10 @@ class ThermoDynamics:
 
 
         if delta_G is not None:
-            if K is None:
+            if K_eq is None:
                 # Compute the equilibrium constant (from the thermodynamic data)
                 # Note: no need to do it if K is present, because we ALREADY checked for consistency
-                K = ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = temp)
+                K_eq = ThermoDynamics.standard_equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = temp)
 
             # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
             if (delta_H is None) and (delta_S is not None):
@@ -187,7 +187,7 @@ class ThermoDynamics:
                 delta_S = ThermoDynamics.entropy_from_gibbs_energy(delta_G=delta_G, delta_H=delta_H, temp=temp)
 
 
-        return {"K": K, "delta_H": delta_H, "delta_S": delta_S, "delta_G": delta_G}
+        return {"K": K_eq, "delta_H": delta_H, "delta_S": delta_S, "delta_G": delta_G}
 
 
 

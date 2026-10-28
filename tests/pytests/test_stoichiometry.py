@@ -75,6 +75,35 @@ def test_get_reaction_vector():
 
 
 
+def test_get_reactant_ids():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_reactant_ids() == {"A", "B"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_reactant_ids() == {"A", "B", "E"}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_reactant_ids(exclude_catalysts=True) == {"A", "B"}
+
+
+def test_get_reactant_terms():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_reactant_terms() == {(2, "A"), (2, "B")}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_reactant_terms() == { (2, "A"), (2, "B") }
+
+    sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
+    assert rxn_defn.stoichiometry.get_reactant_terms() == {(1, "A")}
+
+    sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                  products=["CO2", (2, "H2O")], species_registry=sr)
+    assert rxn_defn.stoichiometry.get_reactant_terms() == {(1, "CH4"), (2, "O2")}
+
+
+
 def test_get_reactant_list():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
     assert s.get_reactant_list() == [(2, "A"), (2, "B")]
@@ -92,15 +121,35 @@ def test_get_reactant_list():
     assert rxn_defn.stoichiometry.get_reactant_list() == [(1, "CH4"), (2, "O2")]
 
 
-def test_get_reactant_ids():
+
+def test_get_product_ids():
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
-    assert s.get_reactant_ids() == {"A", "B"}
+    assert s.get_product_ids() == {"P"}
 
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
-    assert s.get_reactant_ids() == {"A", "B", "E"}
+    assert s.get_product_ids() == {"P", "E"}
 
     s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
-    assert s.get_reactant_ids(exclude_catalysts=True) == {"A", "B"}
+    assert s.get_product_ids(exclude_catalysts=True) == {"P"}
+
+
+
+def test_get_product_terms():
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
+    assert s.get_product_terms() == {(3, "P")}
+
+    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
+    assert s.get_product_terms() == {(3, "P")}
+
+    sr = SpeciesRegistry(ids=["A", "B"])
+    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=sr, reaction_model="mass action")
+    assert rxn_defn.stoichiometry.get_product_terms() == {(1, "B")}
+
+
+    sr = SpeciesRegistry(ids=["CH4", "O2", "CO2", "H2O"])
+    rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
+                                  products=["CO2", (2, "H2O")], species_registry=sr)
+    assert rxn_defn.stoichiometry.get_product_terms() == {(1, "CO2"), (2, "H2O")}
 
 
 
@@ -120,17 +169,6 @@ def test_get_product_list():
     rxn_defn = ReactionDefinition(reactants=["CH4", (2, "O2")],
                                   products=["CO2", (2, "H2O")], species_registry=sr)
     assert rxn_defn.stoichiometry.get_product_list() == [(1, "CO2"), (2, "H2O")]
-
-
-def test_get_product_ids():
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3})
-    assert s.get_product_ids() == {"P"}
-
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
-    assert s.get_product_ids() == {"P", "E"}
-
-    s = Stoichiometry(vector={"A": -2, "B":- 2, "P": 3}, catalysts=["E"])
-    assert s.get_product_ids(exclude_catalysts=True) == {"P"}
 
 
 

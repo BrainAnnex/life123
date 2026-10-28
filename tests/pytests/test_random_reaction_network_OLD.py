@@ -154,53 +154,6 @@ def test_random_species_enthalpy():
 
 
 
-def test_random_reaction_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-
-    result_1 = net.random_reaction_enthalpy(reactants=["A", "B"], products="C")
-    #print(net.standard_species_enthalpy)
-
-    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
-    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
-    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
-
-    assert np.allclose(result_1, -0.09060878868225242)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
-    # ΔH = HC − HA − HB
-
-    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "B"])
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-    result_1 = net.random_reaction_enthalpy(reactants=["A", "A"], products="C")
-    assert np.allclose(result_1, 18.64658849823368)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - 2 * net.get_species_enthalpy("A"))
-    # ΔH = HC - 2 HA
-
-    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "A"])
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-
-def test_random_reaction_enthalpy_2():
-    net = RandomReactionNetwork(n_species=20, n_rxns=30, seed=8492342, verbose=False)
-
-    # Extract the delta_H values for all the reactions
-    H_list = [rxn.get_thermodynamics().delta_H
-              for rxn in net.get_reaction_data().get_all_reactions()]
-
-    assert len(H_list) == net.n_rxns
-    #print(np.mean(H_list))
-    #print(np.std(H_list))
-    # Note: the values are subject to change, if changes are made in RandomReactionNetwork's usage of random calls
-    assert np.allclose(np.mean(H_list), 1.134796074882131)  # This will approach 0
-    assert np.allclose(np.std(H_list), 75.23219472302631)   # Roughly around 70
-
-
 
 def test_random_entropy():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)

@@ -60,15 +60,79 @@ def test_get_number_atoms():
 
 
 
+def test_random_reaction_enthalpy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -1, "B": -1, "C": 1})
+    #print(net.standard_species_enthalpy)
+
+    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
+    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
+    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
+
+    assert np.allclose(result_1, -0.09060878868225242)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
+    # ΔH = HC − HA − HB
+
+
+    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 1, "B": 1})
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -2, "C": 1})
+    assert np.allclose(result_1, 18.64658849823368)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - 2 * net.get_species_enthalpy("A"))
+    # ΔH = HC - 2 HA
+
+    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 2})
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+
+def test_assign_thermodynamics():
+    net = RandomReactionNetwork(n_species=300, n_rxns=0, seed=8492342, verbose=False)
+
+    net.generate_multiple_random_reactions(n_rxns=150)
+
+    net.assign_thermodynamics()
+
+    # Extract the delta_H values for all the reactions
+    H_list = [rxn.get_thermodynamics().delta_H
+              for rxn in net.get_reaction_data().get_all_reactions()]
+
+    assert len(H_list) == 150
+    #print(H_list)
+
+    #print(np.mean(H_list))
+    #print(np.std(H_list))
+    # Note: the values are subject to change, if changes are made in RandomReactionNetwork's usage of random calls
+    assert np.allclose(np.mean(H_list), -4.217131270343261)  # This will approach 0
+    assert np.allclose(np.std(H_list),  76.38392872589338)   # Roughly around 70 - 90 (much closer to 70)
+
+    # 25 species 40 rnxs
+    #8.642044062313182
+    #77.12230122272996
+
+    # 25 species 55 rnxs
+    # -6.088549189861795
+    #66.58801977050156
+
+
+
+
 def test_generate_multiple_random_reactions():
 
     net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
-    net.generate_multiple_random_reactions()
+    net.generate_multiple_random_reactions(0)
     assert net.reaction_registry.number_of_reactions() == 0
 
 
-    net = RandomReactionNetwork(n_species=4, n_rxns=1, seed=1234)
-    net.generate_multiple_random_reactions()
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+    net.generate_multiple_random_reactions(1)
     assert net.reaction_registry.number_of_reactions() == 1
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
@@ -77,8 +141,8 @@ def test_generate_multiple_random_reactions():
     assert net.species_registry.get_species('D').annotation == "16"
 
 
-    net = RandomReactionNetwork(n_species=4, n_rxns=2, seed=1234)
-    net.generate_multiple_random_reactions()
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+    net.generate_multiple_random_reactions(2)
     assert net.reaction_registry.number_of_reactions() == 2
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
@@ -91,8 +155,8 @@ def test_generate_multiple_random_reactions():
     assert net.species_registry.get_species('D').annotation == "16"
 
 
-    net = RandomReactionNetwork(n_species=4, n_rxns=3, seed=1234)
-    net.generate_multiple_random_reactions()
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
+    net.generate_multiple_random_reactions(3)
     assert net.reaction_registry.number_of_reactions() == 3
     rxns = net.reaction_registry.get_all_reactions()
     r = rxns[0]
@@ -108,8 +172,8 @@ def test_generate_multiple_random_reactions():
     assert net.species_registry.get_species('D').annotation == "16"
 
 
-    net = RandomReactionNetwork(n_species=6, n_rxns=4, seed=987654321)
-    net.generate_multiple_random_reactions()
+    net = RandomReactionNetwork(n_species=6, n_rxns=0, seed=987654321)
+    net.generate_multiple_random_reactions(4)
     assert net.reaction_registry.number_of_reactions() == 4
     rxns = net.reaction_registry.get_all_reactions()
     assert rxns[0].stoichiometry.vector == {'E': -1, 'B': -1, 'F': 1}  # E + B -> F

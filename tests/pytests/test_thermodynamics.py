@@ -133,7 +133,7 @@ def test_extract_thermodynamic_data():
     assert result == {"K": None, "delta_H": None, "delta_S": None, "delta_G": None}
 
 
-    result = ThermoDynamics.extract_thermodynamic_data(temp=100, K=3)
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, K_eq=3)
     assert result["K"] == 3
     assert result["delta_H"] is None
     assert result["delta_S"] is None
@@ -149,7 +149,7 @@ def test_extract_thermodynamic_data():
 
     with pytest.raises(Exception):
         # Inconsistent thermodynamic data
-        ThermoDynamics.extract_thermodynamic_data(temp=100, K=3, delta_G=666.)
+        ThermoDynamics.extract_thermodynamic_data(temp=100, K_eq=3, delta_G=666.)
 
 
     result = ThermoDynamics.extract_thermodynamic_data(temp=300, delta_H=10, delta_S=-40)
@@ -164,7 +164,7 @@ def test_extract_thermodynamic_data():
         ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, delta_S=-3, delta_G=999)
 
 
-    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, K=0.38205953171)
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, K_eq=0.38205953171)
     assert np.allclose(result["K"], 0.38205953171)
     assert result["delta_H"] == 500
     assert np.allclose(result["delta_S"], 4992)
@@ -173,7 +173,7 @@ def test_extract_thermodynamic_data():
 
     with pytest.raises(Exception):
         # Inconsistent thermodynamic data
-        ThermoDynamics.extract_thermodynamic_data(temp=100, K=2, delta_H=500, delta_S=-3)
+        ThermoDynamics.extract_thermodynamic_data(temp=100, K_eq=2, delta_H=500, delta_S=-3)
 
 
     result = ThermoDynamics.extract_thermodynamic_data(temp=300, delta_H=30, delta_G=20)

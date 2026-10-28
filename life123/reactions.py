@@ -18,7 +18,8 @@ from life123.units import show_standard_units, convert, K, C
                             #       and of making the class more efficient
 class ReactionThermodynamics:
     """
-    Thermodynamic data belonging to a particular reaction
+    Thermodynamic data belonging to a particular reaction.
+    More specifically, belonging to an object of type "ReactionDefinition"
     """
     delta_H: float | None = None
     delta_S: float | None = None
@@ -35,7 +36,7 @@ class ReactionThermodynamics:
 
         :return: None
         """
-        self.set_temperature(self.temp)
+        self.set_temperature(self.temp) # This will raise an Exception if any inconsistency is detected
 
 
 
@@ -58,10 +59,33 @@ class ReactionThermodynamics:
 
 
 
+    def set_thermodynamics_data(self, parameters :dict, temp=None):
+        """
+        Set all the thermodynamic data; missing values that are already set aren't changed.
+        If the temperature is specified, also set any thermodynamic data derivable from
+        the given temperature and all stored thermodynamic data.
+        Raise an Exception if any inconsistency is detected.
+
+        :param parameters:
+        :param temp:
+        :return:
+        """
+        if "delta_H" in parameters:
+            self.delta_H = parameters["delta_H"]
+        if "delta_S" in parameters:
+            self.delta_S = parameters["delta_S"]
+        if "delta_G" in parameters:
+            self.delta_G = parameters["delta_G"]
+
+        if temp is not None:
+            self.set_temperature(self.temp)     # This also acts as a validation
+
+
+
     def set_temperature(self, temp :float) -> None:
         """
-        Set all the thermodynamic data derivable from the given temperature,
-        and all stored thermodynamic data.
+        Set all the thermodynamic data derivable from
+        the given temperature and all stored thermodynamic data.
         Raise an Exception if any inconsistency is detected.
 
         :param temp:    System temperature in Kelvins.  For now, assumed constant everywhere,
@@ -69,6 +93,7 @@ class ReactionThermodynamics:
                             If the temp gradually changes, periodically call this method.
         :return:        None
         """
+        # TODO: maybe merge with set_thermodynamics_data()
         #TODO: maybe don't pass `temp` as arg, since available as self.temp
         #TODO: maybe rename to "apply_temperature()" or "derive_parameters()"
         # Process the thermodynamic data, and update various object attributes accordingly
@@ -76,7 +101,7 @@ class ReactionThermodynamics:
         if temp is None:
             return      # Can't do anything!
 
-        thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K_eq,
+        thermo_data = ThermoDynamics.extract_thermodynamic_data(K_eq=self.K_eq,
                                                                 delta_H=self.delta_H, delta_S=self.delta_S, delta_G=self.delta_G,
                                                                 temp=temp)
 
