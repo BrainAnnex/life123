@@ -2,6 +2,7 @@ from life123.species_registry import SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
+from life123.numerical import Numerical
 from typing import NamedTuple, Mapping
 import math
 import numpy as np
@@ -14,6 +15,7 @@ class ReactionTerm(NamedTuple):
     coeff: int
     species_id: str
     atom_count: int
+
 
 
 class RandomReactionNetwork:
@@ -35,28 +37,30 @@ class RandomReactionNetwork:
     """
 
     def __init__(self, n_species :int, n_rxns :int, seed=None,
-                 temp=298.15, thermodynamic_ruggedness = 2.0, verbose=False):
+                 temp=298.15):
         """
         :param n_species:           Integer >=3, with the desired number of chemicals species
-        :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
+        :param n_rxns:              Number of desired reactions.
+                                        Use 0 to initialize this object without actually generating any random reaction
         :param seed:                [OPTIONAL] A (large) integer, to guarantee consistent random runs
         :param temp:                [OPTIONAL] Temperature in Kelvins.  By default, 298.15 K
-        :param thermodynamic_ruggedness: [OPTIONAL] It affects the magnitudes of the random reactions delta Gibbs energy values,
-                                            by means of picking the standard deviation of the normal distribution
-                                            used to generate the random values for the SPECIES enthalpy.
-                                            Very rough guidelines:
-                                                ruggedness	σ(H)	    behavior
-                                                    0.5	    10	    metabolism-like
-                                                    1	    20	    moderate
-                                                    1.5	    30	    broad chemistry
-                                                    2	    40	    rugged chemistry
-                                            For example, a value of 40.4145 for sigma has the effect of
-                                            making the derived SD for the REACTION delta_H value to be sqrt(3) * sigma = 70 kJ/mol
-                                            For more details, see random_species_enthalpy()
-
-        :param verbose:             [OPTIONAL] Some extra printout if True
         """
-        self.species_sigma_entropy = thermodynamic_ruggedness * 40.4145 / 2
+        # The following 4 parameters are calibrated to our dominant reaction pattern, A + B <-> P
+        # (only sporadically it is in the form 2 A <-> P)
+        self.species_enthalpy_mean = 0         # kJ/mol	        Reaction Target: mean(Delta H^0) = 0
+        self.species_enthalpy_sd = 40.4145188  # kJ/mo          Reaction Target: Std Dev(Delta H^0) = 70
+
+        # Verify consistency for reactions with stoichiometry [-1, -1, 1]
+        common_mean, common_sigma = Numerical.linear_combination_normals(coeff=[-1, -1, 1], target_mean=0, target_sigma=70)
+        np.allclose((common_mean, common_sigma), (0, 40.4145188))
+
+        self.species_entropy_mean = 40          # J/(mol·K)     Reaction Target: mean(Delta S^0) = -40  [notice the sign inversion]
+        self.species_entropy_sd = 11.547        # J/(mol·K)     Reaction Target: Std Dev(Delta S^0) = 20
+
+        # Verify consistency for reactions with stoichiometry [-1, -1, 1]
+        common_mean, common_sigma = Numerical.linear_combination_normals(coeff=[-1, -1, 1], target_mean=-40, target_sigma=20)
+        np.allclose((common_mean, common_sigma), (40, 11.547))
+
 
         self.kB_over_h = 2.08366191233e10 # K-1 s-1
                                 # Boltzmann constant / Plank constant
@@ -64,7 +68,7 @@ class RandomReactionNetwork:
                                 #       Boltzmann constant = 1.380649 × 10-23 J K-1
                                 #       Plank constant = 6.62607015 × 10-34 J s
 
-        self.RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # NOT IN CURRENT USE
+        self.RXN_CHOICES = ["ReactionSynthesis"]  # NOT IN CURRENT USE
         # Available reaction classes
 
 
@@ -106,8 +110,8 @@ class RandomReactionNetwork:
         self.standard_species_entropy = {}             # A dictionary of random species enthalpies assigned to each species.
 
 
-
-        #self.setup_random_reactions(rxn_types=rxn_types, verbose=verbose)
+        if n_rxns > 0:
+            self.generate_random_reaction_network(n_rxns)
 
 
 
@@ -171,6 +175,23 @@ class RandomReactionNetwork:
                 print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
                 print(self.reaction_registry.get_reaction(i).describe(detail="full"))
 
+
+
+    def generate_random_reaction_network(self, n_rxns :int) -> None:
+        """
+        Generate the given number of random reactions:
+        they are all different from one another,
+        and in the process assign arbitrary but consistent numbers of atams to each involved species.
+
+        Then assign thermodynamic and kinetic parameters.
+
+        Populate `self.reaction_registry` with the newly-generated reactions
+
+        :return:    None
+        """
+        self.generate_multiple_random_reactions(n_rxns)
+
+        self.assign_thermodynamics()
 
 
 
@@ -640,11 +661,12 @@ class RandomReactionNetwork:
         r = "ReactionSynthesis"     # The only type currently supported
         k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
 
-        for rxn in self.reaction_registry.get_all_reactions():
+        for rxn in self.get_all_random_reactions():
             #print("Assigning thermodynamic data to reaction ", rxn.describe("minimal"))
+            reaction_vector=rxn.get_stoichiometry().get_reaction_vector()
 
-            delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=rxn.get_stoichiometry().get_reaction_vector())
-            delta_entropy = self.random_reaction_entropy_OLD(reaction_type=r)
+            delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=reaction_vector)
+            delta_entropy = self.random_reaction_entropy(reaction_vector=reaction_vector)
 
             delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
                                                                                    delta_S=delta_entropy,
@@ -653,15 +675,17 @@ class RandomReactionNetwork:
             forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
             kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                                 temp=self.temp)
+
+            # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
             if r == "ReactionSynthesis":
-                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
+                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
             elif r == "ReactionDecomposition":
                 raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
 
-            thermo = {"delta_H": delta_enthalpy, "delta_S": delta_entropy, "delta_G": delta_gibbs_energy}
+            thermo_data = {"delta_H": delta_enthalpy, "delta_S": delta_entropy, "delta_G": delta_gibbs_energy}
 
             # This also acts as a validation
-            rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo, temp=self.temp)
+            rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=self.temp)
 
             """
             rxn.get_thermodynamics().delta_H = delta_enthalpy
@@ -670,11 +694,11 @@ class RandomReactionNetwork:
             rxn.get_thermodynamics().set_temperature(self.temp)     
             """
 
-            rxn.set_parameters(parameters={"kF": kF})
+            rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
 
 
 
-    def random_species_enthalpy(self, sigma=None, n=None) -> np.ndarray | float:
+    def generate_random_species_enthalpy(self, n=None) -> np.ndarray | float:
         """
         Generate a random "standard enthalpy" value to assign to each of our chemical species.
         Essentially, a species standard enthalpy is a generalized, randomized version
@@ -694,70 +718,64 @@ class RandomReactionNetwork:
 
             The average of the signed sum of the 3 random values is zero
 
-        :param sigma:   [OPTIONAL] The standard deviation of the (zero-centered)
-                            normal distribution used to generate all the values.
-                            Default: 40.4145 kJ/mol
         :param n:       [OPTIONAL] The number of desired values.
                             If None (default) a single value is generated
         :return:        If n isn't None, return a Numpy Array with n numbers;
                             otherwise, return a single float.
                             All values are kJ/mol
         """
-        if sigma is None:
-            sigma = self.species_sigma_entropy
-
-        return self.rng.normal(loc=0, scale=sigma, size=n)
+        return self.rng.normal(loc=self.species_enthalpy_mean, scale=self.species_enthalpy_sd, size=n)
 
 
 
-    def random_species_entropy(self, mean, sigma=None, n=None) -> np.ndarray | float:
+    def generate_random_species_entropy(self, n=None) -> np.ndarray | float:
         """
         Generate a random "standard entropy" value to assign to each of our chemical species.
 
-        The values are generated from a normal distribution all centered at zero,
-        and with the given value for the standard deviation sigma.
-
-        EXAMPLE: a value of 40.4145 for sigma has the effect of making the derived SD
-            of the signed sum of 3 random values to be about
-            sqrt(3) * sigma = 70 kJ/mol
-            For example, the signed sum of 3 random values comes up in determining
-            the reaction enthalpy changes in reactions such as  A + B <-> C ,
-            as computed by random_reaction_enthalpy()
-            [But in the case of reactions such as 2 A <-> C, the reaction enthalpy change
-            would be sqrt(2**2 + 1) * sigma = sqrt(5) * sigma = 90.4 kJ/mol]
-
-            The average of the signed sum of the 3 random values is zero
-
-        :param sigma:   [OPTIONAL] The standard deviation of the (zero-centered)
-                            normal distribution used to generate all the values.
-                            Default: 40.4145 kJ/mol
         :param n:       [OPTIONAL] The number of desired values.
                             If None (default) a single value is generated
         :return:        If n isn't None, return a Numpy Array with n numbers;
                             otherwise, return a single float.
-                            All values are kJ/mol
+                            All values are J/(mol·K)
         """
-        if sigma is None:
-            sigma = self.species_sigma_entropy
-
-        return self.rng.normal(loc=0, scale=sigma, size=n)
+        return self.rng.normal(loc=self.species_entropy_mean, scale=self.species_entropy_sd, size=n)
 
 
 
-    def get_species_enthalpy(self, label :str):
+    def get_species_enthalpy(self, species_id :str):
         """
         Look up the standard enthalpy value to assign to the given chemical;
         if not found, assign and store a new random one
 
-        :param label:   To identify a chemical species
-        :return:        A standard enthalpy value already assigned, or just assigned,
-                            to the given chemical
+        :param species_id:  To identify a chemical species
+        :return:            A standard enthalpy value already assigned, or just assigned,
+                                to the given chemical
         """
-        if value := self.standard_species_enthalpy.get(label):
-            return value
-        value = self.random_species_enthalpy()   # Assign a new value
-        self.standard_species_enthalpy[label] = value
+        if value := self.standard_species_enthalpy.get(species_id):
+            return value    # Was already assigned
+
+        value = self.generate_random_species_enthalpy()   # Assign a new value
+        self.standard_species_enthalpy[species_id] = value
         #print(f"Standard species enthalpy of {value} assigned to `{label}`")
+        return value
+
+
+
+    def get_species_entropy(self, species_id :str):
+        """
+        Look up the standard entropy value to assign to the given chemical;
+        if not found, assign and store a new random one
+
+        :param species_id:  To identify a chemical species
+        :return:            A standard entropy value already assigned, or just assigned,
+                                to the given chemical
+        """
+        if value := self.standard_species_entropy.get(species_id):
+            return value    # Was already assigned
+
+        value = self.generate_random_species_entropy()   # Assign a new value
+        self.standard_species_entropy[species_id] = value
+        #print(f"Standard species entropy of {value} assigned to `{label}`")
         return value
 
 
@@ -870,26 +888,6 @@ class RandomReactionNetwork:
 
         To guarantee thermodynamic consistency, entropy changes are derived from species-level quantities.
 
-        It aims to randomly generate reaction ΔH values that are normally-distributed, with a mean of zero,
-        and a standard deviation of roughly 70-90 kJ/mol
-
-        With σ ≈ 70 kJ/mol for ΔH:
-            ~68% of reactions fall within ±70 kJ/mol    (one standard deviation from the mean)
-            ~95% within ±140 kJ/mol                     (2 standard deviations from the mean)
-
-        That is the plausible range for non-enzymatic small-molecule chemistry.  [TODO: FURTHER VERIFY]
-
-        So, statistically:
-            - You'll get many moderate reactions
-            - Some strongly exothermic/endothermic ones
-
-        For a given elementary reaction, specified by its reactants and products,
-        compute the Sum_i[v_i * H0_i] ,
-        where i ranges over all the species in the reaction,
-        H0_i is the standard enthalpy of that species,
-        and v_i is the stoichiometric coefficient (negative for reactants,
-        and positive for products)
-
         :param reaction_vector: The non-zero components of the reaction vector,
                                     written as a dict mapping from species id to its component value.
                                     EXAMPLE: {"A": -1, "P": 2, "Q": 1}
@@ -898,7 +896,7 @@ class RandomReactionNetwork:
                                 normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
                                 thermodynamically consistent with all the previous random reactions added so far
         """
-        return sum([coeff * self.get_species_enthalpy(sp)
+        return sum([coeff * self.get_species_entropy(sp)
                                     for sp, coeff in reaction_vector.items()]
                   )
 

@@ -18,10 +18,12 @@ def test_ReactionTerm():
     assert t.atom_count == 20
 
 
+
 def test_RandomReactionNetwork_CONSTRUCTOR():
     net = RandomReactionNetwork(n_species=4, n_rxns=0)
     assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C", "D"]
-
+    assert net.species_enthalpy_mean == 0
+    assert net.species_enthalpy_sd == 40.4145188
     # TODO: continue
 
 
@@ -117,21 +119,21 @@ def test_assign_thermodynamics():
 
 def test_random_species_enthalpy():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-    H = net.random_species_enthalpy(sigma=40.4145, n=3)
+    H = net.generate_random_species_enthalpy(sigma=40.4145, n=3)
     assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
 
     # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
-    linear_combo = [np.sum(net.random_species_enthalpy(sigma=40.4145, n=2)) -
-                           net.random_species_enthalpy(sigma=40.4145, n=1)
-                        for _ in range(100)]
+    linear_combo = [np.sum(net.generate_random_species_enthalpy(sigma=40.4145, n=2)) -
+                    net.generate_random_species_enthalpy(sigma=40.4145, n=1)
+                    for _ in range(100)]
     np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
     np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
 
-    H = net.random_species_enthalpy(sigma=35., n=1)
+    H = net.generate_random_species_enthalpy(sigma=35., n=1)
     assert type(H) == np.ndarray
     assert np.allclose(H, [41.60853089])
 
-    H = net.random_species_enthalpy(sigma=35., n=None)
+    H = net.generate_random_species_enthalpy(sigma=35., n=None)
     assert type(H) == float
     assert np.allclose(H, -52.64502861779662)
 
