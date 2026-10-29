@@ -113,14 +113,27 @@ def test_assign_thermodynamics():
     assert np.allclose(np.mean(H_list), -4.217131270343261)  # This will approach 0
     assert np.allclose(np.std(H_list),  76.38392872589338)   # Roughly around 70 - 90 (much closer to 70)
 
-    # 25 species 40 rnxs
-    #8.642044062313182
-    #77.12230122272996
 
-    # 25 species 55 rnxs
-    # -6.088549189861795
-    #66.58801977050156
 
+def test_random_species_enthalpy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+    H = net.random_species_enthalpy(sigma=40.4145, n=3)
+    assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
+
+    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
+    linear_combo = [np.sum(net.random_species_enthalpy(sigma=40.4145, n=2)) -
+                           net.random_species_enthalpy(sigma=40.4145, n=1)
+                        for _ in range(100)]
+    np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
+    np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
+
+    H = net.random_species_enthalpy(sigma=35., n=1)
+    assert type(H) == np.ndarray
+    assert np.allclose(H, [41.60853089])
+
+    H = net.random_species_enthalpy(sigma=35., n=None)
+    assert type(H) == float
+    assert np.allclose(H, -52.64502861779662)
 
 
 

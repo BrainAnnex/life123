@@ -57,6 +57,57 @@ class Numerical:
         return a, b
 
 
+    @staticmethod
+    def linear_combination_normals(coeff :list|tuple, target_mean :float, target_sigma :float) -> tuple[float, float]:
+        """
+        Determine values that can be assigned to the common mean and standard deviation of independent,
+        identically distributed normal variables,
+        SUCH THAT their specified linear combination has the requested mean and standard deviation.
+
+        For independent X_i ~ Normal(mu, sigma^2), and their linear combination:
+
+            Y = sum(c_i * X_i)
+
+        we have:
+            mean(Y) = mu * sum(c_i)
+            variance(Y) = (sigma*2) * sum(c_i^2)
+            sigma(Y) = sigma * sqrt(sum(c_i^2))
+
+        :param coeff:           List or tuple of the coefficients of the desired linear combination
+        :param target_mean:     The desired mean of the linear combination
+        :param target_sigma:    The desired standard deviation of the linear combination
+
+        :return:                (common_mean, common_sigma) for each input normal variable.
+                                    I.e., the pair (mean, sigma) that, when assigned to each normal distribution,
+                                    leds to the target mean and sigma of their linear combination
+        :raises ValueError:     If the requested parameters cannot be determined
+        """
+        if not coeff:
+            raise ValueError("linear_combination_normals(): At least one coefficient must be provided in argument `coeff`")
+
+        if target_sigma < 0:
+            raise ValueError("linear_combination_normals(): `target_sigma` must be non-negative")
+
+        sum_coeff = sum(coeff)
+        sum_square_coeff = sum(c**2 for c in coeff)
+
+        if sum_square_coeff == 0:
+            raise ValueError(
+                "linear_combination_normals(): The coefficients cannot be all zero"
+            )
+
+        if math.isclose(sum_coeff, 0.0, abs_tol=1e-12):
+            raise ValueError(
+                "linear_combination_normals(): The coefficients sum to zero, so the target mean does "
+                "not determine a unique common mean."
+            )
+
+        common_mean = target_mean / sum_coeff
+        common_sigma = target_sigma / math.sqrt(sum_square_coeff)
+
+        return (common_mean, common_sigma)
+
+
 
     @staticmethod
     def reach_threshold(df, x :str, y :str, y_threshold) -> Union[float, None]:

@@ -131,46 +131,22 @@ def test__assign_species_to_rxn():
 
 
 
-
-def test_random_species_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-    H = net.random_species_enthalpy(sigma=40.4145, n=3)
-    assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
-
-    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
-    linear_combo = [np.sum(net.random_species_enthalpy(sigma=40.4145, n=2)) -
-                           net.random_species_enthalpy(sigma=40.4145, n=1)
-                        for _ in range(100)]
-    np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
-    np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
-
-    H = net.random_species_enthalpy(sigma=35., n=1)
-    assert type(H) == np.ndarray
-    assert np.allclose(H, [41.60853089])
-
-    H = net.random_species_enthalpy(sigma=35., n=None)
-    assert type(H) == float
-    assert np.allclose(H, -52.64502861779662)
-
-
-
-
 def test_random_entropy():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
 
     with pytest.raises(Exception):
-        net.random_reaction_entropy("Unknown_rxn_type")
+        net.random_reaction_entropy_OLD("Unknown_rxn_type")
 
-    assert np.allclose(net.random_reaction_entropy("ReactionDecomposition"), 33.72761872021661)
-    assert np.allclose(net.random_reaction_entropy("ReactionSynthesis"), -36.99986904436495)
+    assert np.allclose(net.random_reaction_entropy_OLD("ReactionDecomposition"), 33.72761872021661)
+    assert np.allclose(net.random_reaction_entropy_OLD("ReactionSynthesis"), -36.99986904436495)
 
-    entropy_list = [net.random_reaction_entropy("ReactionDecomposition") for i in range(100)]
+    entropy_list = [net.random_reaction_entropy_OLD("ReactionDecomposition") for i in range(100)]
     assert np.allclose(np.mean(entropy_list), 38.876713159925636)       # This will approach 40
     assert np.allclose(np.std(entropy_list), 19.606579641379344)        # This will approach 20
     assert min(entropy_list) >= 0
     assert max(entropy_list) <= 100
 
-    entropy_list = [net.random_reaction_entropy("ReactionSynthesis") for i in range(100)]
+    entropy_list = [net.random_reaction_entropy_OLD("ReactionSynthesis") for i in range(100)]
     assert np.allclose(np.mean(entropy_list), -39.72751726151384)       # This will approach -40
     assert np.allclose(np.std(entropy_list), 18.754802472647917)        # This will approach 20
     assert min(entropy_list) >= -100

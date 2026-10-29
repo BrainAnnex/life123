@@ -1,3 +1,5 @@
+import math
+
 import pytest
 import numpy as np
 from life123.numerical import Numerical as num
@@ -44,6 +46,60 @@ def test_two_vector_least_square():
     Y = np.array([10, 20, 30])
     result = num.two_vector_least_square(V, W, Y)
     assert np.allclose(result, (10, 0))
+
+
+
+def test_linear_combination_normals():
+    with pytest.raises(ValueError):
+        num.linear_combination_normals(coeff=None, target_mean=100, target_sigma=20)
+
+    with pytest.raises(ValueError):
+        num.linear_combination_normals(coeff=[1, -1], target_mean=100, target_sigma=20)
+
+    with pytest.raises(ValueError):
+        num.linear_combination_normals(coeff=[0, 0], target_mean=100, target_sigma=20)
+
+
+    result = num.linear_combination_normals(coeff=[1], target_mean=100, target_sigma=20)
+    assert result == (100, 20)
+
+    result = num.linear_combination_normals(coeff=[1, 1], target_mean=100, target_sigma=20)
+    assert np.allclose(result, (100/2, math.sqrt(400/2)) )
+
+    result = num.linear_combination_normals(coeff=[1, 3], target_mean=100, target_sigma=20)
+    assert np.allclose(result, (100/4 , math.sqrt(400/10)) )
+
+    # This example relevant to enthalpy of random reactions A + B <-> C
+    result = num.linear_combination_normals(coeff=[-1, -1, 1], target_mean=0, target_sigma=70)
+    assert np.allclose(result, (0, 40.4145188))
+
+    # This example relevant to entropy of random reactions  2 A  <-> P
+    result = num.linear_combination_normals(coeff=[-2, 1], target_mean=0, target_sigma=90.36961)
+    assert np.allclose(result, (0, 40.4145188))
+
+    # This example relevant to entropy of random reactions A + B <-> C
+    result = num.linear_combination_normals(coeff=[-1, -1, 1], target_mean=-40, target_sigma=20)
+    assert np.allclose(result, (40., 11.547))
+
+    # This example relevant to entropy of random reactions  2 A  <-> P
+    result = num.linear_combination_normals(coeff=[-2, 1], target_mean=-40, target_sigma=25.82)
+    assert np.allclose(result, (40., 11.547))
+
+
+    mu, sigma = num.linear_combination_normals(coeff=[-2, 1, 3], target_mean=-100, target_sigma=25)
+    assert np.allclose( (mu, sigma), (-50, 6.68153104781061) )
+
+    rng = np.random.default_rng(seed=53232)
+    sampling_size = 300
+    random_1 = rng.normal(loc=mu, scale=sigma, size=sampling_size)
+    random_2 = rng.normal(loc=mu, scale=sigma, size=sampling_size)
+    random_3 = rng.normal(loc=mu, scale=sigma, size=sampling_size)
+    linear_combo = -2 * random_1 + random_2 + 3 * random_3
+    #print(linear_combo)
+    #print(np.mean(linear_combo))
+    #print(np.std(linear_combo))
+    assert math.isclose( np.mean(linear_combo) , -99.13968791492894)    # Approaching -100
+    assert math.isclose( np.std(linear_combo) ,  25.115554843855893)    # Approaching 25
 
 
 
