@@ -16,7 +16,7 @@ class ThermoDynamics:
     UNITS internally used (same as the DEFAULT units for the function calls):
         Temperature:    degree K
         Energy:         kJ              <- NOTE the divergence from SI units, for familiarity of convention
-        Molar energy:   kJ/mol
+        Molar energy:   kJ/mol          <- NOTE the divergence from SI units, for familiarity of convention
         Molar entropy:  Joules/(mol·K)  <- NOTE : Joules, NOT kJ, for the entropy!
 
     USING ALTERNATE UNITS:
@@ -24,16 +24,16 @@ class ThermoDynamics:
         Some - but not yet all - functions now accept arguments such as temp=(25, C)
 
     ENTITIES:
-            "K"       (equilibrium constant - from thermodynamic data)
-            "delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
-            "delta_S" (change in Entropy)
-            "delta_G" (change in Gibbs Free Energy)
+            "K_standard"    (equilibrium constant - from thermodynamic data)
+            "delta_H"       (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
+            "delta_S"       (change in Entropy)
+            "delta_G"       (change in Gibbs Free Energy)
 
             No correction is made for the temperature dependency of delta_H
     """
 
     # Class Attributes
-    R_SI_units = 8.31446261815324   # Ideal gas constant, in units of Joules / (Kelvin * mol)
+    R_SI_units = 8.31446261815324   # Ideal gas constant, in units of Joules mol−1 K−1
     R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
 
 

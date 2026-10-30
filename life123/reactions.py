@@ -77,8 +77,10 @@ class ReactionThermodynamics:
         if "delta_G" in parameters:
             self.delta_G = parameters["delta_G"]
 
-        if temp is not None:
+        if (temp is None) and (self.temp is not None):
             self.set_temperature(self.temp)     # This also acts as a validation
+        elif temp is not None:
+            self.set_temperature(temp)          # This also acts as a validation
 
 
 
@@ -1033,6 +1035,17 @@ class ReactionDefinition:
 
 
         return thermo_properties | kinetic_properties   # Combine the two dictionaries
+
+
+
+    def get_thermodynamics(self) -> ReactionThermodynamics:
+        """
+        Get the "ReactionThermodynamics" object
+        associated to the source reaction
+
+        :return:    Object of type "ReactionThermodynamics"
+        """
+        return self.thermodynamics
 
 
 

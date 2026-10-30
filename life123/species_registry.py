@@ -426,7 +426,8 @@ class SpeciesRegistry:
         Return a list with the id's of all the species,
         NOT in any particular order (unless `sort` is True)
 
-        :param sort:    [OPTIONAL]
+        :param sort:    [OPTIONAL] If True, the returned species id's are sorted alphabetically;
+                            default: False
         :return:        A list of strings with the species id's,
                             NOT in any particular order (unless `sort` is True)
         """
@@ -656,8 +657,8 @@ class SpeciesRegistry:
         EXAMPLE:    update(species_id="X", diffusion_rate=123, plot_color="red")
 
         :param species_id:  String with a unique value to identify a species
-        :param kwargs:      Other named arguments.
-                                Their names must match against the property names of the class "Species".
+        :param kwargs:      Other named arguments;
+                                their names must match against the property names of the class "Species".
         :return:            None
         """
         s = self.get_species(species_id)

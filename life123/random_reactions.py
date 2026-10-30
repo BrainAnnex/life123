@@ -1,6 +1,7 @@
 from life123.species_registry import SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
 from life123.stoichiometry import Stoichiometry
+from life123.reactions import SimulationReaction
 from life123.thermodynamics import ThermoDynamics
 from life123.numerical import Numerical
 from typing import NamedTuple, Mapping
@@ -191,7 +192,7 @@ class RandomReactionNetwork:
         """
         self.generate_multiple_random_reactions(n_rxns)
 
-        self.assign_thermodynamics()
+        self.assign_thermodynamics_OLD()
 
 
 
@@ -295,7 +296,6 @@ class RandomReactionNetwork:
         :param stoic:
         :return:
         """
-        # TODO: pytest
         check = sum(coeff * int(self.species_registry.get_species(sp).annotation)
                     for sp, coeff in stoic.vector.items())
         return check == 0   # Atom accounting is balanced
@@ -588,6 +588,7 @@ class RandomReactionNetwork:
         return reactants, products
 
 
+
     def get_reaction_data(self) -> ReactionRegistry:
         """
         Extract and return an object containing all the reactions
@@ -656,7 +657,13 @@ class RandomReactionNetwork:
 
 
 
-    def assign_thermodynamics(self):
+    def assign_thermodynamics_OLD(self) -> None:
+        """
+        Assign to each of the reactions in `self.reaction_registry`
+        random thermodynamic parameters that are consistent across the entire network
+
+        :return:    None
+        """
 
         r = "ReactionSynthesis"     # The only type currently supported
         k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
@@ -698,25 +705,87 @@ class RandomReactionNetwork:
 
 
 
+    def assign_thermodynamics(self, rxn :SimulationReaction) -> None:
+        """
+        Assign to the given reaction
+        random thermodynamic parameters that remain consistent
+        across all the added reactions
+
+        :return:    None
+        """
+        #print("Assigning thermodynamic data to reaction ", rxn.describe("minimal"))
+        reaction_vector=rxn.get_stoichiometry().get_reaction_vector()
+
+        delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=reaction_vector)
+        delta_entropy = self.random_reaction_entropy(reaction_vector=reaction_vector)
+
+        """
+        delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
+                                                                               delta_S=delta_entropy,
+                                                                               temp=self.temp)
+        """
+        thermo_data = {"delta_H": delta_enthalpy, "delta_S": delta_entropy}     # , "delta_G": delta_gibbs_energy
+
+        # This also acts as a validation
+        rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=self.temp)
+
+        """
+        rxn.get_thermodynamics().delta_H = delta_enthalpy
+        rxn.get_thermodynamics().delta_S = delta_entropy
+        rxn.get_thermodynamics().delta_G = delta_gibbs_energy
+        rxn.get_thermodynamics().set_temperature(self.temp)     
+        """
+
+        #rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
+
+
+
+    def assign_kinetics(self, rxn :SimulationReaction) -> None:
+        """
+        Assign to each of the reactions in `self.reaction_registry`
+        random kinetic parameters that are consistent with its (previous assigned)
+        thermodynamic parameters
+
+        :return:    None
+        """
+
+        r = "ReactionSynthesis"     # The only type currently supported
+        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
+
+
+        delta_gibbs_energy = rxn.get_thermodynamics().delta_G
+
+        forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
+        kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                            temp=self.temp)
+
+        # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
+        if r == "ReactionSynthesis":
+            kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
+        elif r == "ReactionDecomposition":
+            raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
+
+
+        rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
+
+
+
     def generate_random_species_enthalpy(self, n=None) -> np.ndarray | float:
         """
         Generate a random "standard enthalpy" value to assign to each of our chemical species.
         Essentially, a species standard enthalpy is a generalized, randomized version
         of enthalpy of formation, for the n chemical species.
 
-        The values are generated from a normal distribution all centered at zero,
-        and with the given value for the standard deviation sigma.
+        The values are generated from a normal distribution centered at self.species_enthalpy_mean,
+        and with a standard deviation of self.species_enthalpy_sd
 
-        EXAMPLE: a value of 40.4145 for sigma has the effect of making the derived SD
-            of the signed sum of 3 random values to be about
-            sqrt(3) * sigma = 70 kJ/mol
-            For example, the signed sum of 3 random values comes up in determining
-            the reaction enthalpy changes in reactions such as  A + B <-> C ,
-            as computed by random_reaction_enthalpy()
-            [But in the case of reactions such as 2 A <-> C, the reaction enthalpy change
-            would be sqrt(2**2 + 1) * sigma = sqrt(5) * sigma = 90.4 kJ/mol]
-
-            The average of the signed sum of the 3 random values is zero
+        EXAMPLE:    in the context of the reaction pattern, A + B <-> P ,
+                    the values self.species_enthalpy_mean = 0 and self.species_enthalpy_sd = 40.4145188,
+                    when assigned to independent normal distributions for standard enthalpy of A, B, and P,
+                    have the effect on the derived random variable (P - A - B)
+                    of resulting in a mean of (0 - 0 - 0) = 0
+                    and a std dev of sqrt(3) * 40.4145188 = 70 kJ/mo
+                    For more info, see the function Numerical.linear_combination_normals()
 
         :param n:       [OPTIONAL] The number of desired values.
                             If None (default) a single value is generated
@@ -731,6 +800,17 @@ class RandomReactionNetwork:
     def generate_random_species_entropy(self, n=None) -> np.ndarray | float:
         """
         Generate a random "standard entropy" value to assign to each of our chemical species.
+
+        The values are generated from a normal distribution centered at self.species_entropy_mean,
+        and with a standard deviation of self.species_entropy_sd
+
+        EXAMPLE:    in the context of the reaction pattern, A + B <-> P ,
+                    the values self.species_entropy_mean = 40 and self.species_entropy_sd = 11.547,
+                    when assigned to independent normal distributions for standard entropy of A, B, and P,
+                    have the effect on the derived random variable (P - A - B)
+                    of resulting in a mean of (40 - 40 - 40) = -40 J/(mol·K)
+                    and a std dev of sqrt(3) * 11.547 = 20 J/(mol·K)
+                    For more info, see the function Numerical.linear_combination_normals()
 
         :param n:       [OPTIONAL] The number of desired values.
                             If None (default) a single value is generated
@@ -978,7 +1058,7 @@ class RandomReactionNetwork:
         """
         forward_activation_delta_G = self.rng.normal(loc=mean, scale=sigma)    # Mean and SD
 
-        return max(forward_activation_delta_G, max(0, delta_G))
+        return max(forward_activation_delta_G, max(0., delta_G))
 
 
 
@@ -1015,7 +1095,7 @@ class RandomReactionNetwork:
         eps = self.rng.normal(loc=0, scale=sigma)    # Mean and SD
         forward_activation_delta_G = alpha*delta_G + beta + eps
 
-        return max(forward_activation_delta_G, max(0, delta_G))     # Disregard the PyCharm complaint
+        return max(forward_activation_delta_G, max(0., delta_G))
 
 
 

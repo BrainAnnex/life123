@@ -1,7 +1,9 @@
+import math
+
 import pytest
 import numpy as np
 from life123.random_reactions import RandomReactionNetwork, ReactionTerm
-from life123.reactions import SimulationReaction
+from life123.reactions import ReactionDefinition, SimulationReaction
 from life123.stoichiometry import Stoichiometry
 
 
@@ -27,38 +29,6 @@ def test_RandomReactionNetwork_CONSTRUCTOR():
     # TODO: continue
 
 
-
-def test_set_number_atoms():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0)
-    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C"]
-
-    assert net.set_number_atoms(species_id="A", atom_count=15) == 15
-    sp = net.species_registry.get_species("A")
-    assert sp.annotation == "15"
-
-    assert net.set_number_atoms(species_id="C", atom_count=7) == 7
-    sp = net.species_registry.get_species("C")
-    assert sp.annotation == "7"
-
-    assert net.set_number_atoms(species_id="A", atom_count=3) == 3
-    sp = net.species_registry.get_species("A")
-    assert sp.annotation == "3"
-
-
-
-def test_get_number_atoms():
-    net = RandomReactionNetwork(n_species=4, n_rxns=0)
-
-    net.set_number_atoms(species_id="A", atom_count=15)
-    assert net.get_number_atoms("A") == 15
-
-    net.set_number_atoms(species_id="C", atom_count=7)
-    assert net.get_number_atoms("C") == 7
-
-    net.set_number_atoms(species_id="A", atom_count=3)
-    assert net.get_number_atoms("A") == 3
-
-    assert net.get_number_atoms("B") == 0
 
 
 
@@ -96,11 +66,70 @@ def test_random_reaction_enthalpy():
 
 
 def test_assign_thermodynamics():
-    net = RandomReactionNetwork(n_species=300, n_rxns=0, seed=8492342, verbose=False)
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
+
+    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
+                                 species_registry=net.species_registry)
+    rxn = rxn_def.get_simulation_reactions(0)
+    assert type(rxn) is SimulationReaction
+
+    net.assign_thermodynamics(rxn=rxn)
+
+    thermo = rxn.get_thermodynamics()
+
+    assert math.isclose(thermo.delta_H, -47.88727263020628)     # kJ/mol
+    assert math.isclose(thermo.delta_S, -25.775930312009663)    # J/(mol·K)
+    assert math.isclose(thermo.temp, 298.15)                    # K
+    assert math.isclose(thermo.delta_G,
+                        thermo.delta_H - thermo.temp * thermo.delta_S/1000)
+                        # Divide by 100 because delta_S is J/(mol·K) , while delta_H ana delta_G are kJ/mol
+    R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
+    assert math.isclose(thermo.K_eq, math.exp(-thermo.delta_G/(R * thermo.temp)))
+
+    assert thermo.derived_pars == {'delta_G', 'K_eq'}
+
+    #print(rxn_def.get_thermodynamics())
+    #print(rxn_def.describe(detail="summary"))
+
+
+def test_assign_thermodynamics_2():
+    n_rxns = 200
+
+    net = RandomReactionNetwork(n_species=3*n_rxns, n_rxns=0, seed=992842)
+    all_species_id = net.species_registry.get_all_species_ids(sort=True)
+
+    H_list = []
+    S_list = []
+    for cycle in range(n_rxns):
+        a, b, c = all_species_id[3*cycle : 3*(cycle+1)]     # EXAMPLES: [0:3] , [3:6], etc
+        #print(a, b, c, end="\n")
+        rxn_def = ReactionDefinition(reactants=[a, b], products=[c], reaction_model="mass action",
+                                     species_registry=net.species_registry)
+        rxn = rxn_def.get_simulation_reactions(0)
+        net.assign_thermodynamics(rxn=rxn)
+        thermo = rxn.get_thermodynamics()
+        H_list.append(thermo.delta_H)
+        S_list.append(thermo.delta_S)
+
+
+    #print(np.mean(H_list))
+    assert math.isclose(np.mean(H_list), 0.24042843738514022)   # Approaches 0
+    #print(np.std(H_list))
+    assert math.isclose(np.std(H_list), 68.16724993565813)      # Approaches 70
+
+    #print(np.mean(S_list))
+    assert math.isclose(np.mean(S_list), -40.607863669418535)   # Approaches -40
+    #print(np.std(S_list))
+    assert math.isclose(np.std(S_list), 19.159843568900428)     # Approaches 20
+
+
+
+def xtest_assign_thermodynamics_OLD():
+    net = RandomReactionNetwork(n_species=300, n_rxns=0, seed=8492342)
 
     net.generate_multiple_random_reactions(n_rxns=150)
 
-    net.assign_thermodynamics()
+    net.assign_thermodynamics_OLD()
 
     # Extract the delta_H values for all the reactions
     H_list = [rxn.get_thermodynamics().delta_H
@@ -119,23 +148,55 @@ def test_assign_thermodynamics():
 
 def test_random_species_enthalpy():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-    H = net.generate_random_species_enthalpy(sigma=40.4145, n=3)
+
+    H = net.generate_random_species_enthalpy(n=3)
     assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
 
     # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
-    linear_combo = [np.sum(net.generate_random_species_enthalpy(sigma=40.4145, n=2)) -
-                    net.generate_random_species_enthalpy(sigma=40.4145, n=1)
+    linear_combo = [-np.sum(net.generate_random_species_enthalpy(n=2)) +
+                    net.generate_random_species_enthalpy(n=1)
                     for _ in range(100)]
-    np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
-    np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
+    #print(np.mean(linear_combo))
+    #print(np.std(linear_combo))
 
-    H = net.generate_random_species_enthalpy(sigma=35., n=1)
+    np.allclose(np.mean(linear_combo), -0.8995432)   # This will approach 0
+    np.allclose(np.std(linear_combo),  69.654486)    # This will approach 70
+
+    H = net.generate_random_species_enthalpy(n=1)
     assert type(H) == np.ndarray
-    assert np.allclose(H, [41.60853089])
+    assert np.allclose(H, [48.04539297])
 
-    H = net.generate_random_species_enthalpy(sigma=35., n=None)
+    H = net.generate_random_species_enthalpy(n=None)
     assert type(H) == float
-    assert np.allclose(H, -52.64502861779662)
+    assert np.allclose(H, -60.789242822870854)
+
+
+
+def test_random_species_entropy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    S = net.generate_random_species_entropy(n=3)
+
+
+    assert np.allclose(S, [36.37864067, 41.73212561, 38.08487805])
+
+    # Produce a linear combination of the form -X1 - X2 + X3 from 3 of our normal distributions
+    # (as used for the reaction pattern A + B <-> P)
+    linear_combo = [-np.sum(net.generate_random_species_entropy(n=2)) +
+                    net.generate_random_species_entropy(n=1)
+                    for _ in range(100)]
+    #print(np.mean(linear_combo))
+    #print(np.std(linear_combo))
+    np.allclose(np.mean(linear_combo), -40.257012350018464)     # This will approach -40
+    np.allclose(np.std(linear_combo), 19.90128174726231)        # This will approach 20
+
+    S = net.generate_random_species_entropy(n=1)
+    assert type(S) == np.ndarray
+    assert np.allclose(S, [53.72724875])
+
+    S = net.generate_random_species_entropy(n=None)
+    assert type(S) == float
+    assert np.allclose(S, 22.631652987151497)
 
 
 
@@ -261,33 +322,84 @@ def test_generate_new_unique_reaction():
 
 
 
-def test__assign_species_to_rxn():
-    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=123456)
+def test_check_atom_count_consistency():
 
-    reactants, products = net._assign_species_to_rxn()
-    # Generates A + C -> D
-    assert reactants == ['A', 'C']
-    assert products == ['D']
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1234)
+
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C"]
+
+    net.species_registry.update(species_id="A", annotation=10)
+    net.species_registry.update(species_id="B", annotation=5)
+    net.species_registry.update(species_id="C", annotation=15)
+
+    stoic = Stoichiometry({"A": -1, "B": -1, "C": 1})       # A + B <-> C
+    assert net.check_atom_count_consistency(stoic=stoic)    # 10 + 5 = 15
+
+    net.species_registry.update(species_id="C", annotation=20)
+    assert not net.check_atom_count_consistency(stoic=stoic)
+
+    stoic = Stoichiometry({"A": -2, "C": 1})                # 2A <-> C
+    assert net.check_atom_count_consistency(stoic=stoic)    # 2 * 10 = 20
 
 
-    reactants, products = net._assign_species_to_rxn()
-    # Generates 2 B -> A
-    assert reactants == ['B', 'B']
-    assert products == ['A']
 
-    reactants, products = net._assign_species_to_rxn()
-    # Generates  A + D -> B
-    assert reactants == ['A', 'D']
-    assert products == ['B']
+def test_get_number_atoms():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0)
+
+    net.set_number_atoms(species_id="A", atom_count=15)
+    assert net.get_number_atoms("A") == 15
+
+    net.set_number_atoms(species_id="C", atom_count=7)
+    assert net.get_number_atoms("C") == 7
+
+    net.set_number_atoms(species_id="A", atom_count=3)
+    assert net.get_number_atoms("A") == 3
+
+    assert net.get_number_atoms("B") == 0
 
 
-    for i in range(20):
-        reactants, products = net._assign_species_to_rxn()
 
-        # 2 reactants (same or different species), 1 product
-        assert len(reactants) == 2
-        assert len(products) == 1
+def test_set_number_atoms():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C"]
 
+    assert net.set_number_atoms(species_id="A", atom_count=15) == 15
+    sp = net.species_registry.get_species("A")
+    assert sp.annotation == "15"
+
+    assert net.set_number_atoms(species_id="C", atom_count=7) == 7
+    sp = net.species_registry.get_species("C")
+    assert sp.annotation == "7"
+
+    assert net.set_number_atoms(species_id="A", atom_count=3) == 3
+    sp = net.species_registry.get_species("A")
+    assert sp.annotation == "3"
+
+
+
+def test__fulfill_reaction():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0)
+    # Will initialize 3 species: A, B, C
+
+    stoic = Stoichiometry(vector={"A": -1, "B": -1, "C": 1})    # A + B -> C , all values unset
+    result = net._fulfill_reaction(stoic)
+    assert result
+    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
+                    for sp, coeff in stoic.vector.items())
+    assert check == 0   # Atom accounting is balanced
+
+    result = net._fulfill_reaction(stoic)       # Same reaction, but with the previously set atom counts
+    assert result
+    assert net.check_atom_count_consistency(stoic)  # Atom accounting is balanced
+    """
+    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
+                    for sp, coeff in stoic.vector.items())
+    assert check == 0   # Atom accounting is balanced
+    """
+
+    stoic = Stoichiometry(vector={"A": 1, "B": -1, "C": -1})    # B + C -> A, with the previously set atom counts
+    result = net._fulfill_reaction(stoic)
+    assert not result   # Incompatible counts
 
 
 
@@ -414,30 +526,32 @@ def test_solve_both_sides():
 
 
 
+def test__assign_species_to_rxn():
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=123456)
 
-def test___fulfill_reaction():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0)
-    # Will initialize 3 species: A, B, C
+    reactants, products = net._assign_species_to_rxn()
+    # Generates A + C -> D
+    assert reactants == ['A', 'C']
+    assert products == ['D']
 
-    stoic = Stoichiometry(vector={"A": -1, "B": -1, "C": 1})    # A + B -> C , all values unset
-    result = net._fulfill_reaction(stoic)
-    assert result
-    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
-                    for sp, coeff in stoic.vector.items())
-    assert check == 0   # Atom accounting is balanced
 
-    result = net._fulfill_reaction(stoic)       # Same reaction, but with the previously set atom counts
-    assert result
-    assert net.check_atom_count_consistency(stoic)  # Atom accounting is balanced
-    """
-    check = sum(coeff * int(net.species_registry.get_species(sp).annotation)
-                    for sp, coeff in stoic.vector.items())
-    assert check == 0   # Atom accounting is balanced
-    """
+    reactants, products = net._assign_species_to_rxn()
+    # Generates 2 B -> A
+    assert reactants == ['B', 'B']
+    assert products == ['A']
 
-    stoic = Stoichiometry(vector={"A": 1, "B": -1, "C": -1})    # B + C -> A, with the previously set atom counts
-    result = net._fulfill_reaction(stoic)
-    assert not result   # Incompatible counts
+    reactants, products = net._assign_species_to_rxn()
+    # Generates  A + D -> B
+    assert reactants == ['A', 'D']
+    assert products == ['B']
+
+
+    for i in range(20):
+        reactants, products = net._assign_species_to_rxn()
+
+        # 2 reactants (same or different species), 1 product
+        assert len(reactants) == 2
+        assert len(products) == 1
 
 
 
