@@ -93,7 +93,7 @@ class MassAction_Model:
             "kF": self.kF,
             "kR": self.kR,
             "K": self.K,
-        }
+        }   # TODO: rename "K" to "K_c"
 
         values.update(parameters)
 

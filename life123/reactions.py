@@ -24,7 +24,7 @@ class ReactionThermodynamics:
     delta_H: float | None = None
     delta_S: float | None = None
     delta_G: float | None = None
-    K_eq: float | None = None
+    K_eq: float | None = None       # TODO: rename to "K_standard"
     temp: float | None = None
 
     derived_pars : set = field(default_factory=set) # Set of names of parameters that were DERIVED - i.e.
@@ -420,18 +420,18 @@ class SimulationReaction:
 #############################################################################################
 
 class Reconciler:
-    # Experimental
+    # Experimental   TODO: was phased out in favor of ReactionDefinition.reconcile_thermodynamics_kinetics()
 
     @staticmethod
     def reconcile(thermodynamics_data, model):
         """
-        If available and feasible, propagate the thermodynamic value K_eq to the kinetic model
+        If available and feasible, propagate the thermodynamic value K_standard to the kinetic model
 
         :param thermodynamics_data:
         :param model:
         :return:
         """
-        #TODO: maybe just pass `K_eq` as arg, in lieu of `thermodynamics_data`
+        #TODO: maybe just pass `K_standard` as arg, in lieu of `thermodynamics_data`
 
         if thermodynamics_data.K_eq is None:
             return      # Nothing to do
@@ -443,6 +443,7 @@ class Reconciler:
                        "conflict between thermodynamic value K_eq and kinetic value K"
             else:
                 # Enrich the kinetic data, from thermodynamic values
+                # This will also update other values derivable from it
                 model.set_parameters(parameters={"K":thermodynamics_data.K_eq}, derived_pars={"K"})
 
 
@@ -1049,13 +1050,13 @@ class ReactionDefinition:
 
 
 
-    def set_thermodynamic_data(self, temp :float) -> None:
+    def set_thermodynamics_and_update_kinetics(self, temp=None) -> None:
         """
         Set all the thermodynamic data derivable from the given temperature,
         and all stored kinetic and thermodynamic data.
         Raise an Exception if any inconsistency is detected.
 
-        :param temp:    System temperature in Kelvins.  For now, assumed constant everywhere,
+        :param temp:    [OPTIONAL] System temperature in Kelvins.  For now, assumed constant everywhere,
                             and unvarying (or very slowly varying).
                             If the temp gradually changes, periodically call this method.
         :return:        None
@@ -1065,9 +1066,32 @@ class ReactionDefinition:
             self.thermodynamics.set_temperature(temp)
 
         if self.thermodynamics.K_eq is not None:
-            for sr in self.sim_reactions:
-                Reconciler.reconcile(thermodynamics_data=self.thermodynamics, model=sr.model)
+            for sim_rxn in self.sim_reactions:
+                self.reconcile_thermodynamics_kinetics(K_standard=self.thermodynamics.K_eq, model=sim_rxn.model)
+                #Reconciler.reconcile(thermodynamics_data=self.thermodynamics, model=sim_rxn.model)
             #self.kinetics.set_rate_constants_from_equilibrium_constant(K=self.thermodynamics.K_eq)
+
+
+    def reconcile_thermodynamics_kinetics(self, K_standard :float, model):
+        """
+        If available and feasible, propagate the thermodynamic value K_standard to the given kinetic model
+
+        :param K_standard:
+        :param model:
+        :return:            None
+        """
+        if K_standard is None:
+            return      # Nothing to do
+
+        if model.supports_equilibrium_constant:
+            if model.K is not None:
+                # Check for inconsistency
+                assert math.isclose(model.K, K_standard), \
+                       "reconcile_thermodynamics_kinetics(): conflict between thermodynamic value `K_standard` and kinetic value `K_c`"
+            else:
+                # Enrich the kinetic data, from thermodynamic values
+                # This will also update other values derivable from it
+                model.set_parameters(parameters={"K":K_standard}, derived_pars={"K"})
 
 
 

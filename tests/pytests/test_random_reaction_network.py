@@ -20,15 +20,53 @@ def test_ReactionTerm():
     assert t.atom_count == 20
 
 
+##################################################################################
 
-def test_RandomReactionNetwork_CONSTRUCTOR():
+def test_RandomReactionNetwork_CONSTRUCTOR_1():
+    with pytest.raises(Exception):
+        RandomReactionNetwork()     # Missing args
+
+    with pytest.raises(Exception):
+        RandomReactionNetwork(n_species="not_an_int!", n_rxns=3)  # Bad arg
+
+    with pytest.raises(Exception):
+        RandomReactionNetwork(n_species=2, n_rxns=3)        # Too few species
+
+    with pytest.raises(Exception):
+        RandomReactionNetwork(n_species=3, n_rxns=[1, 3])   # Bad arg
+
+
     net = RandomReactionNetwork(n_species=4, n_rxns=0)
-    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C", "D"]
+
     assert net.species_enthalpy_mean == 0
-    assert net.species_enthalpy_sd == 40.4145188
-    # TODO: continue
+    assert math.isclose(net.species_enthalpy_sd, 40.4145188)
+    assert net.species_entropy_mean == 40
+    assert math.isclose(net.species_entropy_sd, 11.547)
+    assert math.isclose(net.temp, 298.15)
+
+    assert net.n_species == 4
+    assert net.n_rxns == 0
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C", "D"]
+    assert net.reaction_registry.number_of_reactions() == 0
+    assert net.standard_species_enthalpy == {}
+    assert net.standard_species_entropy == {}
 
 
+def test_RandomReactionNetwork_CONSTRUCTOR_2():
+
+    """
+    for _ in range(145):
+        # In some cases, the instantiation of RandomReactionNetwork will give up, because of
+        # the difficulty of creating so many unique reactions from so few chemicals
+        try:
+            net = RandomReactionNetwork(n_species=3, n_rxns=5)
+            break
+        except Exception:
+            pass
+
+    assert net.species_registry.number_of_species() == 3
+    assert net.species_registry.get_all_species_ids() == ['A', 'B', 'C']
+    """
 
 
 
@@ -83,8 +121,11 @@ def test_assign_thermodynamics():
     assert math.isclose(thermo.delta_G,
                         thermo.delta_H - thermo.temp * thermo.delta_S/1000)
                         # Divide by 100 because delta_S is J/(mol·K) , while delta_H ana delta_G are kJ/mol
+    assert math.isclose(thermo.delta_G, -40.2021790076806)
+
     R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
     assert math.isclose(thermo.K_eq, math.exp(-thermo.delta_G/(R * thermo.temp)))
+    assert math.isclose(thermo.K_eq, 11043762.102600524)
 
     assert thermo.derived_pars == {'delta_G', 'K_eq'}
 
@@ -124,25 +165,50 @@ def test_assign_thermodynamics_2():
 
 
 
-def xtest_assign_thermodynamics_OLD():
-    net = RandomReactionNetwork(n_species=300, n_rxns=0, seed=8492342)
+def test_assign_kinetics():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
 
-    net.generate_multiple_random_reactions(n_rxns=150)
+    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
+                                 species_registry=net.species_registry)
+    rxn = rxn_def.get_simulation_reactions(0)
 
-    net.assign_thermodynamics_OLD()
+    net.assign_thermodynamics(rxn=rxn)
+    net.assign_kinetics(rxn=rxn)
 
-    # Extract the delta_H values for all the reactions
-    H_list = [rxn.get_thermodynamics().delta_H
-              for rxn in net.get_reaction_data().get_all_reactions()]
+    thermo = rxn.get_thermodynamics()
+    print(thermo.K_eq)
+    kinetic_parameters = rxn.get_parameters()
+    print(kinetic_parameters)
+    K_standard = 11043762.102600524
+    assert math.isclose(kinetic_parameters['K'], K_standard)    # Propagated from thermodynamics data
+    assert math.isclose(kinetic_parameters['kF'] / kinetic_parameters['kR'] , K_standard)   # kR got set consistently
+    assert kinetic_parameters['reversible']
 
-    assert len(H_list) == 150
-    #print(H_list)
+    # Verify kF
+    delta_G = rxn.get_thermodynamics().delta_G
+    print("delta_G: ", delta_G)
 
-    #print(np.mean(H_list))
-    #print(np.std(H_list))
-    # Note: the values are subject to change, if changes are made in RandomReactionNetwork's usage of random calls
-    assert np.allclose(np.mean(H_list), -4.217131270343261)  # This will approach 0
-    assert np.allclose(np.std(H_list),  76.38392872589338)   # Roughly around 70 - 90 (much closer to 70)
+    for i in range(3):
+        forward_activation_gibbs_energy = net.forward_activation_gibbs_energy_BEP(delta_G=delta_G)
+        print("forward_activation_gibbs_energy: ", forward_activation_gibbs_energy)
+        kF = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                            temp=net.temp)
+        kF = min(kF, 1e9)
+        print(kF)
+
+
+
+def test_forward_rate_from_delta_gibbs():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
+
+    delta_G = -40   # kJ/mol
+    for i in range(5):
+        print(net.forward_rate_from_delta_gibbs(delta_G))
+
+    print("----------------------------")
+    delta_G = 10   # kJ/mol
+    for i in range(5):
+        print(net.forward_rate_from_delta_gibbs(delta_G))
 
 
 
@@ -595,3 +661,88 @@ def test__already_used():
     assert net._already_used(reactants="D", products=["B"])
     assert net._already_used(reactants="D", products=["B", "B"])
     assert net._already_used(reactants="B", products=["D", "D"])
+
+
+
+def test_random_reaction_entropy_single_reaction():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    with pytest.raises(Exception):
+        net.random_reaction_entropy_single_reaction("Unknown_rxn_type")
+
+    assert np.allclose(net.random_reaction_entropy_single_reaction("ReactionDecomposition"), 33.72761872021661)
+    assert np.allclose(net.random_reaction_entropy_single_reaction("ReactionSynthesis"), -36.99986904436495)
+
+    entropy_list = [net.random_reaction_entropy_single_reaction("ReactionDecomposition") for i in range(100)]
+    assert np.allclose(np.mean(entropy_list), 38.876713159925636)       # This will approach 40
+    assert np.allclose(np.std(entropy_list), 19.606579641379344)        # This will approach 20
+    assert min(entropy_list) >= 0
+    assert max(entropy_list) <= 100
+
+    entropy_list = [net.random_reaction_entropy_single_reaction("ReactionSynthesis") for i in range(100)]
+    assert np.allclose(np.mean(entropy_list), -39.72751726151384)       # This will approach -40
+    assert np.allclose(np.std(entropy_list), 18.754802472647917)        # This will approach 20
+    assert min(entropy_list) >= -100
+    assert max(entropy_list) <= 0
+
+
+
+def test_forward_activation_gibbs_energy_normal():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=9538625)
+
+
+    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=40), 69.40655722019214)
+
+    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=20), 71.37605795182265)
+
+    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=0), 77.09026832411178)
+
+    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-20), 71.46432473759808)
+
+    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-40), 74.86038387981017)
+
+    for _ in range(20):
+         delta_G = net.rng.normal(loc=0, scale=100)
+         result = net.forward_activation_gibbs_energy_normal(delta_G=delta_G)
+         assert result >= 0
+         assert result >= delta_G
+
+
+
+def test_forward_activation_gibbs_energy_BEP():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=5447061)
+
+    assert net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=0) == 90
+    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=12), 79.5437172573611)
+
+    assert net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=0) == 80
+    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=12), 75.03655557989254)
+
+    assert net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=0) == 70
+    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=12), 44.18724275817719)
+
+    assert net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=0) == 60
+    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=12), 53.11334188826283)
+
+    assert net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=0) == 50
+    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=12), 31.658362710826765)
+
+    for _ in range(20):
+         delta_G = net.rng.normal(loc=0, scale=100)
+         result = net.forward_activation_gibbs_energy_BEP(delta_G=delta_G, sigma=12)
+         assert result >= 0
+         assert result >= delta_G
+
+
+
+def test_rate_constant_from_activation_gibbs_energyy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=123)
+
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=50, temp=300), 12312.469127155957)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=60, temp=300), 223.472703949188)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=65.743427304, temp=300), 22.3472703949188)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300), 4.056054792471754)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=75, temp=300), 0.5464412521361471)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=80, temp=300), 0.07361785215286852)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=90, temp=300), 0.0013361723233277472)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=100, temp=300), 2.4251678436906198e-05)

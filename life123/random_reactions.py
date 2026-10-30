@@ -90,7 +90,7 @@ class RandomReactionNetwork:
 
 
         self.reaction_registry = ReactionRegistry(species_registry=self.species_registry)   # Object of type ReactionRegistry,
-                                                                                    # to manage the randomly-generated reactions
+                                                                                            # to manage the randomly-generated reactions
 
 
         self.rng = np.random.default_rng(seed=seed)      # A Generator object with Numpy’s default BitGenerator
@@ -152,7 +152,7 @@ class RandomReactionNetwork:
 
 
             delta_enthalpy = self.random_reaction_enthalpy_OLD(reactants, products)
-            delta_entropy = self.random_reaction_entropy_OLD(reaction_type=r)
+            delta_entropy = self.random_reaction_entropy_single_reaction(reaction_type=r)
 
             delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
                                                                                    delta_S=delta_entropy,
@@ -192,8 +192,11 @@ class RandomReactionNetwork:
         """
         self.generate_multiple_random_reactions(n_rxns)
 
-        self.assign_thermodynamics_OLD()
+        #self.assign_thermodynamics_OLD()
 
+        for rxn in self.get_all_random_reactions():
+            self.assign_thermodynamics(rxn)
+            self.assign_kinetics(rxn)
 
 
     def generate_multiple_random_reactions(self, n_rxns :int) -> None:
@@ -719,24 +722,10 @@ class RandomReactionNetwork:
         delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=reaction_vector)
         delta_entropy = self.random_reaction_entropy(reaction_vector=reaction_vector)
 
-        """
-        delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
-                                                                               delta_S=delta_entropy,
-                                                                               temp=self.temp)
-        """
-        thermo_data = {"delta_H": delta_enthalpy, "delta_S": delta_entropy}     # , "delta_G": delta_gibbs_energy
+        thermo_data = {"delta_H": delta_enthalpy, "delta_S": delta_entropy}
 
-        # This also acts as a validation
+        # This will also derive and set `delta_G`
         rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=self.temp)
-
-        """
-        rxn.get_thermodynamics().delta_H = delta_enthalpy
-        rxn.get_thermodynamics().delta_S = delta_entropy
-        rxn.get_thermodynamics().delta_G = delta_gibbs_energy
-        rxn.get_thermodynamics().set_temperature(self.temp)     
-        """
-
-        #rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
 
 
 
@@ -748,13 +737,15 @@ class RandomReactionNetwork:
 
         :return:    None
         """
-
-        r = "ReactionSynthesis"     # The only type currently supported
-        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
+        #r = "ReactionSynthesis"     # The only type currently supported
+        #k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
 
 
         delta_gibbs_energy = rxn.get_thermodynamics().delta_G
 
+        kF = self.forward_rate_from_delta_gibbs(delta_gibbs_energy)
+
+        """
         forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
         kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                             temp=self.temp)
@@ -764,10 +755,41 @@ class RandomReactionNetwork:
             kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
         elif r == "ReactionDecomposition":
             raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
+        """
+
+        rxn.set_parameters(parameters={"kF": kF})
+
+        # This will also set kR, to be consistent with kF and the thermodynamic data
+        rxn.source_object.set_thermodynamics_and_update_kinetics()
 
 
-        rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
 
+    def forward_rate_from_delta_gibbs(self, delta_G) -> float:
+        """
+        Stochastically generate a plausible value for the forward rate of a reaction
+        of the form A + B <-> C, given its delta Gibbs energy
+
+        :param delta_G: The delta Gibbs energy or a reaction of the form A + B <-> C
+        :return:        A stochastically-generated plausible value for its kinetic forward rate
+        """
+        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
+
+        forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_G)
+        kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                            temp=self.temp)
+
+        # Rein in any unrealistic value for kF
+        kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
+
+        return kF
+        """
+        r = "ReactionSynthesis"     # The only type currently supported
+        # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
+        if r == "ReactionSynthesis":
+            kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
+        elif r == "ReactionDecomposition":
+            raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
+        """
 
 
     def generate_random_species_enthalpy(self, n=None) -> np.ndarray | float:
@@ -983,7 +1005,7 @@ class RandomReactionNetwork:
 
 
 
-    def random_reaction_entropy_OLD(self, reaction_type :str) -> float:
+    def random_reaction_entropy_single_reaction(self, reaction_type :str) -> float:
         """
         CAUTION: this is applicable only to single reactions,
                  not to networks of reactions!
@@ -1064,6 +1086,8 @@ class RandomReactionNetwork:
 
     def forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70., sigma=12.) -> float:
         """
+        NOTE: this is a STOCHASTIC value; different calls with the same arguments will give different results
+
         Using the Brønsted-Evans-Polanyi relation (BEP),
         the forward activation Gibbs free energy ΔGf‡ is modeled by:
             ΔGf‡ = α ΔG + β + ϵ
@@ -1085,7 +1109,7 @@ class RandomReactionNetwork:
 
         :param delta_G: The reaction free energy ΔG, in kJ/mol
         :param alpha:   The multiplicative parameter of the Brønsted-Evans-Polanyi relation (BEP) model
-        :param beta:    The multiplicative parameter of the BEP model, in 70 kJ/mol
+        :param beta:    The multiplicative parameter of the BEP model, in kJ/mol
         :param sigma:   The standard deviation, in kJ/mol, of the Gaussian noise to add to the estimates
 
         :return:        An estimate, based on the Brønsted-Evans-Polanyi relation (BEP),

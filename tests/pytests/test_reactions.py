@@ -1055,7 +1055,7 @@ def test_set_thermodynamic_data():
     assert rxn.thermodynamics.delta_G is None
     assert rxn.thermodynamics.K_eq == 3
 
-    rxn.set_thermodynamic_data(temp=100)
+    rxn.set_thermodynamics_and_update_kinetics(temp=100)
     assert math.isclose(rxn.thermodynamics.delta_G, -0.9134370805974775)
 
 
@@ -1065,7 +1065,7 @@ def test_set_thermodynamic_data():
     assert rxn.thermodynamics.delta_S == -3
     assert rxn.thermodynamics.delta_G is None
 
-    rxn.set_thermodynamic_data(temp=100)
+    rxn.set_thermodynamics_and_update_kinetics(temp=100)
     assert np.allclose(rxn.thermodynamics.delta_H, 0.5)
     assert rxn.thermodynamics.delta_S == -3
     assert np.allclose(rxn.thermodynamics.delta_G, 0.8)
