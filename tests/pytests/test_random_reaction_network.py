@@ -189,7 +189,7 @@ def test_assign_kinetics():
     print("delta_G: ", delta_G)
 
     for i in range(3):
-        forward_activation_gibbs_energy = net.forward_activation_gibbs_energy_BEP(delta_G=delta_G)
+        forward_activation_gibbs_energy = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G)
         print("forward_activation_gibbs_energy: ", forward_activation_gibbs_energy)
         kF = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                             temp=net.temp)
@@ -198,17 +198,41 @@ def test_assign_kinetics():
 
 
 
-def test_forward_rate_from_delta_gibbs():
+def test_sample_forward_rate_constant_from_delta_gibbs():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
 
     delta_G = -40   # kJ/mol
-    for i in range(5):
-        print(net.forward_rate_from_delta_gibbs(delta_G))
+    samples = []
+    log_samples = []
+    for i in range(10000):
+        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
+        samples.append(kF)
+        log_samples.append(math.log10(kF))
+        #print(net.sample_forward_rate_constant_from_delta_gibbs(delta_G))
+
+    #print(samples)
+    print("delta_G: ", delta_G)
+    print("MEAN of samples: ", np.mean(samples))
+    print("STD DEV of samples: ", np.std(samples))
+    print("MEAN of LOG samples: ", np.mean(log_samples))
+    print("STD DEV of LOG samples: ", np.std(log_samples))
 
     print("----------------------------")
     delta_G = 10   # kJ/mol
-    for i in range(5):
-        print(net.forward_rate_from_delta_gibbs(delta_G))
+    samples = []
+    log_samples = []
+    for i in range(10000):
+        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
+        samples.append(kF)
+        log_samples.append(math.log10(kF))
+        #print(net.sample_forward_rate_constant_from_delta_gibbs(delta_G))
+
+    #print(samples)
+    print("delta_G: ", delta_G)
+    print("MEAN of samples: ", np.mean(samples))
+    print("STD DEV of samples: ", np.std(samples))
+    print("MEAN of LOG samples: ", np.mean(log_samples))
+    print("STD DEV of LOG samples: ", np.std(log_samples))
 
 
 
@@ -687,52 +711,62 @@ def test_random_reaction_entropy_single_reaction():
 
 
 
+def test_sample_forward_activation_gibbs_energy_BEP():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=5447061)
+
+    # NON-STOCHASTIC SCENARIOS:  sigma_BEP = 0
+    # As delta_G decreases, so does the resulting forward activation Gibbs energy
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=40, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 90)
+
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=20, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 80)
+
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=0, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 70)
+
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=-60, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 40)
+
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=-140, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 0)
+
+    result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=-200, alpha=0.5, beta=70., sigma_BEP=0)
+    assert math.isclose(result, 0)  # Never goes below zero
+
+
+    # STOCHASTIC SCENARIOS:  sigma_BEP > 0
+    result =net.sample_forward_activation_gibbs_energy_BEP(delta_G=40, alpha=0.5, beta=70., sigma_BEP=12)
+    assert math.isclose(result, 106.95363768564654)
+
+    for _ in range(20):
+        # Generated values, no matter what delta_G is, are always >= 0 and >= delta_G
+        # even for large deviations in the stochastic component
+        delta_G = net.rng.normal(loc=0, scale=100)
+        result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G, alpha=0.5, beta=70., sigma_BEP=20)
+        assert result >= 0
+        assert result >= delta_G
+
+
+
 def test_forward_activation_gibbs_energy_normal():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=9538625)
 
+    assert np.allclose(net.sample_forward_activation_gibbs_energy_normal(delta_G=40), 69.40655722019214)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=40), 69.40655722019214)
+    assert np.allclose(net.sample_forward_activation_gibbs_energy_normal(delta_G=20), 71.37605795182265)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=20), 71.37605795182265)
+    assert np.allclose(net.sample_forward_activation_gibbs_energy_normal(delta_G=0), 77.09026832411178)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=0), 77.09026832411178)
+    assert np.allclose(net.sample_forward_activation_gibbs_energy_normal(delta_G=-20), 71.46432473759808)
 
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-20), 71.46432473759808)
-
-    assert np.allclose(net.forward_activation_gibbs_energy_normal(delta_G=-40), 74.86038387981017)
-
-    for _ in range(20):
-         delta_G = net.rng.normal(loc=0, scale=100)
-         result = net.forward_activation_gibbs_energy_normal(delta_G=delta_G)
-         assert result >= 0
-         assert result >= delta_G
-
-
-
-def test_forward_activation_gibbs_energy_BEP():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=5447061)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=0) == 90
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=40, sigma=12), 79.5437172573611)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=0) == 80
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=20, sigma=12), 75.03655557989254)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=0) == 70
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=0, sigma=12), 44.18724275817719)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=0) == 60
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-20, sigma=12), 53.11334188826283)
-
-    assert net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=0) == 50
-    assert np.allclose(net.forward_activation_gibbs_energy_BEP(delta_G=-40, sigma=12), 31.658362710826765)
+    assert np.allclose(net.sample_forward_activation_gibbs_energy_normal(delta_G=-40), 74.86038387981017)
 
     for _ in range(20):
          delta_G = net.rng.normal(loc=0, scale=100)
-         result = net.forward_activation_gibbs_energy_BEP(delta_G=delta_G, sigma=12)
+         result = net.sample_forward_activation_gibbs_energy_normal(delta_G=delta_G)
          assert result >= 0
          assert result >= delta_G
-
 
 
 def test_rate_constant_from_activation_gibbs_energyy():
@@ -740,8 +774,19 @@ def test_rate_constant_from_activation_gibbs_energyy():
 
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=50, temp=300), 12312.469127155957)
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=60, temp=300), 223.472703949188)
+
+    # At T=300 K, every additional 5.7434 kJ/mol of activation free energy leads to a x10 decrease in the rate constant
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=65.743427304, temp=300), 22.3472703949188)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300), 4.056054792471754)
+
+    result = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300)
+    assert math.isclose(result, 4.056054792471754)
+    # Let's increase the above ΔG‡ by some δ = 3.
+    # We expect the ratio = k(ΔG‡ + δ) / k(ΔG‡) to decrease by a factor = exp(δ / R T)
+    result_2 = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70+3, temp=300)
+    ratio = result_2 / result       # 0.30037501036241077
+    decrease_factor =  math.exp(3 / 2.494338785445972)   # at 300 K,  R T = 2.494 kJ mol−1
+    assert math.isclose(ratio, 1./decrease_factor)
+
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=75, temp=300), 0.5464412521361471)
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=80, temp=300), 0.07361785215286852)
     assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=90, temp=300), 0.0013361723233277472)

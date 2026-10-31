@@ -62,8 +62,9 @@ class RandomReactionNetwork:
         common_mean, common_sigma = Numerical.linear_combination_normals(coeff=[-1, -1, 1], target_mean=-40, target_sigma=20)
         np.allclose((common_mean, common_sigma), (40, 11.547))
 
+        self.sigma_BEP = 5.                 # kJ/mol  Explained in sample_forward_activation_gibbs_energy_BEP()
 
-        self.kB_over_h = 2.08366191233e10 # K-1 s-1
+        self.kB_over_h = 2.08366191233e10   # K-1 s-1
                                 # Boltzmann constant / Plank constant
                                 #       Boltzmann constant = 1.380649 × 10-23 J K-1
                                 #       Boltzmann constant = 1.380649 × 10-23 J K-1
@@ -113,68 +114,6 @@ class RandomReactionNetwork:
 
         if n_rxns > 0:
             self.generate_random_reaction_network(n_rxns)
-
-
-
-
-    def setup_random_reactions_OLD(self, rxn_types :list[str], verbose=False) -> None:
-        """
-        Create a network of random reactions, and populate with them the registry `self.reaction_data`
-
-        :param rxn_types:   List of names of reaction classes.
-                                EXAMPLE: ["ReactionSynthesis", "ReactionDecomposition", "ReactionDecomposition"]
-        :param verbose:
-        :return:            None
-        """
-        MAX_ATTEMPTS = 6        # To avoid infinite loops
-
-        all_chems = self.species_registry.get_all_species_ids()             # Get all the id's of the species we're using
-        # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3", ...
-
-        k_diffusion_limit = 1e9  # Smoluchowski diffusion limit for bimolecular reactions
-
-        for r in rxn_types:
-            # For each reaction to create.  EXAMPLE: "ReactionSynthesis"
-            #print(f"Attempting to add reaction of type: {r}")
-            reactants, products = self._assign_species_to_rxn(r, all_chems)
-            #print(f"    Tentatively considering reactants: {reactants} | products: {products}")
-
-            n_attempts = 1
-            # Prevent re-adding reactions that identically occurred before
-            while n_attempts <= MAX_ATTEMPTS and self._already_used(reactants, products):
-                reactants, products = self._assign_species_to_rxn(r, all_chems)
-                #print(f"    the previous combination had already been used.  Tentatively considering new "
-                #      f"reactants: {reactants} | products: {products}")
-                n_attempts += 1
-            assert n_attempts <= MAX_ATTEMPTS, \
-                f"Giving up after {n_attempts} attempts.  It seems that you are requesting such a large number of reactions ({self.n_rxns}), " \
-                f"relative to the {self.n_species} available chemicals, that random reactions would be repeating"
-
-
-            delta_enthalpy = self.random_reaction_enthalpy_OLD(reactants, products)
-            delta_entropy = self.random_reaction_entropy_single_reaction(reaction_type=r)
-
-            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
-                                                                                   delta_S=delta_entropy,
-                                                                                   temp=self.temp)
-
-            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
-            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
-                                                                temp=self.temp)
-            if r == "ReactionSynthesis":
-                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
-            elif r == "ReactionDecomposition":
-                pass        # TODO: apply a diffusion limit to kR
-
-            i = self.reaction_registry.add_elementary_reaction(reactants=reactants, products=products,
-                                                               thermodynamic_parameters={"delta_H": delta_enthalpy, "delta_S": delta_entropy},
-                                                               #delta_H=delta_enthalpy, delta_S=delta_entropy,
-                                                               kinetic_parameters={"kF": kF},
-                                                               temp=self.temp)
-
-            if verbose:
-                print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
-                print(self.reaction_registry.get_reaction(i).describe(detail="full"))
 
 
 
@@ -682,7 +621,7 @@ class RandomReactionNetwork:
                                                                                    delta_S=delta_entropy,
                                                                                    temp=self.temp)
 
-            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
+            forward_activation_gibbs_energy = self.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
             kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                                 temp=self.temp)
 
@@ -743,7 +682,7 @@ class RandomReactionNetwork:
 
         delta_gibbs_energy = rxn.get_thermodynamics().delta_G
 
-        kF = self.forward_rate_from_delta_gibbs(delta_gibbs_energy)
+        kF = self.sample_forward_rate_constant_from_delta_gibbs(delta_gibbs_energy)
 
         """
         forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
@@ -762,34 +701,6 @@ class RandomReactionNetwork:
         # This will also set kR, to be consistent with kF and the thermodynamic data
         rxn.source_object.set_thermodynamics_and_update_kinetics()
 
-
-
-    def forward_rate_from_delta_gibbs(self, delta_G) -> float:
-        """
-        Stochastically generate a plausible value for the forward rate of a reaction
-        of the form A + B <-> C, given its delta Gibbs energy
-
-        :param delta_G: The delta Gibbs energy or a reaction of the form A + B <-> C
-        :return:        A stochastically-generated plausible value for its kinetic forward rate
-        """
-        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
-
-        forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_G)
-        kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
-                                                            temp=self.temp)
-
-        # Rein in any unrealistic value for kF
-        kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
-
-        return kF
-        """
-        r = "ReactionSynthesis"     # The only type currently supported
-        # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
-        if r == "ReactionSynthesis":
-            kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
-        elif r == "ReactionDecomposition":
-            raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
-        """
 
 
     def generate_random_species_enthalpy(self, n=None) -> np.ndarray | float:
@@ -882,66 +793,6 @@ class RandomReactionNetwork:
 
 
 
-    def random_reaction_enthalpy_OLD(self, reactants :[str], products :[str]):
-        """
-        Attempt to provide a plausible regime for non-enzymatic small-molecule aqueous reactions,
-        and thermodynamically consistent with all the previous random reactions added so far.
-
-        It aims to randomly generate reaction ΔH values that are normally-distributed, with a mean of zero,
-        and a standard deviation of roughly 70-90 kJ/mol
-
-        With σ ≈ 70 kJ/mol for ΔH:
-            ~68% of reactions fall within ±70 kJ/mol    (one standard deviation from the mean)
-            ~95% within ±140 kJ/mol                     (2 standard deviations from the mean)
-
-        That is the plausible range for non-enzymatic small-molecule chemistry.  [TODO: FURTHER VERIFY]
-
-        So, statistically:
-            - You'll get many moderate reactions
-            - Some strongly exothermic/endothermic ones
-
-        For a given elementary reaction, specified by its reactants and products,
-        compute the Sum_i[v_i * H0_i] ,
-        where i ranges over all the species in the reaction,
-        H0_i is the standard enthalpy of that species,
-        and v_i is the stoichiometric coefficient (negative for reactants,
-        and positive for products)
-
-        :param reactants:   A list of the species id's of the reactants
-        :param products:    A list of the species id's of the reaction products
-        :return:            A random value for the change in enthalpy of the given reaction, in kJ/mol,
-                                normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
-                                thermodynamically consistent with all the previous random reactions added so far
-        """
-        reaction_enthalpy = 0
-
-        if len(reactants) == 1:
-            h = self.get_species_enthalpy(reactants[0])
-            reaction_enthalpy -= h
-        elif reactants[0] == reactants[1]:
-            h = self.get_species_enthalpy(reactants[0])
-            reaction_enthalpy -= 2 * h
-        else:
-            h_1 = self.get_species_enthalpy(reactants[0])
-            h_2 = self.get_species_enthalpy(reactants[1])
-            reaction_enthalpy = reaction_enthalpy - h_1 - h_2
-
-
-        if len(products) == 1:
-            h = self.get_species_enthalpy(products[0])
-            reaction_enthalpy += h
-        elif products[0] == products[1]:
-            h = self.get_species_enthalpy(products[0])
-            reaction_enthalpy += 2 * h
-        else:
-            h_1 = self.get_species_enthalpy(products[0])
-            h_2 = self.get_species_enthalpy(products[1])
-            reaction_enthalpy = reaction_enthalpy + h_1 + h_2
-
-        return reaction_enthalpy
-
-
-
     def random_reaction_enthalpy(self, reaction_vector :Mapping[str, int]):
         """
         Attempt to provide a plausible regime for non-enzymatic small-molecule aqueous reactions,
@@ -1004,7 +855,6 @@ class RandomReactionNetwork:
 
 
 
-
     def random_reaction_entropy_single_reaction(self, reaction_type :str) -> float:
         """
         CAUTION: this is applicable only to single reactions,
@@ -1052,9 +902,166 @@ class RandomReactionNetwork:
 
 
 
-    def forward_activation_gibbs_energy_normal(self, delta_G :float, mean=70., sigma=15.) -> float:
+    def sample_forward_rate_constant_from_delta_gibbs(self, delta_G :float) -> float:
         """
-        Draw values for the forward activation free energy ΔGf‡ from a normal distribution.
+        Stochastically generate a plausible effective forward rate constant
+        for a bimolecular reaction of the form A + B <-> C.
+
+        The intrinsic chemical rate is estimated using the BEP model
+        and Transition State Theory (Eyring equation).
+
+        A diffusion limitation is subsequently applied using a
+        resistance-in-series approximation:  1/k_eff = 1/k_diff + 1/k_chem
+        ("the Collins–Kimball formulation" for combining diffusion and chemical reaction limitations);
+        see https://www.mdpi.com/1420-3049/24/19/3478 and
+        https://pubs.aip.org/aip/jcp/article/157/19/194110/2842047/A-Gaussian-jump-process-formulation-of-the
+
+        The supplied delta_G is the STANDARD reaction Gibbs energy,
+        in kJ/mol.
+
+        :param delta_G: Standard reaction Gibbs energy, in kJ/mol.
+        :return:        Effective forward rate constant, in mol^-1 s^-1.
+        """
+        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
+                                    # To verify: this value is an approximate upper limit for small molecules in aqueous solution
+
+        forward_activation_gibbs_energy = self.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G,
+                                                                                          sigma_BEP=self.sigma_BEP)
+        #reverse_activation_gibbs_energy = forward_activation_gibbs_energy - delta_G
+
+        # Calculate intrinsic rate constants (in forward and reverse reaction)
+        kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                             molecularity=2,
+                                                             temp=self.temp)    # Forward reaction A + B -> P
+
+        # Rein in any unrealistic value for kF, for reaction of type A + B -> C
+        kF_effective = (kF * k_diffusion_limit) / (kF + k_diffusion_limit)
+        # Note:
+        #   1. When chemistry is slow, the effective rate is approximately the chemical rate
+        #   2. When chemistry is very fast, the effective rate approaches the diffusion limit
+        #   3. There's no abrupt discontinuity when the chemical rate crosses the diffusion limit
+        #kF = min(kF, k_diffusion_limit)
+
+        """
+        kR = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=reverse_activation_gibbs_energy,
+                                                             molecularity=1,
+                                                             temp=self.temp)    # Forward reaction P -> A + B
+        """
+        return kF_effective
+
+
+
+    def rate_constant_from_activation_gibbs_energy(self, activation_delta_G :float, temp :float,
+                                                   molecularity: int=1,
+                                                   standard_concentration: float = 1.0) -> float:
+        """
+        Estimate a rate constant using Transition State Theory (Eyring).
+
+        Using the Eyring equation from transition state theory,
+        estimate the kinetic rate constant from the activation free energy.
+
+        We are working under the assumption that the transmission coefficient κ = 1
+        (the fraction of the flux through the transition state that proceeds to the product
+        without recrossing the transition state)
+
+        For more info:  https://en.wikipedia.org/wiki/Eyring_equation
+                        https://rosenreview.cbe.princeton.edu/sites/g/files/toruqf6461/files/documents/qm_thermo_kinetics.pdf
+
+        Every additional δ > 0 in the activation free energy,
+        leads to a DECREASE in the rate constant by a factor exp(δ /R T) :
+        k(ΔG‡ + δ) / k(ΔG‡) = 1 / exp(δ / R T)
+        i.e.   k(ΔG‡ + δ) = k(ΔG‡) / exp(δ / R T)
+
+        So, for example, at T=300 K, every additional 5.7434 kJ/mol (i.e. R T ln 10) of activation free energy
+        leads to a x10 DECREASE in the rate constant :  exp(5.7434 / 2.494) = 10
+
+        :param activation_delta_G:  Activation free energy (forward or reverse), in kJ/mol
+        :param temp:                Temperature, in degree Kelvins
+        :param molecularity:        Number of reactant molecules in the elementary step.
+                                        For example, for the reaction A + B -> P, use molecularity=2;
+                                        for the reverse reaction, use molecularity=1
+        :param standard_concentration: Standard concentration, mol/L
+
+        :return:                    The kinetic rate constant for either the forward or reverse reaction,
+                                        depending on the type of activation_delta_G
+                                        Units: (mol/L)^(1-molecularity) / sec
+        """
+        exponential = math.exp(- activation_delta_G / (ThermoDynamics.R * temp))
+        # Note: at 300 K,  R T = 2.494 kJ mol−1
+
+        concentration_factor = standard_concentration ** (1 - molecularity)
+
+        # Note: self.kB_over_h * temp is about 6.25e12 s-1 at 300 K,
+        #       and is called "attempt frequency"
+        return self.kB_over_h * temp * concentration_factor * exponential
+
+
+
+    def sample_forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70., sigma_BEP=5.) -> float:
+        """
+        NOTE: this is a STOCHASTIC value; different calls with the same arguments will give different results
+
+        Using the Brønsted-Evans-Polanyi relation (BEP),
+        the forward activation Gibbs free energy ΔGf‡ is modeled by:
+            ΔGf‡ = α ΔG° + β + ϵ
+        where
+            ΔG° reaction free energy
+            α and β are two parameters
+            ϵ is noise (because real reactions are not perfectly correlated)
+
+        We also enforce :  ΔGf‡ >= 0   and  ΔGf‡ >= ΔG
+
+        Tentatively (to be further verified and validated),
+        we use the following default parameter values:
+
+            α=0.5
+            β=70 kJ/mol
+            ϵ modeled with a Normal distribution N(0, σBEP^2) , where σBEP = 5 kJ/mol
+
+        The Brønsted–Evans–Polanyi relationship is an empirical relationship,
+        not a universal law applying identically to all chemical reactions.
+        Its coefficients are generally fitted for particular reaction families or related reaction mechanisms.
+        Extrapolating them to chemically unrelated reactions can be problematic.
+
+        Here we are using it as a phenomenological statistical model for our hypothetical chemistry
+        of random reaction networks.
+
+        See:
+            - "Molecular Driving Forces - Statistical Thermodynamics", by Dill & Bromberg (2nd edn, 2011)
+            - https://pmc.ncbi.nlm.nih.gov/articles/PMC6465329
+            - https://cefrc.princeton.edu/sites/g/files/toruqf1071/files/day4_curran.pdf
+            - https://pubs.rsc.org/p2/article-abstract/23/10/2155/12360/An-extended-form-of-the-Evans-Polanyi-equation-a
+
+        :param delta_G:     The standard reaction free energy ΔG, in kJ/mol
+        :param alpha:       The multiplicative parameter of the Brønsted-Evans-Polanyi relation (BEP) model
+        :param beta:        The multiplicative parameter of the BEP model, in kJ/mol
+        :param sigma_BEP:   The standard deviation, in kJ/mol, of the Gaussian noise to add to the estimates.
+                                Varying sigma_BEP can be used to model "kinetic ruggedness"
+
+        :return:            An estimate, based on the Brønsted-Evans-Polanyi relation (BEP),
+                                of a plausible forward activation free energy, in kJ/mol,
+                                for the given reaction free energy ΔG
+        """
+        eps = self.rng.normal(loc=0, scale=sigma_BEP)    # Mean and SD
+        forward_activation_delta_G = alpha*delta_G + beta + eps
+
+        # The following constrains guarantee that both forward and reverse
+        # activation barriers are non-negative,
+        # provided that the reverse barrier is subsequently calculated as ΔGr‡ = ΔGf‡ - ΔG
+        clipped_value = max(forward_activation_delta_G, max(0., delta_G))
+        # Note: clipping a Gaussian draw creates a probability concentration
+        # exactly at the boundary.  TODO: consider using a truncated normal to avoid that artificial pile-up
+
+        return clipped_value
+
+
+
+    def sample_forward_activation_gibbs_energy_normal(self, delta_G :float, mean=70., sigma=15.) -> float:
+        """
+        Note: not in current use;
+              for a more sophisticated approach, see sample_forward_activation_free_energy_BEP()
+
+        Draw random values for the forward activation free energy ΔGf‡ from a normal distribution.
 
         We also enforce :  ΔGf‡ >= 0   and  ΔGf‡ >= ΔG
 
@@ -1068,82 +1075,14 @@ class RandomReactionNetwork:
         because no consideration is given to the reaction free energy ΔG, other than
         enforcing ΔGf‡ >= ΔG.
 
-        For a more sophisticated approach, see forward_activation_free_energy_BEP()
-
         :param delta_G: The reaction free energy ΔG, in kJ/mol
         :param mean:    The standard deviation, in kJ/mol, of the Gaussian values
         :param sigma:   The standard deviation, in kJ/mol, of the Gaussian values
 
         :return:        An estimate, based on a Normal distribution,
-                            of a plausible forward activation free energy, in kJ/mol,
-                            for a random reaction
+                            of a presumably somewhat plausible forward activation free energy,
+                            in kJ/mol, for a random reaction
         """
         forward_activation_delta_G = self.rng.normal(loc=mean, scale=sigma)    # Mean and SD
 
         return max(forward_activation_delta_G, max(0., delta_G))
-
-
-
-    def forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70., sigma=12.) -> float:
-        """
-        NOTE: this is a STOCHASTIC value; different calls with the same arguments will give different results
-
-        Using the Brønsted-Evans-Polanyi relation (BEP),
-        the forward activation Gibbs free energy ΔGf‡ is modeled by:
-            ΔGf‡ = α ΔG + β + ϵ
-        where
-            ΔG reaction free energy
-            α and β are two parameters
-            ϵ is noise (because real reactions are not perfectly correlated)
-
-        We also enforce :  ΔGf‡ >= 0   and  ΔGf‡ >= ΔG
-
-        Tentatively (to be further verified and validated),
-        we use the following default parameter values:
-
-            α=0.5
-            β=70 kJ/mol
-            ϵ modeled with a Normal distribution N(0, 12^2) , i.e. σ=12 kJ/mol
-
-        See: "Molecular Driving Forces - Statistical Thermodynamics", by Dill & Bromberg (2nd edn, 2011)
-
-        :param delta_G: The reaction free energy ΔG, in kJ/mol
-        :param alpha:   The multiplicative parameter of the Brønsted-Evans-Polanyi relation (BEP) model
-        :param beta:    The multiplicative parameter of the BEP model, in kJ/mol
-        :param sigma:   The standard deviation, in kJ/mol, of the Gaussian noise to add to the estimates
-
-        :return:        An estimate, based on the Brønsted-Evans-Polanyi relation (BEP),
-                            of a plausible forward activation free energy, in kJ/mol,
-                            for the given reaction free energy ΔG
-        """
-        eps = self.rng.normal(loc=0, scale=sigma)    # Mean and SD
-        forward_activation_delta_G = alpha*delta_G + beta + eps
-
-        return max(forward_activation_delta_G, max(0., delta_G))
-
-
-
-    def rate_constant_from_activation_gibbs_energy(self, activation_delta_G :float, temp :float) -> float:
-        """
-        Using the Eyring equation from transition state theory,
-        estimate the kinetic rate constant from the activation free energy.
-
-        We are working under the assumption that the transmission coefficient κ = 1
-        (the fraction of the flux through the transition state that proceeds to the product
-        without recrossing the transition state)
-
-        For more info: https://en.wikipedia.org/wiki/Eyring_equation
-
-        Note that, at T=300 K, every additional 5.7434 kJ/mol (R T ln10) of activation free energy
-        leads to a x10 decrease in the rate constant
-
-        :param activation_delta_G:  Activation free energy (forward or reverse), in kJ/mol
-        :param temp:                System's temperature, in degree Kelvins
-        :return:                    The kinetic rate constant, in 1/sec, for either the forward or reverse reaction,
-                                        depending on the type of activation_delta_G
-        """
-        exponential = math.exp(- activation_delta_G / (ThermoDynamics.R * temp))
-
-        # Note: self.kB_over_h * temp is about 6.25e12 s-1 at 300 K,
-        #       and is called "attempt frequency"
-        return self.kB_over_h * temp * exponential
