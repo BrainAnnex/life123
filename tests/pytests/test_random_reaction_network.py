@@ -5,6 +5,7 @@ import numpy as np
 from life123.random_reactions import RandomReactionNetwork, ReactionTerm
 from life123.reactions import ReactionDefinition, SimulationReaction
 from life123.stoichiometry import Stoichiometry
+from life123.thermodynamics import ThermoDynamics
 
 
 def test_ReactionTerm():
@@ -199,40 +200,87 @@ def test_assign_kinetics():
 
 
 def test_sample_forward_rate_constant_from_delta_gibbs():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, temp=300, seed=1892842)
 
+    # The following variables are used to predict the results of the statistical sampling
+    assert net.temp == 300
+    F = net.kB_over_h * net.temp * 1
+    C = math.log(F)
+    assert math.isclose(C, 29.463760285159093)
+    alpha=0.5   # Value used for sample_forward_activation_gibbs_energy_BEP()
+    beta=70.    # Value used for sample_forward_activation_gibbs_energy_BEP()
+    RT = ThermoDynamics.R * net.temp
+    assert math.isclose(RT, 2.494338785445972)
+    expected_SD_of_logs = net.sigma_BEP / RT
+    print("expected_SD_of_logs: ", expected_SD_of_logs)
+
+    # In the following scenario, the forward activation energy ~ N(50, 5^2)
+    #   as shown in test_sample_forward_activation_gibbs_energy_BEP()
     delta_G = -40   # kJ/mol
     samples = []
     log_samples = []
-    for i in range(10000):
+    for _ in range(200):
         kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
         samples.append(kF)
-        log_samples.append(math.log10(kF))
-        #print(net.sample_forward_rate_constant_from_delta_gibbs(delta_G))
+        log_samples.append(math.log(kF))
 
-    #print(samples)
-    print("delta_G: ", delta_G)
-    print("MEAN of samples: ", np.mean(samples))
-    print("STD DEV of samples: ", np.std(samples))
-    print("MEAN of LOG samples: ", np.mean(log_samples))
-    print("STD DEV of LOG samples: ", np.std(log_samples))
+    #print("delta_G: ", delta_G)
 
-    print("----------------------------")
+    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
+    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
+    #print("expected_mean_of_logs: ", expected_mean_of_logs)
+    #print("expected median of samples: ", expected_median_of_samples)
+
+    #print("MEAN of rate-constant samples: ", np.mean(samples))
+    assert math.isclose(np.mean(samples), 61202.31395971857)
+
+    #print("MEDIAN of rate-constant samples: ", np.median(samples))
+    assert math.isclose(np.median(samples), 12124.209523114856)
+    assert math.isclose(expected_median_of_samples, 12312.469127155957)
+
+    #print("STD DEV of rate-constant samples: ", np.std(samples))
+    assert math.isclose(np.std(samples), 163647.55713183244)
+
+    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
+    assert math.isclose(np.mean(log_samples), 9.40148571925807)
+    assert math.isclose(expected_mean_of_logs, 9.418367778038089)
+
+    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
+    assert math.isclose(np.std(log_samples), 1.9490556161092185)
+    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
+
+
+    # In the following scenario, the forward activation energy ~ N(70, 5^2)
     delta_G = 10   # kJ/mol
     samples = []
     log_samples = []
-    for i in range(10000):
+    for i in range(200):
         kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
         samples.append(kF)
-        log_samples.append(math.log10(kF))
-        #print(net.sample_forward_rate_constant_from_delta_gibbs(delta_G))
+        log_samples.append(math.log(kF))
 
-    #print(samples)
-    print("delta_G: ", delta_G)
-    print("MEAN of samples: ", np.mean(samples))
-    print("STD DEV of samples: ", np.std(samples))
-    print("MEAN of LOG samples: ", np.mean(log_samples))
-    print("STD DEV of LOG samples: ", np.std(log_samples))
+    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
+    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
+    #print("expected_mean_of_logs: ", expected_mean_of_logs)
+    #print("expected median of samples: ", expected_median_of_samples)
+
+    #print("MEAN of rate-constant samples: ", np.mean(samples))
+    assert math.isclose(np.mean(samples), 2.781075328962337)
+
+    #print("MEDIAN of rate-constant samples: ", np.median(samples))
+    assert math.isclose(np.median(samples), 0.6605902686082537)
+    assert math.isclose(expected_median_of_samples, 0.5464412521361471)
+
+    #print("STD DEV of rate-constant samples: ", np.std(samples))
+    assert math.isclose(np.std(samples), 6.453436015796135)
+
+    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
+    assert math.isclose(np.mean(log_samples), -0.5303373792011049)
+    assert math.isclose(expected_mean_of_logs, -0.604328475522415)
+
+    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
+    assert math.isclose(np.std(log_samples), 1.9180559948866813)
+    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
 
 
 
@@ -740,12 +788,60 @@ def test_sample_forward_activation_gibbs_energy_BEP():
     assert math.isclose(result, 106.95363768564654)
 
     for _ in range(20):
-        # Generated values, no matter what delta_G is, are always >= 0 and >= delta_G
+        # The generated values, no matter what delta_G is, are always >= 0 and >= delta_G
         # even for large deviations in the stochastic component
-        delta_G = net.rng.normal(loc=0, scale=100)
+        delta_G = net.rng.normal(loc=0, scale=120)
         result = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G, alpha=0.5, beta=70., sigma_BEP=20)
         assert result >= 0
         assert result >= delta_G
+
+
+    # In this scenario, clipping of the normal distribution is virtually nonexistent
+    delta_G = -40   # kJ/mol
+    samples = []
+    for _ in range(200):
+        forward_activation_gibbs_energy \
+            = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G, alpha=0.5, beta=70.,
+                                                             sigma_BEP=5)
+        samples.append(forward_activation_gibbs_energy)
+
+    #print("MEAN of samples: ", np.mean(samples))    # approaches: 0.5 * (-40) + 70 = 50
+    #print("STD DEV of samples: ", np.std(samples))  # approaches: 5
+    assert math.isclose(np.mean(samples), 49.61507214604135)
+    assert math.isclose(np.std(samples), 5.0522742961708)
+
+
+    # In this scenario, clipping of the normal distribution is virtually nonexistent
+    delta_G = 10   # kJ/mol
+    samples = []
+    for _ in range(200):
+        forward_activation_gibbs_energy \
+            = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G, alpha=0.5, beta=70.,
+                                                             sigma_BEP=5)
+        samples.append(forward_activation_gibbs_energy)
+
+    #print("MEAN of samples: ", np.mean(samples))        # approaches: 0.5 * (10) + 70 = 75
+    #print("STD DEV of samples: ", np.std(samples))      # approaches: 5
+    assert math.isclose(np.mean(samples), 74.66395543434598)
+    assert math.isclose(np.std(samples), 5.104981509763143)
+
+
+    # This scenario will trigger a lot of negative values clipped to zero
+    delta_G = -140   # kJ/mol
+    samples = []
+    for _ in range(200):
+        forward_activation_gibbs_energy \
+            = net.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G, alpha=0.5, beta=70.,
+                                                             sigma_BEP=5)
+        samples.append(forward_activation_gibbs_energy)
+
+    #print("MEAN of samples: ", np.mean(samples))    # In the absence of clipping, it'd approach
+                                                    # 0.5 * (-140) + 70 = 0  -> LOTS OF CLIPPING!
+    #print("STD DEV of samples: ", np.std(samples))  # In the absence of clipping, it'd approach 5
+    # The following values are based on a Normal, clipped at zero (rectified normal distribution),
+    # which we'll call Y
+    assert math.isclose(np.mean(samples),  2.0245342138123097)  # E[Y] = sigma_BEP/sqrt(2 π) = 1.995
+    assert math.isclose(np.std(samples), 3.236657973331011)     # SD[Y] = sigma_BEP*sqrt(1/2 - 1/2π) = 2.919
 
 
 

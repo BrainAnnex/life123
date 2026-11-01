@@ -929,24 +929,25 @@ class RandomReactionNetwork:
                                                                                           sigma_BEP=self.sigma_BEP)
         #reverse_activation_gibbs_energy = forward_activation_gibbs_energy - delta_G
 
-        # Calculate intrinsic rate constants (in forward and reverse reaction)
+        # Calculate intrinsic rate constants (in forward reaction)
         kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                              molecularity=2,
                                                              temp=self.temp)    # Forward reaction A + B -> P
 
         # Rein in any unrealistic value for kF, for reaction of type A + B -> C
+        # Use a resistance-in-series approximation:  1/k_eff = 1/k_diff + 1/k_chem
         kF_effective = (kF * k_diffusion_limit) / (kF + k_diffusion_limit)
         # Note:
         #   1. When chemistry is slow, the effective rate is approximately the chemical rate
         #   2. When chemistry is very fast, the effective rate approaches the diffusion limit
         #   3. There's no abrupt discontinuity when the chemical rate crosses the diffusion limit
-        #kF = min(kF, k_diffusion_limit)
 
         """
         kR = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=reverse_activation_gibbs_energy,
                                                              molecularity=1,
                                                              temp=self.temp)    # Forward reaction P -> A + B
         """
+
         return kF_effective
 
 
@@ -989,34 +990,60 @@ class RandomReactionNetwork:
         exponential = math.exp(- activation_delta_G / (ThermoDynamics.R * temp))
         # Note: at 300 K,  R T = 2.494 kJ mol−1
 
-        concentration_factor = standard_concentration ** (1 - molecularity)
+        concentration_factor = standard_concentration ** (1 - molecularity)     # This is generally 1
 
         # Note: self.kB_over_h * temp is about 6.25e12 s-1 at 300 K,
         #       and is called "attempt frequency"
-        return self.kB_over_h * temp * concentration_factor * exponential
+        rate_constant = self.kB_over_h * temp * concentration_factor * exponential
+
+        # STATISTICAL ANALYSIS -
+        # At a given temp:
+        #       rate_constant = (self.kB_over_h * temp * concentration_factor) * math.exp(- activation_delta_G / (R T))
+        #
+        # Taking the natural logs:
+        #       ln(rate_constant) = ln(self.kB_over_h * temp * concentration_factor) + [- activation_delta_G / (R T)]
+        # i.e.  ln(rate_constant) = C - (1/(R T)) * activation_delta_G  ,
+        #       where C is a constant:  C = ln(self.kB_over_h * temp * concentration_factor)
+        #
+        # We noted that activation_delta_G ~ N(α ΔG° + β , sigma_BEP^2) whenever there's no clipping
+        # (see the comments inside sample_forward_activation_gibbs_energy_BEP())
+        # Therefore, under those circumstances,  ln(rate_constant) will also have a normal distribution
+        #   with mean = ln(C) - (1/(R T)) * E[activation_delta_G] = C - [α ΔG° + β]/(R T)
+        #   and SD = (1/(R T)) * SD[activation_delta_G] = sigma_BEP / (R T)
+        #
+        # Finally, the median(rate_constant) = median(F * math.exp(- activation_delta_G / (R T)) =
+        #                                    = F * math.exp(- median(activation_delta_G) / (R T))
+        #                                    = F * math.exp(- (α ΔG° + β) / (R T))
+        #       where F = self.kB_over_h * temp * concentration_factor
+        return rate_constant
 
 
 
-    def sample_forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70., sigma_BEP=5.) -> float:
+    def sample_forward_activation_gibbs_energy_BEP(self, delta_G :float, alpha=0.5, beta=70.,
+                                                   sigma_BEP=5.) -> float:
         """
         NOTE: this is a STOCHASTIC value; different calls with the same arguments will give different results
 
         Using the Brønsted-Evans-Polanyi relation (BEP),
-        the forward activation Gibbs free energy ΔGf‡ is modeled by:
+        the forward activation Gibbs free energy ΔGf‡ is modeled by
+        the linear empirical approximation:
             ΔGf‡ = α ΔG° + β + ϵ
         where
-            ΔG° reaction free energy
+            ΔG° reaction standard free energy
             α and β are two parameters
             ϵ is noise (because real reactions are not perfectly correlated)
 
-        We also enforce :  ΔGf‡ >= 0   and  ΔGf‡ >= ΔG
+        We also enforce the following clipping:  ΔGf‡ >= 0   and  ΔGf‡ >= ΔG
+
+        Note that, in scenarios where clipping happens to be virtually nonexistent,
+        ΔGf‡ will have a Normal distribution, with mean = α ΔG° + β , and SD = sigma_BEP
 
         Tentatively (to be further verified and validated),
         we use the following default parameter values:
 
             α=0.5
             β=70 kJ/mol
-            ϵ modeled with a Normal distribution N(0, σBEP^2) , where σBEP = 5 kJ/mol
+            ϵ modeled with a Normal distribution N(0, σBEP^2) , where by default σBEP = 5 kJ/mol
 
         The Brønsted–Evans–Polanyi relationship is an empirical relationship,
         not a universal law applying identically to all chemical reactions.
@@ -1045,12 +1072,17 @@ class RandomReactionNetwork:
         eps = self.rng.normal(loc=0, scale=sigma_BEP)    # Mean and SD
         forward_activation_delta_G = alpha*delta_G + beta + eps
 
+        # Note: forward_activation_delta_G, as computed so far,
+        #       has a normal distribution with mean = alpha*delta_G + beta, and STD_DEV = sigma_BEP
+
         # The following constrains guarantee that both forward and reverse
         # activation barriers are non-negative,
         # provided that the reverse barrier is subsequently calculated as ΔGr‡ = ΔGf‡ - ΔG
         clipped_value = max(forward_activation_delta_G, max(0., delta_G))
         # Note: clipping a Gaussian draw creates a probability concentration
         # exactly at the boundary.  TODO: consider using a truncated normal to avoid that artificial pile-up
+        # TODO: maybe record the number of instances of clippings, for diagnostic value that
+        #      perhaps the linear BEP approximation is being extrapolated beyond the range where it's a good model
 
         return clipped_value
 
