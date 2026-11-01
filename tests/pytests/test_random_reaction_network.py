@@ -365,7 +365,7 @@ def test_random_species_entropy():
 
 
 def test_generate_random_reaction_network():
-    net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=307)
+    net = RandomReactionNetwork(n_species=4, n_rxns=0, temp=300, seed=1885)
 
     net.generate_random_reaction_network(n_rxns=1)
 
@@ -373,11 +373,31 @@ def test_generate_random_reaction_network():
     rxns = net.reaction_registry.get_all_reactions()
     assert len(rxns) == 1
     r = rxns[0]
-    print(r.source_object.describe(detail="summary"))
+    #print(r.source_object.describe(detail="summary"))
+
+    thermo = r.get_thermodynamics()
+    #print(thermo)
+    assert math.isclose(thermo.delta_G, -40.71017768072146)
+    assert math.isclose(thermo.delta_H, -58.58420393765226)
+    assert math.isclose(thermo.delta_S, -59.58008752310267)
+    assert math.isclose(thermo.K_eq, 12249918.145025807)
+    assert math.isclose(thermo.temp, 300)
+    assert thermo.derived_pars=={'K_eq', 'delta_G'}
+
+    assert r.stoichiometry.vector == {'D': -1, 'A': -1, 'C': 1}     # D + A <-> C
+    assert r.stoichiometry.catalysts == []
+
+    kinetic = r.get_parameters()
+    #print(kinetic)  # {'kF': 11006.600415591303, 'kR': 0.0008985039969479825, 'K': 12249918.145025807, 'reversible': True}
+    assert math.isclose(kinetic['kF'], 11006.600415591303)
+    assert math.isclose(kinetic['kR'], 0.0008985039969479825)
+    assert math.isclose(kinetic['K'], 12249918.145025807)
+    assert kinetic['reversible']
 
 
+    # The following is used to find a seed that leads close to a desired value of delta_G
     """
-    for seed in range(1000):
+    for seed in range(2000):
         net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=seed)
 
         net.generate_random_reaction_network(n_rxns=1)
@@ -393,7 +413,8 @@ def test_generate_random_reaction_network():
             print("FOUND:")
             print("   value: ", r.get_thermodynamics().delta_G)
             print("   using seed: ", seed)
-    """
+        """
+
 
 
 def test_generate_multiple_random_reactions():

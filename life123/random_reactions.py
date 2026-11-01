@@ -119,13 +119,16 @@ class RandomReactionNetwork:
 
     def generate_random_reaction_network(self, n_rxns :int) -> None:
         """
-        Generate the given number of random reactions:
-        they are all different from one another,
-        and in the process assign arbitrary but consistent numbers of atams to each involved species.
+        Generate the given number of random reactions,
+        all different from one another.
 
-        Then assign thermodynamic and kinetic parameters.
+        In the process, assign arbitrary but consistent numbers of atams
+        to each involved species.
+        Then assign consistent thermodynamic parameters,
+        as well as kinetic parameters that are plausible - and consistent - in the context
+        of the existing thermodynamic parameters.
 
-        Populate `self.reaction_registry` with the newly-generated reactions
+        Populate `self.reaction_registry` with the newly-generated reactions.
 
         :return:    None
         """
@@ -134,6 +137,7 @@ class RandomReactionNetwork:
         for rxn in self.get_all_random_reactions():
             self.assign_thermodynamics(rxn)
             self.assign_kinetics(rxn)
+
 
 
     def generate_multiple_random_reactions(self, n_rxns :int) -> None:
@@ -909,12 +913,24 @@ class RandomReactionNetwork:
 
         forward_activation_gibbs_energy = self.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_G,
                                                                                           sigma_BEP=self.sigma_BEP)
-        #reverse_activation_gibbs_energy = forward_activation_gibbs_energy - delta_G
+
 
         # Calculate intrinsic rate constants (in forward reaction)
         kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
                                                              molecularity=2,
                                                              temp=self.temp)    # Forward reaction A + B -> P
+
+
+        # This is just for verification (uncomment for testing)
+        """
+        reverse_activation_gibbs_energy = forward_activation_gibbs_energy - delta_G
+        kR_uncorrected = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=reverse_activation_gibbs_energy,
+                                                             molecularity=1,
+                                                             temp=self.temp)    # Reverse reaction P -> A + B
+        print("reverse_activation_gibbs_energy: ", reverse_activation_gibbs_energy)
+        print("kR_uncorrected: ", kR_uncorrected)
+        
+        """
 
         # Rein in any unrealistic value for kF, for reaction of type A + B -> C
         # Use a resistance-in-series approximation:  1/k_eff = 1/k_diff + 1/k_chem
@@ -924,12 +940,8 @@ class RandomReactionNetwork:
         #   2. When chemistry is very fast, the effective rate approaches the diffusion limit
         #   3. There's no abrupt discontinuity when the chemical rate crosses the diffusion limit
 
-        """
-        kR = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=reverse_activation_gibbs_energy,
-                                                             molecularity=1,
-                                                             temp=self.temp)    # Forward reaction P -> A + B
-        """
-
+        # TODO: consider also returning the `forward_activation_gibbs_energy`,
+        #       and storing it in the data structure
         return kF_effective
 
 
@@ -1054,8 +1066,8 @@ class RandomReactionNetwork:
         eps = self.rng.normal(loc=0, scale=sigma_BEP)    # Mean and SD
         forward_activation_delta_G = alpha*delta_G + beta + eps
 
-        # Note: forward_activation_delta_G, as computed so far,
-        #       has a normal distribution with mean = alpha*delta_G + beta, and STD_DEV = sigma_BEP
+        # STATISTICAL NOTE: forward_activation_delta_G, as computed so far,
+        #                   has a Normal distribution with MEAN = alpha*delta_G + beta, and STD_DEV = sigma_BEP
 
         # The following constrains guarantee that both forward and reverse
         # activation barriers are non-negative,
@@ -1065,6 +1077,8 @@ class RandomReactionNetwork:
         # exactly at the boundary.  TODO: consider using a truncated normal to avoid that artificial pile-up
         # TODO: maybe record the number of instances of clippings, for diagnostic value that
         #      perhaps the linear BEP approximation is being extrapolated beyond the range where it's a good model
+
+        #print("clipped_value for sample_forward_activation: ", clipped_value)
 
         return clipped_value
 
@@ -1090,11 +1104,11 @@ class RandomReactionNetwork:
         enforcing ΔGf‡ >= ΔG.
 
         :param delta_G: The reaction free energy ΔG, in kJ/mol
-        :param mean:    The standard deviation, in kJ/mol, of the Gaussian values
+        :param mean:    The mean, in kJ/mol, of the Gaussian values
         :param sigma:   The standard deviation, in kJ/mol, of the Gaussian values
 
         :return:        An estimate, based on a Normal distribution,
-                            of a presumably somewhat plausible forward activation free energy,
+                            of a presumably plausible forward activation free energy,
                             in kJ/mol, for a random reaction
         """
         forward_activation_delta_G = self.rng.normal(loc=mean, scale=sigma)    # Mean and SD
