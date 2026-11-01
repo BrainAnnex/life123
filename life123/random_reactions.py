@@ -131,8 +131,6 @@ class RandomReactionNetwork:
         """
         self.generate_multiple_random_reactions(n_rxns)
 
-        #self.assign_thermodynamics_OLD()
-
         for rxn in self.get_all_random_reactions():
             self.assign_thermodynamics(rxn)
             self.assign_kinetics(rxn)
@@ -166,17 +164,17 @@ class RandomReactionNetwork:
         """
         MAX_TRIES = 30        # To avoid infinite loops
 
-        print(f"\ngenerate_new_consistent_unique_reaction(): generating a new unique reaction...")
+        #print(f"\ngenerate_new_consistent_unique_reaction(): generating a new unique reaction...")
         stoic = self.generate_new_unique_reaction()
-        print(f"generate_new_consistent_unique_reaction(): now attempting to assign/verify assignment of atom counts to tentative new reaction with vector {stoic.vector}")
+        #print(f"generate_new_consistent_unique_reaction(): now attempting to assign/verify assignment of atom counts to tentative new reaction with vector {stoic.vector}")
 
 
         n_attempts = 1
         # Prevent adding reactions that can't be fit into a balanced atomic-count accounting
         while (n_attempts <= MAX_TRIES) and (not self._fulfill_reaction(stoic=stoic)):
-            print(f"generate_new_consistent_unique_reaction(): the previous tentative reaction CANNOT be fit into a balanced atomic-count accounting. Generating new one...")
+            #print(f"generate_new_consistent_unique_reaction(): the previous tentative reaction CANNOT be fit into a balanced atomic-count accounting. Generating new one...")
             stoic = self.generate_new_unique_reaction()
-            print(f"    Attempting to validate atom count in new reaction with vector {stoic.vector}")
+            #print(f"    Attempting to validate atom count in new reaction with vector {stoic.vector}")
             n_attempts += 1
         assert n_attempts <= MAX_TRIES, \
             f"Giving up after {n_attempts} attempts.  It's proving very hard to generate new random reactions fit into a balanced atomic-count accounting.  " \
@@ -194,7 +192,7 @@ class RandomReactionNetwork:
                 species_object.label += f"({atom_count})"
 
 
-        print(f"    validated atom count: {stoic.standard_chemical_formula(reversible=True)}  {debug_info}")
+        #print(f"    validated atom count: {stoic.standard_chemical_formula(reversible=True)}  {debug_info}")
 
         return stoic
 
@@ -211,14 +209,14 @@ class RandomReactionNetwork:
 
         # Reaction R1 + R2 <-> P
         reactants, products  = self._assign_species_to_rxn()
-        print(f"generate_new_unique_reaction(): Tentatively considering reactants: {reactants} | products: {products}")
+        #print(f"generate_new_unique_reaction(): Tentatively considering reactants: {reactants} | products: {products}")
 
         n_attempts = 1
         # Prevent re-adding reactions that identically occurred before
         while (n_attempts <= MAX_ATTEMPTS) and (self._already_used(reactants, products)):
             reactants, products = self._assign_species_to_rxn()
-            print(f"    [!] the previous combination had already been used.  Tentatively considering new "
-                  f"reactants: {reactants} | products: {products}")
+            #print(f"    [!] the previous combination had already been used.  Tentatively considering new "
+            #      f"reactants: {reactants} | products: {products}")
             n_attempts += 1
         assert n_attempts <= MAX_ATTEMPTS, \
             f"Giving up after {n_attempts} attempts.  It's proving very hard to generate random reactions that don't repeat," \
@@ -670,36 +668,20 @@ class RandomReactionNetwork:
 
     def assign_kinetics(self, rxn :SimulationReaction) -> None:
         """
-        Assign to each of the reactions in `self.reaction_registry`
+        Assign to the given reaction
         random kinetic parameters that are consistent with its (previous assigned)
         thermodynamic parameters
 
         :return:    None
         """
-        #r = "ReactionSynthesis"     # The only type currently supported
-        #k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
-
-
         delta_gibbs_energy = rxn.get_thermodynamics().delta_G
 
         kF = self.sample_forward_rate_constant_from_delta_gibbs(delta_gibbs_energy)
 
-        """
-        forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
-        kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
-                                                            temp=self.temp)
-
-        # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
-        if r == "ReactionSynthesis":
-            kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
-        elif r == "ReactionDecomposition":
-            raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
-        """
-
         rxn.set_parameters(parameters={"kF": kF})
 
         # This will also set kR, to be consistent with kF and the thermodynamic data
-        rxn.source_object.set_thermodynamics_and_update_kinetics()
+        rxn.source_object.set_thermodynamics_and_update_kinetics()  # rxn.source_object is of type "ReactionDefinition"
 
 
 
