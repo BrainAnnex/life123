@@ -71,299 +71,6 @@ def test_RandomReactionNetwork_CONSTRUCTOR_2():
 
 
 
-def test_random_reaction_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-
-    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -1, "B": -1, "C": 1})
-    #print(net.standard_species_enthalpy)
-
-    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
-    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
-    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
-
-    assert np.allclose(result_1, -0.09060878868225242)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
-    # ΔH = HC − HA − HB
-
-
-    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 1, "B": 1})
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -2, "C": 1})
-    assert np.allclose(result_1, 18.64658849823368)
-    assert np.allclose(result_1,
-                       net.get_species_enthalpy("C")
-                       - 2 * net.get_species_enthalpy("A"))
-    # ΔH = HC - 2 HA
-
-    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 2})
-    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
-
-
-
-def test_assign_thermodynamics():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
-
-    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
-                                 species_registry=net.species_registry)
-    rxn = rxn_def.get_simulation_reactions(0)
-    assert type(rxn) is SimulationReaction
-
-    net.assign_thermodynamics(rxn=rxn)
-
-    thermo = rxn.get_thermodynamics()
-
-    assert math.isclose(thermo.delta_H, -47.88727263020628)     # kJ/mol
-    assert math.isclose(thermo.delta_S, -25.775930312009663)    # J/(mol·K)
-    assert math.isclose(thermo.temp, 298.15)                    # K
-    assert math.isclose(thermo.delta_G,
-                        thermo.delta_H - thermo.temp * thermo.delta_S/1000)
-                        # Divide by 100 because delta_S is J/(mol·K) , while delta_H ana delta_G are kJ/mol
-    assert math.isclose(thermo.delta_G, -40.2021790076806)
-
-    R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
-    assert math.isclose(thermo.K_eq, math.exp(-thermo.delta_G/(R * thermo.temp)))
-    assert math.isclose(thermo.K_eq, 11043762.102600524)
-
-    assert thermo.derived_pars == {'delta_G', 'K_eq'}
-
-    #print(rxn_def.get_thermodynamics())
-    #print(rxn_def.describe(detail="summary"))
-
-
-def test_assign_thermodynamics_2():
-    n_rxns = 200
-
-    net = RandomReactionNetwork(n_species=3*n_rxns, n_rxns=0, seed=992842)
-    all_species_id = net.species_registry.get_all_species_ids(sort=True)
-
-    H_list = []
-    S_list = []
-    for cycle in range(n_rxns):
-        a, b, c = all_species_id[3*cycle : 3*(cycle+1)]     # EXAMPLES: [0:3] , [3:6], etc
-        #print(a, b, c, end="\n")
-        rxn_def = ReactionDefinition(reactants=[a, b], products=[c], reaction_model="mass action",
-                                     species_registry=net.species_registry)
-        rxn = rxn_def.get_simulation_reactions(0)
-        net.assign_thermodynamics(rxn=rxn)
-        thermo = rxn.get_thermodynamics()
-        H_list.append(thermo.delta_H)
-        S_list.append(thermo.delta_S)
-
-
-    #print(np.mean(H_list))
-    assert math.isclose(np.mean(H_list), 0.24042843738514022)   # Approaches 0
-    #print(np.std(H_list))
-    assert math.isclose(np.std(H_list), 68.16724993565813)      # Approaches 70
-
-    #print(np.mean(S_list))
-    assert math.isclose(np.mean(S_list), -40.607863669418535)   # Approaches -40
-    #print(np.std(S_list))
-    assert math.isclose(np.std(S_list), 19.159843568900428)     # Approaches 20
-
-
-
-def test_assign_kinetics():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, temp=300, seed=1892842)
-
-    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
-                                 species_registry=net.species_registry)
-    rxn = rxn_def.get_simulation_reactions(0)   # Object of type "SimulationReaction"
-
-    # Instead of generate a random assignment of thermodynamic data, here we insert test values of our picking
-    thermo_data = {"delta_G": -40, "delta_S": -100}
-
-    # This will also derive and set `delta_H`
-    rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=net.temp)
-    thermo = rxn.get_thermodynamics()
-    print("thermo: ", thermo)
-    # ReactionThermodynamics(delta_H=-70.0, delta_S=-100, delta_G=-40, K_eq=9214731.447581297, temp=300, derived_pars={'K_eq', 'delta_H'})
-    assert math.isclose(thermo.delta_H, -40 + net.temp * (-100)/1000)   # The 1/1000 is because delta_S in J/mol while delta_H in kJ/mol
-    assert math.isclose(thermo.K_eq, math.exp(- (-40) / (ThermoDynamics.R * net.temp)))
-
-    #print("kinetic_parameters:", rxn.get_parameters())
-    # {'kF': None, 'kR': None, 'K': None, 'reversible': False}
-
-    net.assign_kinetics(rxn=rxn)
-    kin_pars = rxn.get_parameters()
-    #print("kinetic_parameters:", kin_pars)
-    # {'kF': 10379.920849763035, 'kR': 0.0011264485469609188, 'K': 9214731.447581297, 'reversible': True}
-    assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data
-    assert math.isclose(kin_pars["kF"], 10379.920849763035)     # Plausible, given a sample median of 12124
-                                                                # as shown in test_sample_forward_rate_constant_from_delta_gibbs()
-    assert math.isclose(kin_pars["kR"], kin_pars["kF"] / kin_pars["K"])     # Consistency
-
-
-    # Another round
-    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
-                                 species_registry=net.species_registry)
-    rxn = rxn_def.get_simulation_reactions(0)   # Object of type "SimulationReaction"
-
-    # Instead of generate a random assignment of thermodynamic data, here we insert test values of our picking
-    thermo_data = {"delta_G": 10, "delta_S": 500}
-
-    # This will also derive and set `delta_H`
-    rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=net.temp)
-    thermo = rxn.get_thermodynamics()
-    print("thermo: ", thermo)
-    #ReactionThermodynamics(delta_H=160.0, delta_S=500, delta_G=10, K_eq=0.01815011283612517, temp=300, derived_pars={'delta_H', 'K_eq'})
-    assert math.isclose(thermo.delta_H, 10 + net.temp * (500)/1000)   # The 1/1000 is because delta_S in J/mol while delta_H in kJ/mol
-    assert math.isclose(thermo.K_eq, math.exp(- (10) / (ThermoDynamics.R * net.temp)))
-
-    net.assign_kinetics(rxn=rxn)
-    kin_pars = rxn.get_parameters()
-    print("kinetic_parameters:", kin_pars)
-    # {'kF': 0.3768282915740335, 'kR': 20.76176026983212, 'K': 0.01815011283612517, 'reversible': True}
-    assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data
-    assert math.isclose(kin_pars["kF"], 0.3768282915740335)     # Plausible, given a sample median of 0.6605902686082537
-                                                                # as shown in test_sample_forward_rate_constant_from_delta_gibbs()
-    assert math.isclose(kin_pars["kR"], kin_pars["kF"] / kin_pars["K"])     # Consistency
-
-
-
-def test_sample_forward_rate_constant_from_delta_gibbs():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, temp=300, seed=1892842)
-
-    # The following variables are used to predict the results of the statistical sampling
-    assert net.temp == 300
-    F = net.kB_over_h * net.temp * 1
-    C = math.log(F)
-    assert math.isclose(C, 29.463760285159093)
-    alpha=0.5   # Value used for sample_forward_activation_gibbs_energy_BEP()
-    beta=70.    # Value used for sample_forward_activation_gibbs_energy_BEP()
-    RT = ThermoDynamics.R * net.temp
-    assert math.isclose(RT, 2.494338785445972)
-    expected_SD_of_logs = net.sigma_BEP / RT
-    #print("expected_SD_of_logs: ", expected_SD_of_logs)
-
-    # In the following scenario, the forward activation energy ~ N(50, 5^2)
-    #   as shown in test_sample_forward_activation_gibbs_energy_BEP()
-    #   Also, the k_diffusion_limit isn't applicable
-    delta_G = -40   # kJ/mol
-    samples = []
-    log_samples = []
-    for _ in range(200):
-        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
-        samples.append(kF)
-        log_samples.append(math.log(kF))
-
-    #print("delta_G: ", delta_G)
-
-    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
-    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
-    #print("expected_mean_of_logs: ", expected_mean_of_logs)
-    #print("expected median of samples: ", expected_median_of_samples)
-
-    #print("MEAN of rate-constant samples: ", np.mean(samples))
-    assert math.isclose(np.mean(samples), 61202.31395971857)
-
-    #print("MEDIAN of rate-constant samples: ", np.median(samples))
-    assert math.isclose(np.median(samples), 12124.209523114856)
-    assert math.isclose(expected_median_of_samples, 12312.469127155957)
-
-    #print("STD DEV of rate-constant samples: ", np.std(samples))
-    assert math.isclose(np.std(samples), 163647.55713183244)
-
-    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
-    assert math.isclose(np.mean(log_samples), 9.40148571925807)
-    assert math.isclose(expected_mean_of_logs, 9.418367778038089)
-
-    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
-    assert math.isclose(np.std(log_samples), 1.9490556161092185)
-    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
-
-
-    # In the following scenario, the forward activation energy ~ N(70, 5^2)
-    delta_G = 10   # kJ/mol
-    samples = []
-    log_samples = []
-    for i in range(200):
-        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
-        samples.append(kF)
-        log_samples.append(math.log(kF))
-
-    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
-    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
-    #print("expected_mean_of_logs: ", expected_mean_of_logs)
-    #print("expected median of samples: ", expected_median_of_samples)
-
-    #print("MEAN of rate-constant samples: ", np.mean(samples))
-    assert math.isclose(np.mean(samples), 2.781075328962337)
-
-    #print("MEDIAN of rate-constant samples: ", np.median(samples))
-    assert math.isclose(np.median(samples), 0.6605902686082537)
-    assert math.isclose(expected_median_of_samples, 0.5464412521361471)
-
-    #print("STD DEV of rate-constant samples: ", np.std(samples))
-    assert math.isclose(np.std(samples), 6.453436015796135)
-
-    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
-    assert math.isclose(np.mean(log_samples), -0.5303373792011049)
-    assert math.isclose(expected_mean_of_logs, -0.604328475522415)
-
-    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
-    assert math.isclose(np.std(log_samples), 1.9180559948866813)
-    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
-
-
-
-def test_random_species_enthalpy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-
-    H = net.generate_random_species_enthalpy(n=3)
-    assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
-
-    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
-    linear_combo = [-np.sum(net.generate_random_species_enthalpy(n=2)) +
-                    net.generate_random_species_enthalpy(n=1)
-                    for _ in range(100)]
-    #print(np.mean(linear_combo))
-    #print(np.std(linear_combo))
-
-    np.allclose(np.mean(linear_combo), -0.8995432)   # This will approach 0
-    np.allclose(np.std(linear_combo),  69.654486)    # This will approach 70
-
-    H = net.generate_random_species_enthalpy(n=1)
-    assert type(H) == np.ndarray
-    assert np.allclose(H, [48.04539297])
-
-    H = net.generate_random_species_enthalpy(n=None)
-    assert type(H) == float
-    assert np.allclose(H, -60.789242822870854)
-
-
-
-def test_random_species_entropy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
-
-    S = net.generate_random_species_entropy(n=3)
-
-
-    assert np.allclose(S, [36.37864067, 41.73212561, 38.08487805])
-
-    # Produce a linear combination of the form -X1 - X2 + X3 from 3 of our normal distributions
-    # (as used for the reaction pattern A + B <-> P)
-    linear_combo = [-np.sum(net.generate_random_species_entropy(n=2)) +
-                    net.generate_random_species_entropy(n=1)
-                    for _ in range(100)]
-    #print(np.mean(linear_combo))
-    #print(np.std(linear_combo))
-    np.allclose(np.mean(linear_combo), -40.257012350018464)     # This will approach -40
-    np.allclose(np.std(linear_combo), 19.90128174726231)        # This will approach 20
-
-    S = net.generate_random_species_entropy(n=1)
-    assert type(S) == np.ndarray
-    assert np.allclose(S, [53.72724875])
-
-    S = net.generate_random_species_entropy(n=None)
-    assert type(S) == float
-    assert np.allclose(S, 22.631652987151497)
-
-
-
 def test_generate_random_reaction_network():
     net = RandomReactionNetwork(n_species=4, n_rxns=0, temp=300, seed=1885)
 
@@ -500,6 +207,7 @@ def test_generate_new_consistent_unique_reaction():
     st = net.generate_new_consistent_unique_reaction()
     assert st == Stoichiometry(vector={'D': -2, 'C': 1}, species_registry=net.species_registry) # 2 D -> C
     assert net.check_atom_count_consistency(st)
+    # Add the newly-generated reaction to the registry
     net.reaction_registry.add_elementary_reaction(reactants=[(2, "D")], products="C")
 
     st = net.generate_new_consistent_unique_reaction()
@@ -524,17 +232,33 @@ def test_generate_new_consistent_unique_reaction():
 
 
 
-def test_generate_new_unique_reaction():
+def test__generate_new_unique_reaction():
     net = RandomReactionNetwork(n_species=4, n_rxns=0, seed=1234)
 
-    st = net.generate_new_unique_reaction()
+    st = net._generate_new_unique_reaction()
     assert st == Stoichiometry(vector={'D': -2, 'C': 1}, catalysts=[], species_registry=net.species_registry)  # 2 D -> C
 
-    st = net.generate_new_unique_reaction()
+    st = net._generate_new_unique_reaction()
     assert st.vector == {'B': -1, 'A': -1, 'D': 1}      # B + A -> D
 
-    st = net.generate_new_unique_reaction()
+    st = net._generate_new_unique_reaction()
     assert st.vector == {'A': -1, 'B': -1, 'C': 1}      # A + B -> C
+    # This reaction, unlike the previous ones, we'll add to the registry
+    net.reaction_registry.add_elementary_reaction(reactants=["A","B"], products="C")
+
+    # The last reaction got added to the registry; so, it won't repeat
+    # Other reaction will eventually repeat
+    repeated = False
+    for _ in range(100):
+        st = net._generate_new_unique_reaction()
+        #print(st.vector)
+        assert st.vector != {'A': -1, 'B': -1, 'C': 1}  # Never repeated
+        if st.vector == {'D': -2, 'C': 1} or st.vector == {'B': -1, 'A': -1, 'D': 1}:
+            # One of the previously-generated (but not saved) reactions will, sooner or later,
+            # get re-generated
+            repeated = True
+
+    assert repeated
 
 
 
@@ -814,6 +538,280 @@ def test__already_used():
 
 
 
+
+
+###################   THERMODYNAMICS   ############################################################
+
+
+
+def test_assign_thermodynamics_1():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
+
+    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
+                                 species_registry=net.species_registry)
+    rxn = rxn_def.get_simulation_reactions(0)
+    assert type(rxn) is SimulationReaction
+
+    net.assign_thermodynamics(rxn=rxn)
+
+    thermo = rxn.get_thermodynamics()
+
+    assert math.isclose(thermo.delta_H, -47.88727263020628)     # kJ/mol
+    assert math.isclose(thermo.delta_S, -25.775930312009663)    # J/(mol·K)
+    assert math.isclose(thermo.temp, 298.15)                    # K
+    assert math.isclose(thermo.delta_G,
+                        thermo.delta_H - thermo.temp * thermo.delta_S/1000)
+                        # Divide by 100 because delta_S is J/(mol·K) , while delta_H ana delta_G are kJ/mol
+    assert math.isclose(thermo.delta_G, -40.2021790076806)
+
+    R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
+    assert math.isclose(thermo.K_eq, math.exp(-thermo.delta_G/(R * thermo.temp)))
+    assert math.isclose(thermo.K_eq, 11043762.102600524)
+
+    assert thermo.derived_pars == {'delta_G', 'K_eq'}
+
+    #print(rxn_def.get_thermodynamics())
+    #print(rxn_def.describe(detail="summary"))
+
+
+def test_assign_thermodynamics_2():
+    n_rxns = 200
+
+    net = RandomReactionNetwork(n_species=3*n_rxns, n_rxns=0, seed=992842)
+    all_species_id = net.species_registry.get_all_species_ids(sort=True)
+
+    H_list = []
+    S_list = []
+    for cycle in range(n_rxns):
+        a, b, c = all_species_id[3*cycle : 3*(cycle+1)]     # EXAMPLES: [0:3] , [3:6], etc
+        #print(a, b, c, end="\n")
+        rxn_def = ReactionDefinition(reactants=[a, b], products=[c], reaction_model="mass action",
+                                     species_registry=net.species_registry)
+        rxn = rxn_def.get_simulation_reactions(0)
+        net.assign_thermodynamics(rxn=rxn)
+        thermo = rxn.get_thermodynamics()
+        H_list.append(thermo.delta_H)
+        S_list.append(thermo.delta_S)
+
+
+    #print(np.mean(H_list))
+    assert math.isclose(np.mean(H_list), 0.24042843738514022)   # Approaches 0
+    #print(np.std(H_list))
+    assert math.isclose(np.std(H_list), 68.16724993565813)      # Approaches 70
+
+    #print(np.mean(S_list))
+    assert math.isclose(np.mean(S_list), -40.607863669418535)   # Approaches -40
+    #print(np.std(S_list))
+    assert math.isclose(np.std(S_list), 19.159843568900428)     # Approaches 20
+
+
+def test_assign_thermodynamics_3():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1892842)
+
+    reaction_registry = net.reaction_registry
+
+    # Create a reaction cycle
+    reaction_registry.add_elementary_reaction(reactants=["A", "B"], products="C")   # A + B <-> C
+    reaction_registry.add_elementary_reaction(reactants=[(2, "D")], products="C")   # C <-> 2 D , written in reverse
+    reaction_registry.add_elementary_reaction(reactants=[(2, "D")], products="E")   # 2 D <-> E
+    reaction_registry.add_elementary_reaction(reactants="E", products=["A", "B"])   # E <-> A + B , closing the loop
+
+    for rxn in reaction_registry.get_all_reactions():
+        assert net._fulfill_reaction(rxn.stoichiometry)   # For atom-count consistency
+
+    #net.reaction_registry.describe_reactions(detail="summary")
+    assert net.species_registry.get_all_species_ids(sort=True) == ["A", "B", "C", "D", "E"]
+
+    atom_assignment = {}
+    for sp in net.species_registry.as_recordset():
+        #print(f"Species {sp['id']} -> atom count {sp['annotation']}")
+        atom_assignment[sp['id']] = sp['annotation']
+
+    assert atom_assignment == {'A': '16', 'B': '16', 'C': '32', 'D': '16', 'E': '32'}
+
+    # Now assign thermodynamics values
+
+    for rxn in reaction_registry.get_all_reactions():
+        net.assign_thermodynamics(rxn)
+
+    #reaction_registry.describe_reactions(detail="summary")
+
+    thermo_data = reaction_registry.extract_thermodynamics_data()
+    #print(thermo_data)
+    (H, S, G, K_standard) = [thermo_data.get(key) for key in ("H", "S", "G", "K_standard")]
+
+    # Flip the 2nd reaction, which had been expressed in reverse
+    H[1] = - H[1]
+    S[1] = - S[1]
+    G[1] = - G[1]
+    K_standard[1] = 1 / K_standard[1]
+
+    assert math.isclose(np.sum(H), 0, abs_tol=1e-12)    # -7.105427357601002e-15
+    assert math.isclose(np.sum(S), 0, abs_tol=1e-12)
+    assert math.isclose(np.sum(G), 0, abs_tol=1e-12)
+    assert math.isclose(np.product(K_standard), 1)  # "Wegscheider cycle condition"
+
+
+
+def test_assign_kinetics():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, temp=300, seed=1892842)
+
+    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
+                                 species_registry=net.species_registry)
+    rxn = rxn_def.get_simulation_reactions(0)   # Object of type "SimulationReaction"
+
+    # Instead of generate a random assignment of thermodynamic data, here we insert test values of our picking
+    thermo_data = {"delta_G": -40, "delta_S": -100}
+
+    # This will also derive and set `delta_H`
+    rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=net.temp)
+    thermo = rxn.get_thermodynamics()
+    print("thermo: ", thermo)
+    # ReactionThermodynamics(delta_H=-70.0, delta_S=-100, delta_G=-40, K_eq=9214731.447581297, temp=300, derived_pars={'K_eq', 'delta_H'})
+    assert math.isclose(thermo.delta_H, -40 + net.temp * (-100)/1000)   # The 1/1000 is because delta_S in J/mol while delta_H in kJ/mol
+    assert math.isclose(thermo.K_eq, math.exp(- (-40) / (ThermoDynamics.R * net.temp)))
+
+    #print("kinetic_parameters:", rxn.get_parameters())
+    # {'kF': None, 'kR': None, 'K': None, 'reversible': False}
+
+    net.assign_kinetics(rxn=rxn)
+    kin_pars = rxn.get_parameters()
+    #print("kinetic_parameters:", kin_pars)
+    # {'kF': 10379.920849763035, 'kR': 0.0011264485469609188, 'K': 9214731.447581297, 'reversible': True}
+    assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data
+    assert math.isclose(kin_pars["kF"], 10379.920849763035)     # Plausible, given a sample median of 12124
+                                                                # as shown in test_sample_forward_rate_constant_from_delta_gibbs()
+    assert math.isclose(kin_pars["kR"], kin_pars["kF"] / kin_pars["K"])     # Consistency
+
+
+    # Another round
+    rxn_def = ReactionDefinition(reactants=["A", "B"], products=["C"], reaction_model="mass action",
+                                 species_registry=net.species_registry)
+    rxn = rxn_def.get_simulation_reactions(0)   # Object of type "SimulationReaction"
+
+    # Instead of generate a random assignment of thermodynamic data, here we insert test values of our picking
+    thermo_data = {"delta_G": 10, "delta_S": 500}
+
+    # This will also derive and set `delta_H`
+    rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=net.temp)
+    thermo = rxn.get_thermodynamics()
+    print("thermo: ", thermo)
+    #ReactionThermodynamics(delta_H=160.0, delta_S=500, delta_G=10, K_eq=0.01815011283612517, temp=300, derived_pars={'delta_H', 'K_eq'})
+    assert math.isclose(thermo.delta_H, 10 + net.temp * (500)/1000)   # The 1/1000 is because delta_S in J/mol while delta_H in kJ/mol
+    assert math.isclose(thermo.K_eq, math.exp(- (10) / (ThermoDynamics.R * net.temp)))
+
+    net.assign_kinetics(rxn=rxn)
+    kin_pars = rxn.get_parameters()
+    print("kinetic_parameters:", kin_pars)
+    # {'kF': 0.3768282915740335, 'kR': 20.76176026983212, 'K': 0.01815011283612517, 'reversible': True}
+    assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data
+    assert math.isclose(kin_pars["kF"], 0.3768282915740335)     # Plausible, given a sample median of 0.6605902686082537
+                                                                # as shown in test_sample_forward_rate_constant_from_delta_gibbs()
+    assert math.isclose(kin_pars["kR"], kin_pars["kF"] / kin_pars["K"])     # Consistency
+
+
+
+def test_generate_random_species_enthalpy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    H = net.generate_random_species_enthalpy(n=3)
+    assert np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
+
+    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
+    linear_combo = [-np.sum(net.generate_random_species_enthalpy(n=2)) +
+                    net.generate_random_species_enthalpy(n=1)
+                    for _ in range(100)]
+    #print(np.mean(linear_combo))
+    #print(np.std(linear_combo))
+
+    np.allclose(np.mean(linear_combo), -0.8995432)   # This will approach 0
+    np.allclose(np.std(linear_combo),  69.654486)    # This will approach 70
+
+    H = net.generate_random_species_enthalpy(n=1)
+    assert type(H) == np.ndarray
+    assert np.allclose(H, [48.04539297])
+
+    H = net.generate_random_species_enthalpy(n=None)
+    assert type(H) == float
+    assert np.allclose(H, -60.789242822870854)
+
+
+
+def test_generate_random_species_entropy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    S = net.generate_random_species_entropy(n=3)
+
+
+    assert np.allclose(S, [36.37864067, 41.73212561, 38.08487805])
+
+    # Produce a linear combination of the form -X1 - X2 + X3 from 3 of our normal distributions
+    # (as used for the reaction pattern A + B <-> P)
+    linear_combo = [-np.sum(net.generate_random_species_entropy(n=2)) +
+                    net.generate_random_species_entropy(n=1)
+                    for _ in range(100)]
+    #print(np.mean(linear_combo))
+    #print(np.std(linear_combo))
+    np.allclose(np.mean(linear_combo), -40.257012350018464)     # This will approach -40
+    np.allclose(np.std(linear_combo), 19.90128174726231)        # This will approach 20
+
+    S = net.generate_random_species_entropy(n=1)
+    assert type(S) == np.ndarray
+    assert np.allclose(S, [53.72724875])
+
+    S = net.generate_random_species_entropy(n=None)
+    assert type(S) == float
+    assert np.allclose(S, 22.631652987151497)
+
+
+
+def test_test_get_species_enthalpy():
+    pass        # TODO
+
+
+def test_get_species_entropy():
+   pass        # TODO
+
+
+
+def test_random_reaction_enthalpy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -1, "B": -1, "C": 1})
+    #print(net.standard_species_enthalpy)
+
+    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
+    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
+    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
+
+    assert np.allclose(result_1, -0.09060878868225242)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
+    # ΔH = HC − HA − HB
+
+
+    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 1, "B": 1})
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+    result_1 = net.random_reaction_enthalpy(reaction_vector={"A": -2, "C": 1})
+    assert np.allclose(result_1, 18.64658849823368)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - 2 * net.get_species_enthalpy("A"))
+    # ΔH = HC - 2 HA
+
+    result_2 = net.random_reaction_enthalpy(reaction_vector={"C": -1, "A": 2})
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+
+def test_random_reaction_entropy():
+    pass        #TODO
+
+
+
 def test_random_reaction_entropy_single_reaction():
     net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
 
@@ -834,6 +832,117 @@ def test_random_reaction_entropy_single_reaction():
     assert np.allclose(np.std(entropy_list), 18.754802472647917)        # This will approach 20
     assert min(entropy_list) >= -100
     assert max(entropy_list) <= 0
+
+
+
+def test_sample_forward_rate_constant_from_delta_gibbs():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, temp=300, seed=1892842)
+
+    # The following variables are used to predict the results of the statistical sampling
+    assert net.temp == 300
+    F = net.kB_over_h * net.temp * 1
+    C = math.log(F)
+    assert math.isclose(C, 29.463760285159093)
+    alpha=0.5   # Value used for sample_forward_activation_gibbs_energy_BEP()
+    beta=70.    # Value used for sample_forward_activation_gibbs_energy_BEP()
+    RT = ThermoDynamics.R * net.temp
+    assert math.isclose(RT, 2.494338785445972)
+    expected_SD_of_logs = net.sigma_BEP / RT
+    #print("expected_SD_of_logs: ", expected_SD_of_logs)
+
+    # In the following scenario, the forward activation energy ~ N(50, 5^2)
+    #   as shown in test_sample_forward_activation_gibbs_energy_BEP()
+    #   Also, the k_diffusion_limit isn't applicable
+    delta_G = -40   # kJ/mol
+    samples = []
+    log_samples = []
+    for _ in range(200):
+        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
+        samples.append(kF)
+        log_samples.append(math.log(kF))
+
+    #print("delta_G: ", delta_G)
+
+    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
+    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
+    #print("expected_mean_of_logs: ", expected_mean_of_logs)
+    #print("expected median of samples: ", expected_median_of_samples)
+
+    #print("MEAN of rate-constant samples: ", np.mean(samples))
+    assert math.isclose(np.mean(samples), 61202.31395971857)
+
+    #print("MEDIAN of rate-constant samples: ", np.median(samples))
+    assert math.isclose(np.median(samples), 12124.209523114856)
+    assert math.isclose(expected_median_of_samples, 12312.469127155957)
+
+    #print("STD DEV of rate-constant samples: ", np.std(samples))
+    assert math.isclose(np.std(samples), 163647.55713183244)
+
+    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
+    assert math.isclose(np.mean(log_samples), 9.40148571925807)
+    assert math.isclose(expected_mean_of_logs, 9.418367778038089)
+
+    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
+    assert math.isclose(np.std(log_samples), 1.9490556161092185)
+    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
+
+
+    # In the following scenario, the forward activation energy ~ N(70, 5^2)
+    delta_G = 10   # kJ/mol
+    samples = []
+    log_samples = []
+    for i in range(200):
+        kF = net.sample_forward_rate_constant_from_delta_gibbs(delta_G)
+        samples.append(kF)
+        log_samples.append(math.log(kF))
+
+    expected_mean_of_logs = C - (alpha * delta_G + beta) / RT
+    expected_median_of_samples = F * math.exp(-(alpha * delta_G + beta) / RT)
+    #print("expected_mean_of_logs: ", expected_mean_of_logs)
+    #print("expected median of samples: ", expected_median_of_samples)
+
+    #print("MEAN of rate-constant samples: ", np.mean(samples))
+    assert math.isclose(np.mean(samples), 2.781075328962337)
+
+    #print("MEDIAN of rate-constant samples: ", np.median(samples))
+    assert math.isclose(np.median(samples), 0.6605902686082537)
+    assert math.isclose(expected_median_of_samples, 0.5464412521361471)
+
+    #print("STD DEV of rate-constant samples: ", np.std(samples))
+    assert math.isclose(np.std(samples), 6.453436015796135)
+
+    #print("MEAN of NATURAL LOG samples: ", np.mean(log_samples))
+    assert math.isclose(np.mean(log_samples), -0.5303373792011049)
+    assert math.isclose(expected_mean_of_logs, -0.604328475522415)
+
+    #print("STD DEV of NATURAL LOG samples: ", np.std(log_samples))
+    assert math.isclose(np.std(log_samples), 1.9180559948866813)
+    assert math.isclose(expected_SD_of_logs, 2.0045392507121007)
+
+
+
+def test_rate_constant_from_activation_gibbs_energyy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=123)
+
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=50, temp=300), 12312.469127155957)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=60, temp=300), 223.472703949188)
+
+    # At T=300 K, every additional 5.7434 kJ/mol of activation free energy leads to a x10 decrease in the rate constant
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=65.743427304, temp=300), 22.3472703949188)
+
+    result = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300)
+    assert math.isclose(result, 4.056054792471754)
+    # Let's increase the above ΔG‡ by some δ = 3.
+    # We expect the ratio = k(ΔG‡ + δ) / k(ΔG‡) to decrease by a factor = exp(δ / R T)
+    result_2 = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70+3, temp=300)
+    ratio = result_2 / result       # 0.30037501036241077
+    decrease_factor =  math.exp(3 / 2.494338785445972)   # at 300 K,  R T = 2.494 kJ mol−1
+    assert math.isclose(ratio, 1./decrease_factor)
+
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=75, temp=300), 0.5464412521361471)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=80, temp=300), 0.07361785215286852)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=90, temp=300), 0.0013361723233277472)
+    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=100, temp=300), 2.4251678436906198e-05)
 
 
 
@@ -941,27 +1050,3 @@ def test_forward_activation_gibbs_energy_normal():
          result = net.sample_forward_activation_gibbs_energy_normal(delta_G=delta_G)
          assert result >= 0
          assert result >= delta_G
-
-
-def test_rate_constant_from_activation_gibbs_energyy():
-    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=123)
-
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=50, temp=300), 12312.469127155957)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=60, temp=300), 223.472703949188)
-
-    # At T=300 K, every additional 5.7434 kJ/mol of activation free energy leads to a x10 decrease in the rate constant
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=65.743427304, temp=300), 22.3472703949188)
-
-    result = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70, temp=300)
-    assert math.isclose(result, 4.056054792471754)
-    # Let's increase the above ΔG‡ by some δ = 3.
-    # We expect the ratio = k(ΔG‡ + δ) / k(ΔG‡) to decrease by a factor = exp(δ / R T)
-    result_2 = net.rate_constant_from_activation_gibbs_energy(activation_delta_G=70+3, temp=300)
-    ratio = result_2 / result       # 0.30037501036241077
-    decrease_factor =  math.exp(3 / 2.494338785445972)   # at 300 K,  R T = 2.494 kJ mol−1
-    assert math.isclose(ratio, 1./decrease_factor)
-
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=75, temp=300), 0.5464412521361471)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=80, temp=300), 0.07361785215286852)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=90, temp=300), 0.0013361723233277472)
-    assert np.allclose(net.rate_constant_from_activation_gibbs_energy(activation_delta_G=100, temp=300), 2.4251678436906198e-05)

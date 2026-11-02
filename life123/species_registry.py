@@ -551,6 +551,17 @@ class SpeciesRegistry:
 
 
 
+    def  as_species_list(self) -> list[Species]:
+        """
+        Return all the registry data in the form of a list of "Species" objects
+
+        :return:    A list of "Species" objects
+        """
+        #TODO: pytest
+        return list(self.by_id.values())
+
+
+
     def as_recordset(self) -> list[dict]:
         """
         Return all the registry data in the form of a list of dictionaries,

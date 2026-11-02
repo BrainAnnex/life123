@@ -163,13 +163,26 @@ class RandomReactionNetwork:
 
     def generate_new_consistent_unique_reaction(self) -> Stoichiometry:
         """
-        Also modifies the `annotation` property of the affected Species objects
-        :return:
+        Generate the stoichiometry of a random reaction
+        of the type R1 + R2 <-> P, or 2 R <-> P, with the properties:
+            1)  different from all previously-generated reactions
+                that were added to the reaction registry (i.e., don't re-use reactions)
+            2)  a consistent atom-count can be assigned to all the species of this reaction,
+                alongside previously-assigned counts
+
+        It modifies the `annotation` property of the affected Species objects,
+        setting it the number of atoms (as a string),
+        and if modify the species "label" property to be of the form 'X (n)' ,
+        where n is its total number of atoms.
+
+        However, it does NOT add the reaction to the reaction registry.
+
+        :return:    An object of type "Stoichiometry" for the proposed new reaction
         """
         MAX_TRIES = 30        # To avoid infinite loops
 
         #print(f"\ngenerate_new_consistent_unique_reaction(): generating a new unique reaction...")
-        stoic = self.generate_new_unique_reaction()
+        stoic = self._generate_new_unique_reaction()
         #print(f"generate_new_consistent_unique_reaction(): now attempting to assign/verify assignment of atom counts to tentative new reaction with vector {stoic.vector}")
 
 
@@ -177,7 +190,7 @@ class RandomReactionNetwork:
         # Prevent adding reactions that can't be fit into a balanced atomic-count accounting
         while (n_attempts <= MAX_TRIES) and (not self._fulfill_reaction(stoic=stoic)):
             #print(f"generate_new_consistent_unique_reaction(): the previous tentative reaction CANNOT be fit into a balanced atomic-count accounting. Generating new one...")
-            stoic = self.generate_new_unique_reaction()
+            stoic = self._generate_new_unique_reaction()
             #print(f"    Attempting to validate atom count in new reaction with vector {stoic.vector}")
             n_attempts += 1
         assert n_attempts <= MAX_TRIES, \
@@ -186,11 +199,13 @@ class RandomReactionNetwork:
             f"relative to the {self.n_species} available species"
 
 
-        debug_info = ""
+        # Modify the labels of all species that have an atom count
+        # to have the suffix (n) added, where n is its atom count
+        #debug_info = ""
         for sp_id in stoic.get_all_species_ids():
-            species_object = self.species_registry.get_species(sp_id)
+            species_object = self.species_registry.get_species(sp_id)   # Object of type "Species"
             atom_count = species_object.annotation      # A string
-            debug_info += f"| {sp_id} : {atom_count} "
+            #debug_info += f"| {sp_id} : {atom_count} "
             if species_object.label == sp_id:
                 # If label is unchanged from its original value
                 species_object.label += f"({atom_count})"
@@ -202,17 +217,27 @@ class RandomReactionNetwork:
 
 
 
-    def generate_new_unique_reaction(self) -> Stoichiometry:
+    def _generate_new_unique_reaction(self) -> Stoichiometry:
         """
-        Reaction of type R1 + R2 <-> P, or 2 R <-> P,
+        Generate the stoichiometry of a random reaction
+        of the type R1 + R2 <-> P, or 2 R <-> P,
         sufficiently different from all previously generated reactions
+        (i.e., don't re-use reactions.)
+
+        This is only a tentatively PROPOSED reaction;
+        nothing is actually added to the reaction registry.
+
+        NOTE: There's NO guarantee that an atom-count can be assigned to all the
+        species of this reaction, alongside previously-assigned counts;
+        the invoking function will need to verify that this reaction is
+        indeed realizable, and add it to the reaction registry if it is.
 
         :return:    An object of type "Stoichiometry" for the proposed new reaction
         """
         MAX_ATTEMPTS = 6        # To avoid infinite loops
 
         # Reaction R1 + R2 <-> P
-        reactants, products  = self._assign_species_to_rxn()
+        reactants, products = self._assign_species_to_rxn()
         #print(f"generate_new_unique_reaction(): Tentatively considering reactants: {reactants} | products: {products}")
 
         n_attempts = 1
@@ -283,8 +308,10 @@ class RandomReactionNetwork:
         """
         Only supports reactions of type  R1 + R2 <-> P  or  2 R <-> P
 
-        Along the way, assign compatible number of atoms to each species in the reaction,
-        and modify the species "label" property to be of the form 'X (n)' , where n is its total number of atoms
+        Assign compatible number of atoms, if possible, to each species in the reaction.
+
+        The assigned atom counts get stored, as strings, in the "annotations" fields
+        of the applicable Species data classes.  (I.e., they will get remembered.)
 
         :param stoic:   Object of type "Stoichiometry"
         :return:        True if possible, or False otherwise
@@ -601,58 +628,10 @@ class RandomReactionNetwork:
 
 
 
-    def assign_thermodynamics_OLD(self) -> None:
-        """
-        Assign to each of the reactions in `self.reaction_registry`
-        random thermodynamic parameters that are consistent across the entire network
-
-        :return:    None
-        """
-
-        r = "ReactionSynthesis"     # The only type currently supported
-        k_diffusion_limit = 1e9     # Smoluchowski diffusion limit for bimolecular reactions
-
-        for rxn in self.get_all_random_reactions():
-            #print("Assigning thermodynamic data to reaction ", rxn.describe("minimal"))
-            reaction_vector=rxn.get_stoichiometry().get_reaction_vector()
-
-            delta_enthalpy = self.random_reaction_enthalpy(reaction_vector=reaction_vector)
-            delta_entropy = self.random_reaction_entropy(reaction_vector=reaction_vector)
-
-            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
-                                                                                   delta_S=delta_entropy,
-                                                                                   temp=self.temp)
-
-            forward_activation_gibbs_energy = self.sample_forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
-            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
-                                                                temp=self.temp)
-
-            # Rein in any unrealistic value for kF (note: kR is automatically set to be consistent with kF and the thermodynamic data)
-            if r == "ReactionSynthesis":
-                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A + B -> C
-            elif r == "ReactionDecomposition":
-                raise Exception(f" '{r}' is not covered")        # TODO: apply a diffusion limit to kR
-
-            thermo_data = {"delta_H": delta_enthalpy, "delta_S": delta_entropy, "delta_G": delta_gibbs_energy}
-
-            # This also acts as a validation
-            rxn.get_thermodynamics().set_thermodynamics_data(parameters=thermo_data, temp=self.temp)
-
-            """
-            rxn.get_thermodynamics().delta_H = delta_enthalpy
-            rxn.get_thermodynamics().delta_S = delta_entropy
-            rxn.get_thermodynamics().delta_G = delta_gibbs_energy
-            rxn.get_thermodynamics().set_temperature(self.temp)     
-            """
-
-            rxn.set_parameters(parameters={"kF": kF})       # This will also set kR, to be consistent with kF and the thermodynamic data
-
-
-
     def assign_thermodynamics(self, rxn :SimulationReaction) -> None:
         """
         Assign to the given reaction
-        random thermodynamic parameters that remain consistent
+        random thermodynamic parameters that remain globally consistent
         across all the added reactions
 
         :return:    None

@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from typing import Literal
 from life123.visualization.py_graph_visual import PyGraphVisual
@@ -90,7 +91,8 @@ class ReactionRegistry:
         Note: this number might be higher than the number of reactions specified by the user,
               because some overall reactions are modeled by means of multiple "simulation reactions"
 
-        :return:    A list of "SimulationReaction" objects
+        :return:    A list of "SimulationReaction" objects,
+                        in the order in which the reactions were registered
         """
         return self.reaction_list
 
@@ -559,6 +561,30 @@ class ReactionRegistry:
         rxn_defn = self.reaction_defn_list[rxn_index]
 
         return rxn_defn.describe(detail, use_labels=use_labels)    # Invoke the individual "ReactionDefinition" object
+
+
+
+    def extract_thermodynamics_data(self) -> dict:
+        """
+        Extract the thermodynamics data for all the reactions,
+        and assemble together all the values for delta_H, delta_S, delta_G, K_standard
+        as Numpy array, in the order in which the reactions were registered.
+
+        :return:    A dictionary with 3 keys ("H", "S", "G", and "K_standard")
+        """
+        H_list = []
+        S_list = []
+        G_list = []
+        K_list = []
+        for rxn in self.get_all_reactions():
+            thermo = rxn.get_thermodynamics()
+            H_list.append(thermo.delta_H)
+            S_list.append(thermo.delta_S)
+            G_list.append(thermo.delta_G)
+            K_list.append(thermo.K_eq)
+
+        return {"H": np.array(H_list), "S": np.array(H_list), "G": np.array(G_list),
+                "K_standard": np.array(K_list)}
 
 
 
