@@ -365,7 +365,7 @@ class SpeciesRegistry:
 
         :return:
         """
-        msg = """This is on object of type life123.species_registry.SpeciesRegistry
+        msg = f"""This is on object of type `SpeciesRegistry`, containing {self.number_of_species()} `Species` objects.
                  To display is, use the function as_recordset() or as_dataframe()
                  EXAMPLE:   my_species_registry.as_dataframe()
               """

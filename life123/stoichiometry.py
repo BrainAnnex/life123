@@ -56,6 +56,22 @@ class Stoichiometry:
         assert self.get_product_terms() != [], \
             f"Stoichiometry instantiation: no products are present in this stoichiometry ({self.vector})"
 
+        # TODO: consider auto-registration of species in the species registry,
+        #       or alternatively rejecting non-existing species,
+        #       if `species_registry` is set
+
+
+
+    def __str__(self) -> str:
+        str = f"`Stoichiometry` data class object representing the reaction:  {self.standard_chemical_formula()}\n" \
+              f"    vector : {self.vector}\n    catalysts : {self.catalysts}\n"
+        if self.species_registry is None:
+            str += "    species_registry : NOT associated to any registry"
+        else:
+            str += f"    species_registry : Associated to a registry containing {self.species_registry.number_of_species()} species"
+
+        return str
+
 
 
     def to_dict(self) -> dict:

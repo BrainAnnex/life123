@@ -640,7 +640,7 @@ def test_assign_thermodynamics_3():
     #print(thermo_data)
     (H, S, G, K_standard) = [thermo_data.get(key) for key in ("H", "S", "G", "K_standard")]
 
-    # Flip the 2nd reaction, which had been expressed in reverse
+    # Flip the 2nd reaction, which had been expressed in the reverse direction
     H[1] = - H[1]
     S[1] = - S[1]
     G[1] = - G[1]

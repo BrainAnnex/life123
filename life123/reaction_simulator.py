@@ -96,7 +96,8 @@ class ReactionSimulator:
     """
     
     def __init__(self, system=None, species_index_map=None, reaction_registry=None,
-                 diagnostics=None, enable_diagnostics=False, method="forward_euler", preset="mid",
+                 diagnostics=None, enable_diagnostics=False, history_frequency=1,
+                 method="forward_euler", preset="mid",
                  uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None,
                  macromolecules=None):
         """
@@ -114,10 +115,14 @@ class ReactionSimulator:
                                 If passed, cannot pass either of the args `reactions` (an object that contains `species_data`)
                                 nor `names` (names are contained in the `species_data` object)
 
-        :param diagnostics:
+        :param diagnostics: [OPTIONAL] Object of type "Diagnostics".
+                                If not passed, and if `enable_diagnostics` is True, it gets automatically instantiated.
         :param enable_diagnostics: [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
+        :param history_frequency:   [OPTIONAL] If not None, both concentration and rate history are turned on;
+                                        the number indicates how often to capture a snapshot of the data.
+                                        For finer control, use the method enable_history()
         :param method:      [OPTIONAL] One of the following strings:  "forward_euler", "heun" or "analytic".
                                 If "analytic", use exact analytical solutions whenever possible; failing that, fall back to forward Euler
         :param preset:      [OPTIONAL] String with name of a standard preset
@@ -208,14 +213,25 @@ class ReactionSimulator:
                                                 #   (taken in full OR aborted!)
                                                 #   Object of dataclass "ReactionStep"
 
+        if history_frequency is None:
+            self.conc_history = HistoryUniformConcentration(active=False)
+            self.rate_history = HistoryReactionRate(active=False)
+        else:
+            assert type(history_frequency) is int, \
+                "Instantiation of ReactionSimulator: the argument `history_frequency`, if passed, " \
+                "must be an integer"
+            assert history_frequency >= 1, \
+                "Instantiation of ReactionSimulator: the argument `history_frequency`, if passed, " \
+                "must be >= 1"
+            self.conc_history = HistoryUniformConcentration(active=True, frequency=history_frequency)
+                                                                # Object used to store user-requested snapshots
+                                                                # of (some of) the species concentrations:
+                                                                # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
-        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
-                                                                        # of (some of) the species concentrations:
-                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
-
-        self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
-                                                                    # of (some of) the chemical reaction rates:
-                                                                    # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
+            self.rate_history = HistoryReactionRate(active=True, frequency=history_frequency)
+                                                                # Object used to store user-requested snapshots
+                                                                # of (some of) the chemical reaction rates:
+                                                                # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
@@ -559,11 +575,18 @@ class ReactionSimulator:
 
         Their desired relationship is: total_duration = time_step * n_steps
 
+        No more than 2 of the arguments can be passed.
+        At least 1 of the arguments `duration` and `initial_step` must be provided.
+
+        If not enough arguments are given, then: DEFAULT_N_STEPS = 10
+
         :param duration:    Float with the overall time advance (i.e. time_step * n_steps)
         :param initial_step:Float with the size of each time step
         :param n_steps:     Integer with the desired number of steps
         :return:            The pair (time_step, n_steps)
         """
+        # TODO: test more, and perhaps streamline
+
         DEFAULT_N_STEPS = 10
 
         assert (not duration or not initial_step or not n_steps), \
@@ -827,8 +850,8 @@ class ReactionSimulator:
 
 
 
-    def _single_compartment_react_main_loop(self, time_step, variable_steps :bool,
-                                            step_count, n_steps :int,
+    def _single_compartment_react_main_loop(self, time_step :float, variable_steps :bool,
+                                            step_count :int, n_steps :int,
                                             explain_variable_steps=None) -> (int, float):
         """
         Helper function to single_compartment_react(), for its main loop.
@@ -896,8 +919,10 @@ class ReactionSimulator:
         if variable_steps:
             if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
                 raise Exception(f"_single_compartment_react_main_loop(): "
-                                f"the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                                f" try reducing the time_step")   # TODO: is the explanation correctly phrased?
+                                f"the variable-step computation is taking a very large number of steps (step count {step_count}), "
+                                f"relative to its target number of steps ({n_steps}); \n"
+                                f"probably from automatically trying to correct instability.  "
+                                f"If you passed a value to `initial_step`, try reducing it")
 
 
         return step_count, recommended_next_step
@@ -1024,7 +1049,7 @@ class ReactionSimulator:
         # TODO: no longer pass conc_array .  Use the object variable self.system.system instead
         #       Determine whether 1 or multiple "ReactionSimulator" objects are to be used by Bio1D, etc.
 
-        SMALLEST_VALUE_TO_TRY = delta_time / 5000.       # Used to prevent infinite loops   TODO: maybe allow user to specify the factor
+        SMALLEST_VALUE_TO_TRY = delta_time / 10000.       # Used to prevent infinite loops   TODO: maybe allow user to specify the factor
 
 
         if conc_array is not None:
@@ -1105,7 +1130,7 @@ class ReactionSimulator:
                             f"In spite of numerous automated reductions of the time step "
                             f"(reduced down to {delta_time:.5g} from the original {original_delta_time:.5g}), \n"
                             f"it continues to lead to concentration changes that are considered excessive. \n"
-                            f"Try reducing the original time step, or specifying one if you simply went with the default one; use the argument `initial_step=`")
+                            f"Try reducing the original time step, or specifying one if you have opted for the default one; use the argument `initial_step=`")
                             #, and/or increasing the 'abort' thresholds with set_thresholds(). "
                             #f"Current values: {self.adaptive_steps.thresholds}")
 
@@ -2152,6 +2177,24 @@ class ReactionSimulator:
             self.rate_history.enable_history(frequency=frequency, chem_labels=chem_labels)
             if take_snapshot:
                 self.capture_rate_snapshot()
+
+
+
+    def disable_history(self) -> None:
+        """
+        Turn off all types of history capture
+
+        :return:                None
+        """
+        #TODO: pytest
+
+        # Note: there is a COMMON way to disable history, but different ways to reach it
+        if self.conc_history is not None:
+            self.conc_history.disable_history()
+
+        if self.rate_history is not None:
+            self.rate_history.disable_history()
+
 
 
 

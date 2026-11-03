@@ -22,7 +22,7 @@
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Oct. 21, 2026"
+LAST_REVISED = "Nov. 2, 2026"
 LIFE123_VERSION = "1.0.0rc9"         # Library version this experiment is based on
 
 # %%
@@ -58,7 +58,7 @@ log_file
 # ## Set up Random Network
 
 # %%
-net = RandomReactionNetwork(n_species=4, n_rxns=7, seed=47242315, thermodynamic_ruggedness=0.2)
+net = RandomReactionNetwork(n_species=6, n_rxns=5, seed=47242315)
 
 # %%
 net.species_registry.get_all_species_ids()
@@ -78,7 +78,7 @@ rxns.number_of_reactions()
 rxns.describe_reactions(detail="minimal")
 
 # %%
-rxns.describe_reactions(detail="summary")
+rxns.describe_reactions(detail="summary", use_labels=True)
 
 # %% [markdown]
 # ## NOTE ON UNITS: _delta_H_ and _delta_G_ are in **kJ/mol**  ;  _delta_S_ are in **J/(mol·K)**
@@ -162,7 +162,7 @@ IFrame(log_file, width=1200, height=700)         # You may also open the above l
 # #### Always with same initial condition:
 
 # %%
-init_conc = [31, 4, 18, 82]
+init_conc = [31, 4, 18, 82, 8, 18]
 
 # %%
 
@@ -170,7 +170,7 @@ init_conc = [31, 4, 18, 82]
 # # Reaction-wise analytic solution, with variable steps
 
 # %%
-sim = ReactionSimulator(reaction_registry=rxns, method="analytic", preset="mid")   # `preset` is to guide the adaptive variable steps
+sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler", history_frequency=200, preset="mid")   # `preset` is to guide the adaptive variable steps   analytic
 sim.set_system_state(init_conc)
 
 # %%
@@ -188,11 +188,59 @@ sim.system.get_system_conc()
 # %%
 
 # %%
-sim.single_compartment_react(target_end_time=0.04, variable_steps=True)
+sim.single_compartment_react(target_end_time=4e-9, variable_steps=True, initial_step=1e-11)
+
+# %%
+sim.conc_history.capture_frequency
+
+# %%
+#sim.single_compartment_react(target_end_time=0.04, variable_steps=True)
 # Using defaults for all other parameters, including in particular the initial step
 
 # %%
 sim.plot_history(show_intervals=True)
+
+# %%
+
+# %% [markdown]
+# # Heun
+
+# %%
+sim = ReactionSimulator(reaction_registry=rxns, method="heun", history_frequency=200, preset="mid")   # `preset` is to guide the adaptive variable steps   analytic
+sim.set_system_state(init_conc)
+
+# %%
+sim.get_history()
+
+# %%
+sim.single_compartment_react(target_end_time=4e-9, variable_steps=True, initial_step=1e-11)
+
+# %%
+sim.conc_history.capture_frequency
+
+# %%
+sim.plot_history(show_intervals=True)
+
+# %%
+
+# %% [markdown]
+# # Analytic
+
+# %%
+sim = ReactionSimulator(reaction_registry=rxns, method="analytic", history_frequency=200, preset="mid")   # `preset` is to guide the adaptive variable steps   analytic
+sim.set_system_state(init_conc)
+
+# %%
+sim.get_history()
+
+# %%
+sim.single_compartment_react(target_end_time=4e-18, variable_steps=True, initial_step=1e-21)
+
+# %%
+
+# %%
+
+# %%
 
 # %%
 sim.species_index_map.index_to_species

@@ -21,6 +21,8 @@ def test_CONSTRUCTOR_Stoichiometry():
     assert st.vector == {"S": -1, "P": 1}
     assert st.catalysts == ["E"]
 
+    #print(st)
+
 
     with pytest.raises(Exception):
         Stoichiometry(vector={"R": -1, "P": 1, "E": 0})    # Zero coefficient
@@ -211,12 +213,18 @@ def test_get_reaction_complexes_2():
     sp_reg = SpeciesRegistry()
     sp_reg.add_single_species(species_id="A", label="A-red")
 
+    # A + E -> 2 P + Q + E
     st = Stoichiometry(vector={"A": -1, "P": 2, "Q": 1}, catalysts=["E"], species_registry=sp_reg)
+    #print(st)
+    assert sp_reg.number_of_species() == 1  # At present, there's no auto-registration of species in the species registry
 
     sp_reg.add_single_species(species_id="P", label="P-white")
     sp_reg.add_single_species(species_id="E", label="E-black")
     sp_reg.add_single_species(species_id="Q", label=None)
     # Note: NOT setting a label for `Q`
+
+    #print(st)
+    assert sp_reg.number_of_species() == 4
 
     assert st.get_reaction_complexes(use_labels=True) == \
                     ( {"A-red": 1, "E-black": 1} ,  {"P-white": 2, "Q": 1, "E-black": 1} )

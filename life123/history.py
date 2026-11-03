@@ -15,10 +15,11 @@ class History:
         - and should NOT be directly instantiated;
         it provides common properties and methods.
 
-        :param active:      Flag indicating whether the history is enabled
+        :param active:      Flag indicating whether the history is enabled.  Default=False
         :param chem_labels: List of chemicals for which history is to be kept; use None to mean all
         :param frequency:   How many simulation cycles to wait until taking another data snapshot
         """
+        # TODO: add validation
         self.history = None                 # Object set by the children classes.
                                             # The type, depending on the child class, will be one of:
                                             # CollectionTabular, CollectionArray, Collection
