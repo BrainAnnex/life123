@@ -103,19 +103,19 @@ class ReactionThermodynamics:
         if temp is None:
             return      # Can't do anything!
 
-        thermo_data = ThermoDynamics.extract_thermodynamic_data(K_eq=self.K_eq,
+        thermo_data = ThermoDynamics.extract_thermodynamic_data(K_standard=self.K_eq,
                                                                 delta_H=self.delta_H, delta_S=self.delta_S, delta_G=self.delta_G,
                                                                 temp=temp)
 
         #print(f"thermo_data : {thermo_data}")
-        if self.K_eq is None and thermo_data["K"] is not None:
+        if self.K_eq is None and thermo_data["K_standard"] is not None:
             self.derived_pars.add("K_eq")
 
-        if thermo_data["K"] is not None:
+        if thermo_data["K_standard"] is not None:
             if self.K_eq is None:
                 self.derived_pars.add("K_eq")
 
-            self.K_eq = thermo_data["K"]
+            self.K_eq = thermo_data["K_standard"]
 
         if thermo_data["delta_H"] is not None:
             if self.delta_H is None:
