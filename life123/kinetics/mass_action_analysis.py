@@ -1,4 +1,256 @@
+import math
+import numpy as np
+import plotly.graph_objects as pgo
+from life123.numerical import Numerical
+from life123.visualization.plotly_helper import PlotlyHelper
+from typing import Tuple
+
 
 
 class MassAction_Analysis:
-    pass
+    """
+    Static methods about analysis of mass-action kinetics
+    """
+
+
+
+    @staticmethod
+    def compute_equilibrium_conc_elementary_decomposition(kF, kR, A0, P0) -> dict:
+        """
+        Given a reversible reaction of the form:  A <-> 2P
+        whose kinetics follow the "mass-action" law,
+        determine the equilibrium concentrations that would be eventually reached by all its species,
+        given the specified initial concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param kF:  The reaction's forward rate constant
+        :param kR:  The reaction's reverse rate constant
+        :param A0:  Initial concentration of the reactant species `A`
+        :param P0:  Initial concentration of the product species `P`
+        :return:    A dictionary with two keys, `A` and `P`, containing their equilibrium concentrations.
+                        EXAMPLE:    {'A': 24.0, 'P': 1.8}
+        """
+        # Reverse kF and kR, to obtain the reversed reaction 2 P <-> A
+        result = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=kR, kR=kF, A0=P0, P0=A0)
+
+        return {"A": result["P"], "P": result["A"]}     # Reverse `A` and `P`, because the above function
+                                                        # was in terms of 2 A <-> P
+        """
+        # ALTERNATIVE WAY (successfully tested)
+        # Note: the confusing arguments "Q0=P0, p=2, q=2" are a hack to use "Generalization 2" of _compute_equilibrium_conc_first_order()
+        # TODO: ditch the helper function, and do a direct computation
+        result = ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=kR,
+                                                                        A0=A0, a=1,
+                                                                        P0=P0, Q0=P0, p=2, q=2)
+        
+        del result["Q"]
+        """
+        return result
+
+
+
+    @staticmethod
+    def compute_equilibrium_conc_elementary_synthesis(kF, kR, A0, P0) -> dict:
+        """
+        Given a reversible reaction of the form:  2 A <-> P
+        whose kinetics follow the "mass-action" law,
+        determine the equilibrium concentrations that would be eventually reached by all its species,
+        given the specified initial concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param kF:  The reaction's forward rate constant
+        :param kR:  The reaction's reverse rate constant
+        :param A0:  Initial concentration of the reactant species `A`
+        :param P0:  Initial concentration of the product species `P`
+        :return:    A dictionary with two keys, `A` and `P`, containing their equilibrium concentrations.
+                        EXAMPLE:    {'A': 24.0, 'P': 1.8}
+        """
+        # Note: the confusing arguments "B0=A0, a=2, b=2" are a hack to use "Generalization 2" of _compute_equilibrium_conc_first_order()
+        # TODO: ditch the helper function, and do a direct computation
+        result = MassAction_Analysis._compute_equilibrium_conc_first_order(kF=kF, kR=kR, A0=A0, B0=A0, a=2, b=2, P0=P0, p=1)
+        del result["B"]
+        return result
+
+
+
+    @staticmethod
+    def compute_equilibrium_conc_mass_action(kF, kR, A0, P0, B0=None, Q0=None) -> dict:
+        """
+        Given a reversible reaction of the form:  A + B <-> P + Q (some terms may be missing)
+        whose kinetics follow the "mass-action" law,
+        determine the equilibrium concentrations that would be eventually reached by all its species,
+        given the specified initial concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        Note: for scenarios where one of stoichiometric coefficients is 2,
+              use compute_equilibrium_conc_elementary_synthesis() instead
+
+        :param kF:  The reaction's forward rate constant (None will be interpreted as a zero, i.e. no forward reaction)
+        :param kR:  The reaction's reverse rate constant (None will be interpreted as a zero, i.e. no reverse reaction)
+        :param A0:  The initial concentration of species `A` (i.e. the 1st reactant term)
+        :param P0:  The initial concentration of species `P` (i.e. the 1st product term)
+        :param B0:  Use None to indicate the absence of a `B` species (i.e. a 2nd term) among the reactants
+        :param Q0:  Use None to indicate the absence of a `Q` species (i.e. a 2nd term) among the products
+
+        :return:    A dictionary of the equilibrium concentrations of the
+                        species involved in the specified reaction;
+                        only the applicable entries will be present
+                        EXAMPLES:
+                            {'A': 24.0, 'B': 36.0, 'P': 1.8, 'Q': 0.3}
+                            {'A': 35.0, 'P': 18.3}
+        """
+        b = 0 if B0 is None else 1
+        q = 0 if Q0 is None else 1
+
+        kF = 0 if kF is None else kF
+        kR = 0 if kR is None else kR
+
+        return MassAction_Analysis._compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=b, B0=B0, q=q, Q0=Q0)
+
+
+
+    @staticmethod
+    def _compute_equilibrium_conc_first_order(kF, kR, a, A0, p, P0, b=0, B0=None, q=0, Q0=None) -> dict:
+        """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals participating in a reversible reaction of the form:
+            a A + b B <-> p P + q Q
+        whose kinetics are (hypothetically) FIRST ORDER in EACH of the species
+        (some of the terms may be missing),
+        given the specified initial concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        If both a and b are non-zero, or if both p and q are non-zero, the overall order will be 2;
+        otherwise, it will be 1.
+
+        In other words, this applies to reactions that can be modeled kinetically as:
+            vF = kF [A] [B]  ,  vR = kR [C] [D]    (some of the terms may be missing)
+        where vF and vR are, respectively, the forward and reverse reaction velocities (rates).
+
+        IMPORTANT:  cannot be used for an elementary reaction such as 2 A <-> P,
+                    because it won't be first-order with respect to `A`
+
+        CAUTION: since all reaction orders are expected to be 1,
+                 if any of stoichiometry coefficients of the involved species aren't 1,
+                 then it's a scenario of a particular scenario of "generalized kinetics"
+                 (non-mass-action with respect to the stoichiometry)
+
+        Note:  we're using "concentrations" instead of "chemical activities";
+               concentrations approximate the activities of ideal dilute solutions
+
+        :param kF:  The reaction's forward rate constant.
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the species),
+                        then this value will be a composite "kF effective"
+        :param kR:  The reaction's reverse rate constant.
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the species),
+                        then this value will be a composite "kR effective"
+
+        :param a:   The stoichiometry coefficient of species A in the reaction (typically 1)
+        :param A0:  The initial concentration of species A
+        :param b:   [OPTIONAL] The stoichiometry coefficient of species B in the reaction;
+                        if not present, accept the default value of zero
+        :param B0:  [OPTIONAL] The initial concentration of species B;
+                        if not present, accept the default None
+        :param p:   The stoichiometry coefficient of product species `P` in the reaction (typically 1)
+        :param P0:  The initial concentration of the product species `P`
+        :param q:   [OPTIONAL] The stoichiometry coefficient of species D in the reaction;
+                        if not present, accept the default value of zero
+        :param Q0:  [OPTIONAL] The initial concentration of species `Q``;
+                        if not present, accept the default value
+
+        :return:    A dictionary of the equilibrium concentrations of the
+                        species involved in the specified reaction;
+                        only the applicable entries will be present
+                        EXAMPLES:
+                            {'A': 24.0, 'B': 36.0, 'P': 1.8, 'Q': 0.3}
+                            {'A': 35.0, 'P': 18.3}
+        """
+        '''
+        For (hypothetical) reactions of the form aA + bB <-> cC + dD  
+        that are FIRST-ORDER in all species, and with the given initial condition,
+        the equilibrium equation needs to equate the reaction's forward and reverse rates 
+        after the reaction has advanced by m moles 
+        (which consumes reagents in proportion to their stoichiometric coefficients, and 
+        generates products similarly):
+                  
+            kF [(A0 - a*m) (B0 - b*m)] = kR [(C0 + c*m) (D0 + d*m)]     # Forward rate = Reverse rate
+        
+        where m (to be solved for) is the number of "moles/liter of forward reaction" 
+
+        Generalization 1: 
+        The above equilibrium equation can also be made to handle reaction terms that aren't present 
+        (for example the "D" part in the reaction A + B <-> C), 
+        by simply using 1 for the "initial concentration" and 0 for the "stoichiometry coefficient"
+        of any missing term;
+        such a trick will make its corresponding multiplicative term to become (1 + 0*m) ,
+        i.e. identically equal to 1 , and thus have no effect on the solution of the equation.
+        
+        Generalization 2:
+        The equilibrium equation can also be made to handle scenarios where 2 terms refer to the same chemical,
+        such as in the reaction 2 A <-> C , with 2nd order with respect to A, 
+        by setting B0 = A0, a=2, b=2,
+        which will produce the multiplicative term that we need, namely:
+            kF [(A0 - 2*m) **2]
+        
+        
+        SOLUTION -
+        Our equilibrium equation can be expanded into a standard quadratic form for the unknown m :
+        
+                alpha * m**2 + beta * m + gamma = 0
+        
+        (where alpha, beta and gamma are as computed below), and then solved for m.  
+        In case of two solution for the quadratic, we'll pick the one that
+        leads to physically-possible results (non-negative concentrations of all the species.)
+        '''
+        assert kR is not None, \
+            "_compute_equilibrium_conc_first_order(): a value must be passed for argument `kR` (currently None)"
+
+        assert kF is not None, \
+            "_compute_equilibrium_conc_first_order(): a value must be passed for argument `kF` (currently None)"
+
+        if b == 0:
+            assert B0 is None, \
+                "_compute_equilibrium_conc_first_order(): unexpected concentration value for a chemical not in reaction (B)"
+            B0 = 1      # A trick to reduce to the general equation when b=0
+
+        if q == 0:
+            assert Q0 is None, \
+                "_compute_equilibrium_conc_first_order(): unexpected concentration value for a chemical not in reaction (D)"
+            Q0 = 1      # A trick to reduce to the general equation when d=0
+
+        alpha = (kF * a * b - kR * p * q)
+        beta = -kF * (b*A0 + a*B0) -kR * (q * P0 + p * Q0)
+        gamma = kF * A0 * B0 - kR * P0 * Q0
+
+        #print("_compute_equilibrium_conc_first_order() - alpha, beta, gamma : ", alpha, beta, gamma)
+
+        if np.allclose(alpha, 0):
+            # The quadratic reduces to the linear equation:  beta * m + gamma = 0
+            m1 = -gamma / beta
+            m2 = m1
+        else:
+            sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
+            m1 = (-beta - sqrt_discriminant) / (2 * alpha)
+            m2 = (-beta + sqrt_discriminant) / (2 * alpha)
+            #print("m1, m2 : ", m1, m2)
+
+        m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
+
+        # After m "moles of forward reaction", the concentration of the reactant "A"
+        # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
+        # Reaction products get increased.  Values for missing terms will be meaningless
+        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "P" : P0 + p * m, "Q" : Q0 + q * m}   # TENTATIVE values!
+
+        if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
+            # ...then repeat the computation using the other solution of the quadratic
+            m = m2
+            print("Using 2nd solution: m = ", m)
+            std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : P0 + p * m, "D" : Q0 + q * m}
+
+        # Eliminate any entries that aren't applicable to the reaction
+        if b == 0:
+            del std_result["B"]
+        if q == 0:
+            del std_result["Q"]
+
+        return std_result

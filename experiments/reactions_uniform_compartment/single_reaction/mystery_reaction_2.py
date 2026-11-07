@@ -42,10 +42,9 @@ LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-import ipynbname
 import numpy as np
 
-from life123 import check_version, ReactionSimulator, PlotlyHelper, Numerical
+from life123 import check_version, ReactionSimulator, PlotlyHelper, Numerical, MassAction_Parameter_Estimator
 
 
 # %%
@@ -131,7 +130,7 @@ C_conc = df["C"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants_synthesis(t=t_arr,
+MassAction_Parameter_Estimator.estimate_rate_constants_synthesis(t=t_arr,
                                            A_conc=A_conc, B_conc=B_conc, C_conc=C_conc,
                                            reactants=["A", "B"], product="C")
 

@@ -4,6 +4,7 @@ from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
+from life123.kinetics.mass_action_analysis import MassAction_Analysis
 
 
 
@@ -35,7 +36,7 @@ def test_exact_advance_unimolecular_reversible():
     p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=100.)
     assert np.allclose(p, 54.)
 
-    equil = ReactionKinetics._compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, A0=80., p=1, P0=10.)
+    equil = MassAction_Analysis._compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, A0=80., p=1, P0=10.)
     assert np.allclose(p, equil["P"])
 
 
@@ -205,7 +206,7 @@ def test_exact_advance_synthesis_reversible():
 
     # Verify reaching equilibrium at a large t
     P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=10., incremental=False)
-    eq = ReactionKinetics._compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., p=1, P0=20.)
+    eq = MassAction_Analysis._compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., p=1, P0=20.)
     assert np.allclose(P_t, eq["P"])    # 29.705122591242464
 
 

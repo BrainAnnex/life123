@@ -10,6 +10,7 @@ from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
 from life123.kinetics.kinetic_models import MassAction_Model, MichaelisMenten_Model, Custom_Model
+from life123.kinetics.mass_action_analysis import MassAction_Analysis
 from life123.units import show_standard_units, convert, K, C
 
 
@@ -1360,7 +1361,7 @@ class ReactionDefinition:
                 f"it's only implemented when there are no more than 2 products (number of products is {len(products)})"
 
 
-        # To conform with functions available in ReactionKinetics,
+        # To conform with functions available in MassAction_Analysis,
         # we'll express the reaction in the form   A + B <-> P + Q   or  2 A <-> P  or  A <-> 2 P   (no other solver is available)
 
         standard_names = ["A", "B", "P", "Q"]
@@ -1420,31 +1421,31 @@ class ReactionDefinition:
 
         if (self.analytic_solution_family == "ONE_TO_ONE"):
             # Reaction is of the form A <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
                                                                             kR=sim_rxm.model.kR,
                                                                             A0=A0, P0=P0)
 
         elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 1):
             # Reaction is of the form A + B <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
                                                                             kR=sim_rxm.model.kR,
                                                                             A0=A0, B0=B0, P0=P0)
 
         elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 2):
             # Reaction is of the form 2 A <-> P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_synthesis(kF=sim_rxm.model.kF,
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=sim_rxm.model.kF,
                                                                                      kR=sim_rxm.model.kR,
                                                                                      A0=A0, P0=P0)
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 1):
             # Reaction is of the form A <-> P + Q
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=sim_rxm.model.kF,
                                                                             kR=sim_rxm.model.kR,
                                                                             A0=A0, P0=P0, Q0=Q0)
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 2):
             # Reaction is of the form A <-> 2 P
-            eq_dict = ReactionKinetics.compute_equilibrium_conc_elementary_decomposition(kF=sim_rxm.model.kF,
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_elementary_decomposition(kF=sim_rxm.model.kF,
                                                                                          kR=sim_rxm.model.kR,
                                                                                          A0=A0, P0=P0)
 
@@ -1452,7 +1453,7 @@ class ReactionDefinition:
             raise Exception(f"find_equilibrium_conc(): Not implemented for this reaction type ({self.analytic_solution_family})")
 
         """                                                                      
-        eq_dict = ReactionKinetics._compute_equilibrium_conc_first_order(kF=sim_rxm.model.kF, kR=sim_rxm.model.kR,
+        eq_dict = MassAction_Analysis._compute_equilibrium_conc_first_order(kF=sim_rxm.model.kF, kR=sim_rxm.model.kR,
                                                                          a=a, b=b, p=c, q=d,
                                                                          A0=A0, B0=B0, P0=C0, Q0=D0)
         """
