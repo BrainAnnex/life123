@@ -34,7 +34,6 @@ from life123.kinetics.mass_action_analysis import MassAction_Analysis
 from life123.kinetics.mass_action_parameter_estimator import MassAction_Parameter_Estimator
 from life123.numerical import Numerical
 from life123.random_reactions import RandomReactionNetwork
-from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_simulator import ReactionSimulator, ReactionStep, VariableTimeSteps
 from life123.reactions import (

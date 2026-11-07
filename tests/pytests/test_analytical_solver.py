@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from life123.analytic_reaction_solver import AnalyticReactionSolver
-from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
 from life123.kinetics.mass_action_analysis import MassAction_Analysis

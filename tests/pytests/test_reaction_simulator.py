@@ -12,7 +12,6 @@ from life123.uniform_compartment import UniformCompartment
 from life123.reactions import ReactionDefinition
 from life123.reaction_simulator import ExcessiveTimeStepHard
 from life123.kinetics.kinetic_models import Custom_Model
-from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.collections import CollectionTabular
 from life123.diagnostics import Diagnostics
 from tests.utilities.comparisons import *
