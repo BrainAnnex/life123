@@ -39,7 +39,7 @@ LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 import ipynbname
 from IPython.display import IFrame
 
-from life123 import check_version, UniformCompartment, PlotlyHelper
+from life123 import check_version, ReactionSimulator, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -88,7 +88,7 @@ uc.describe_state()
 uc.get_history()
 
 # %%
-# For experiment repeatability, we specified, when instantiating the "UniformCompartment" class, 
+# For experiment repeatability, we specified, when instantiating the "ReactionSimulator" class,
 # a particular PRESET applicable to the adaptive time steps; 
 # let's take a look at the value assigned by that preset
 uc.adaptive_steps.show_adaptive_parameters() 

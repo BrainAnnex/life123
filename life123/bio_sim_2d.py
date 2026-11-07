@@ -27,8 +27,8 @@ class BioSim2D:
         [At least one of the 2 following arguments must be provided]
         :param species_data:    [OPTIONAL] Object of class "SpeciesRegistry";
                                     if not specified, it will get extracted
-                                    from the "UniformCompartment" class (if passed to the next argument)
-        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
+                                    from the "ReactionSimulator" class (if passed to the next argument)
+        :param reaction_handler:[OPTIONAL] Object of class "ReactionSimulator";
                                     if not specified, it'll get instantiated here
         :param index_species:   [OPTIONAL] Object of type "IndexSpecies"
         """
@@ -43,7 +43,7 @@ class BioSim2D:
 
         self.reactions = None   # Object of type "ReactionRegistry", with info on all the reactions
 
-        self.reaction_dynamics = None   # Object of class "UniformCompartment"
+        self.reaction_dynamics = None   # Object of class "ReactionSimulator"
 
         self.system_state = None      # Concentration data in the System we're simulating, for all the chemicals:
                                 #   NumPy array of dimension (n_species) x (n_bins_x) x (n_bins_y)

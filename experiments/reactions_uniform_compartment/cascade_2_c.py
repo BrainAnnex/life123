@@ -36,7 +36,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import UniformCompartment, ReactionKinetics, PlotlyHelper
+from life123 import MassAction_Parameter_Estimator, ReactionSimulator
 
 # %%
 
@@ -114,7 +114,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try to do such a linear fit!
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### A terrible fit!  But it looks like we'll do much better if split it into 3 portions, one where A(t) ranges from 0 to about 0.04, one from about 0.04 to 5, and one from about 5 to 50   
@@ -164,7 +164,7 @@ t_arr_late = t_arr[129:]
 # ## I. Let's start with the EARLY region, when t < 0.028
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
                                                 reactant_name="A", product_name="C")
 
 # %% [markdown]
@@ -177,7 +177,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_ear
 # ## II. Let's now consider the MID region (not seen in earlier experiments in this series), when 0.028 < t < 0.1
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_mid, A_conc=A_conc_mid, B_conc=C_conc_mid,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_mid, A_conc=A_conc_mid, B_conc=C_conc_mid,
                                                 reactant_name="A", product_name="C")
 
 # %% [markdown]
@@ -190,7 +190,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_mid, A_conc=A_conc_mid, 
 # ## III. And now let's consider the LATE region, when t > 0.1
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
                                                 reactant_name="A", product_name="C")
 
 # %% [markdown]

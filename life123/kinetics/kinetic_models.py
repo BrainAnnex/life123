@@ -1,8 +1,6 @@
 from __future__ import annotations      # To facilitate type annotations
 import math
 import numpy as np
-from life123.reaction_kinetics import ReactionKinetics
-
 
 
 class OrderedBiBi_Model:
@@ -272,6 +270,7 @@ class MassAction_Model:
             reverse_rate *= conc ** order       # Raise to power
 
         return forward_rate - reverse_rate
+
 
 
 

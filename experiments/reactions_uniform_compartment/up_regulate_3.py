@@ -34,8 +34,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import SpeciesRegistry
-from life123 import UniformCompartment
+from life123 import SpeciesRegistry, ReactionSimulator
 
 from life123 import GraphicLog
 

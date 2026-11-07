@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 import ipynbname
 import numpy as np
 
-from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper, Numerical
+from life123 import check_version, MassAction_Parameter_Estimator, PlotlyHelper, Numerical
 
 
 # %%
@@ -121,7 +121,7 @@ B_conc = df["B"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr,
                                                 A_conc=A_conc, B_conc=B_conc,
                                                 reactant_name="A", product_name="B")
 

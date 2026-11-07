@@ -29,9 +29,12 @@ from life123.history import (
     HistoryReactionRate
 )
 from life123.html_log import HtmlLog
+from life123.kinetics.kinetic_models import MassAction_Model, MichaelisMenten_Model, Custom_Model
+from life123.kinetics.mass_action_analysis import MassAction_Analysis
+from life123.kinetics.mass_action_parameter_estimator import MassAction_Parameter_Estimator
 from life123.numerical import Numerical
 from life123.random_reactions import RandomReactionNetwork
-from life123.reaction_kinetics import ReactionKinetics
+from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.reaction_registry import ReactionRegistry
 from life123.reaction_simulator import ReactionSimulator, ReactionStep, VariableTimeSteps
 from life123.reactions import (
@@ -74,6 +77,8 @@ __all__ = [
     'HistoryUniformConcentration',
     'HistoryReactionRate',
     'MacroMolecules',
+    'MassAction_Model', 'MichaelisMenten_Model', 'Custom_Model',
+    'MassAction_Analysis', 'MassAction_Parameter_Estimator',
     'Membranes1D',
     'Membranes2D',
     'Numerical',

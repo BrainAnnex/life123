@@ -36,10 +36,9 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-import numpy as np
 import ipynbname
 
-from life123 import check_version, UniformCompartment
+from life123 import check_version, ReactionSimulator
 
 # %%
 check_version(LIFE123_VERSION)
@@ -139,7 +138,7 @@ uc.get_history(t=0.002)
 
 # %% [markdown]
 # ### Because of the very large changes happening between t=0 and 0.002, the simulation automatically slowed down and opted to actually take 80 steps in lieu of the 1 step we had (rather optimistically!) proposed  
-# The number of variable steps actually taken can be modulated by changing the _preset_ passed when the `UniformCompartment` class is first instantiated - or, alternatively, using calls to `use_adaptive_preset()`. For finer control, advanced users may tweak internal parameters such as "norm thresholds" and "step factors"
+# The number of variable steps actually taken can be modulated by changing the _preset_ passed when the `ReactionSimulator` class is first instantiated - or, alternatively, using calls to `use_adaptive_preset()`. For finer control, advanced users may tweak internal parameters such as "norm thresholds" and "step factors"
 
 # %% [markdown]
 # ### Step sizes can work both ways!  Notice how, late in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:

@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, SpeciesRegistry, UniformCompartment, ReactionKinetics
+from life123 import check_version, SpeciesRegistry, ReactionSimulator, MassAction_Parameter_Estimator
 
 # %%
 check_version(LIFE123_VERSION)
@@ -125,7 +125,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try a fit to determine values for `kF` and `kR`!
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as an elementary reaction with some suitable rate constants
@@ -177,7 +177,7 @@ t_arr_late = t_arr[48:]
 # ## I. Let's start with the EARLY region, when t < 0.1
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
                                                 reactant_name="A", product_name="C")
 
 # %% [markdown]
@@ -199,7 +199,7 @@ uc.plot_history(range_x=[0, 0.4], vertical_lines_to_add=[0.1],
 # ## II. And now let's consider the LATE region, when t > 0.1
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
                                                 reactant_name="A", product_name="C")
 
 # %% [markdown]

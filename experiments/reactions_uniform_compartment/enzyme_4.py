@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based o
 
 import ipynbname
 
-from life123 import check_version, SpeciesRegistry, ReactionRegistry, UniformCompartment, GraphicLog
+from life123 import check_version, SpeciesRegistry, ReactionRegistry, ReactionSimulator, GraphicLog
 
 import pandas as pd
 

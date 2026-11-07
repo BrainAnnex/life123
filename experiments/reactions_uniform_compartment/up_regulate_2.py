@@ -41,7 +41,7 @@ import ipynbname
 from IPython.display import IFrame
 
 from life123 import check_version, ReactionSimulator
-from life123.kinetic_models import Custom_Model
+from life123.kinetics.kinetic_models import Custom_Model
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility

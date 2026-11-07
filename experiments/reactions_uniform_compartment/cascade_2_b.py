@@ -34,7 +34,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path 
 
-from life123 import UniformCompartment, ReactionKinetics, PlotlyHelper
+from life123 import MassAction_Parameter_Estimator, ReactionSimulator
 
 # %%
 
@@ -112,7 +112,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try to do such a linear fit!
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
@@ -156,7 +156,7 @@ t_arr_late = t_arr[20:]
 # ## I. Let's start with the EARLY region, when t < 0.028
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
                                         reactant_name="A", product_name="C")
 
 # %% [markdown]
@@ -169,7 +169,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_ear
 # ## II. And now let's consider the LATE region, when t > 0.028
 
 # %%
-ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+MassAction_Parameter_Estimator.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
                                         reactant_name="A", product_name="C")
 
 # %% [markdown]

@@ -55,9 +55,7 @@ LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 import ipynbname
 from IPython.display import IFrame
 
-from life123 import check_version, SpeciesRegistry, UniformCompartment
-
-import plotly.express as px
+from life123 import check_version, ReactionSimulator
 
 # %%
 check_version(LIFE123_VERSION)

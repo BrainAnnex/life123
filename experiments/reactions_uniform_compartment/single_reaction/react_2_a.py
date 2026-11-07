@@ -43,7 +43,7 @@ import numpy as np
 import ipynbname
 from IPython.display import IFrame
 
-from life123 import check_version, ReactionSimulator, ReactionKinetics, PlotlyHelper
+from life123 import check_version, ReactionSimulator, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -109,7 +109,7 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 # More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K_eq**, which is 1.5 :
 
 # %%
-ReactionKinetics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
+MassAction_Parameter_Estimator.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
                                            conc={"A": 10., "B": 50.})
 
 # %% [markdown]

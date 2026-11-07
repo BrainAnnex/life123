@@ -46,7 +46,7 @@ LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based 
 
 import pandas as pd
 
-from life123 import check_version, SpeciesRegistry, UniformCompartment, PlotlyHelper
+from life123 import check_version, SpeciesRegistry, ReactionSimulator, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility

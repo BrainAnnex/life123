@@ -56,7 +56,7 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 
 import ipynbname
 
-from life123 import check_version, ReactionRegistry, UniformCompartment, PlotlyHelper, GraphicLog
+from life123 import check_version, ReactionRegistry, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)

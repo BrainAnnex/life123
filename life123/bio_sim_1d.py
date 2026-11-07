@@ -1464,7 +1464,7 @@ class BioSim1D(System1D):
         [IMPORTANT: At least one of the 3 following arguments MUST be provided]
         :param species_data:       [OPTIONAL] Object of class "SpeciesRegistry";
                                     if not specified, it will get extracted
-                                    from the "UniformCompartment" class (if passed to the next argument)
+                                    from the "ReactionSimulator" class (if passed to the next argument)
         :param reaction_handler:[OPTIONAL] Object of class "ReactionSimulator";
                                     if not specified, it'll get instantiated here
         :param reactions:       [OPTIONAL] Object of type "Reactions", with data about the reactions and the chemicals
@@ -1492,7 +1492,7 @@ class BioSim1D(System1D):
 
         self.reactions = reactions   # Object of type "Reactions", with info on all the reactions
 
-        self.reaction_dynamics = None   # Object of class "UniformCompartment"
+        self.reaction_dynamics = None   # Object of class "ReactionSimulator"
                                         # TODO: for now just 1 object is instantiated;
                                         #       in the future, it might be 1 per bin cluster
 
@@ -1567,7 +1567,7 @@ class BioSim1D(System1D):
         in the future, it might be 1 per bin (or per bin cluster)
 
         :param bin_address: CURRENTLY NOT USED
-        :return:            Object ot type "UniformCompartment"
+        :return:            Object ot type "ReactionSimulator"
         """
         return self.reaction_dynamics
 

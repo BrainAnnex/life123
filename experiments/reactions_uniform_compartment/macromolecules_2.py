@@ -35,8 +35,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import SpeciesRegistry
-from life123 import UniformCompartment
+from life123 import SpeciesRegistry, ReactionSimulator
 
 import plotly.express as px
 

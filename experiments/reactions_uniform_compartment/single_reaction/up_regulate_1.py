@@ -35,8 +35,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import SpeciesRegistry
-from life123 import UniformCompartment
+from life123 import SpeciesRegistry, ReactionSimulator
 
 from life123 import GraphicLog
 

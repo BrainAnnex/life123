@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import SpeciesRegistry, UniformCompartment, BioSim1D, GraphicLog, check_version
+from life123 import SpeciesRegistry, ReactionSimulator, BioSim1D, GraphicLog, check_version
 
 # %%
 check_version(LIFE123_VERSION)

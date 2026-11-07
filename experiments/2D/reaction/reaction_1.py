@@ -34,7 +34,7 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import UniformCompartment, BioSim2D, GraphicLog
+from life123 import ReactionSimulator, BioSim2D, GraphicLog
 
 # %%
 # Initialize the HTML logging

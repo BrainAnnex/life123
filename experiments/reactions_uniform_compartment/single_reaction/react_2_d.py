@@ -36,7 +36,7 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 
 import numpy as np
 
-from life123 import check_version, UniformCompartment, ReactionKinetics, GraphicLog, PlotlyHelper
+from life123 import check_version, ReactionSimulator, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility
@@ -99,7 +99,7 @@ uc_approx.plot_history(show_intervals=True)
 uc_approx.plot_step_sizes(show_intervals=True)        #  To see the sizes of the steps taken
 
 # %% [markdown]
-# Why the zigzag?  It's because of the **"fast" preset** picked for the variable steps, in the instantiation of the class `UniformCompartment`: it's like a "high-strung driver" that tries to get away with excessive speeed - and periodically overdoes on acceleration, and then slams on the brakes!  
+# Why the zigzag?  It's because of the **"fast" preset** picked for the variable steps, in the instantiation of the class `ReactionSimulator`: it's like a "high-strung driver" that tries to get away with excessive speeed - and periodically overdoes on acceleration, and then slams on the brakes!
 # Other presets (such as "mid") are more "mild-mannered" and more conservative about going too fast too soon.
 
 # %%

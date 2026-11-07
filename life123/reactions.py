@@ -6,10 +6,10 @@ from typing import Literal
 from dataclasses import dataclass, field, asdict
 from life123.stoichiometry import Stoichiometry
 from life123.thermodynamics import ThermoDynamics
-from life123.reaction_kinetics import ReactionKinetics
+from life123.kinetics.reaction_kinetics import ReactionKinetics
 from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
-from life123.kinetic_models import MassAction_Model, MichaelisMenten_Model, Custom_Model
+from life123.kinetics.kinetic_models import MassAction_Model, MichaelisMenten_Model, Custom_Model
 from life123.units import show_standard_units, convert, K, C
 
 

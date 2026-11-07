@@ -45,7 +45,7 @@ LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 import ipynbname
 import numpy as np
 
-from life123 import check_version, UniformCompartment, PlotlyHelper, Numerical
+from life123 import check_version, ReactionSimulator, PlotlyHelper, Numerical
 
 
 # %%

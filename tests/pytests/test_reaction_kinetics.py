@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import math
-from life123.reaction_kinetics import ReactionKinetics
-from life123.reaction_simulator import ReactionSimulator, AnalyticReactionSolver
+from life123.kinetics.reaction_kinetics import ReactionKinetics
+from life123.reaction_simulator import AnalyticReactionSolver
 from life123.reactions import Stoichiometry
 
 
@@ -67,16 +67,6 @@ def test_half_time_to_equilibrium_synthesis():
     print(P_t)
     assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
                                     # when the reagents have been consumed
-
-
-
-def test_estimate_rate_constants_simple():
-    pass    # TODO
-
-
-def test_estimate_rate_constants_synthesis():
-    pass    # TODO
-
 
 
 
