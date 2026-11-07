@@ -14,6 +14,15 @@ class MassAction_Analysis:
 
 
 
+    #####################################################################################################
+
+    '''                           ~   EQUILIBRIUM CONCENTRATIONS   ~                                  '''
+
+    def ________EQUILIBRIUM_CONCENTRATIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
     @staticmethod
     def compute_equilibrium_conc_elementary_decomposition(kF, kR, A0, P0) -> dict:
         """

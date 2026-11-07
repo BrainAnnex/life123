@@ -2657,42 +2657,6 @@ def test_relative_significance():
 
 
 
-def test_compute_reaction_quotient():
-    # Reaction : A <-> B
-    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
-                                                 conc={'A': 24., 'B': 36.}, explain=False)
-    assert np.allclose(q, 1.5)
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
-                                                          conc={'A': 24., 'B': 36.}, explain=True)
-    assert np.allclose(q, 1.5)
-    assert formula == '[B] / [A]'
-
-
-    # Reaction : 2 A + B <-> C
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(2, "A"), (1, "B")], product_data=["C"],
-                                                          conc={'A': 24., 'B': 36., 'C': 10}, explain=True)
-
-    assert np.allclose(q, 10 / (24.**2 * 36))
-    assert formula == '[C] / ( [A]^2 [B])'
-
-
-    # Reaction: R + S <-> P + Q
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"R"), "S"],
-                                                          product_data=["P", (1,"Q")],
-                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
-    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
-    assert formula == '([P][Q]) / ([R][S])'
-
-    # Reaction: R + 3 S <-> 2 P + Q
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"R"), (3,"S")],
-                                                          product_data=[(2,"P"), (1,"Q")],
-                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
-    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
-    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
-
-
-
-
 
 #################   INDIVIDUAL NORMS   #################
 

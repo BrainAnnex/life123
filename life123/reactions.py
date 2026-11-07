@@ -20,7 +20,9 @@ from life123.units import show_standard_units, convert, K, C
 class ReactionThermodynamics:
     """
     Thermodynamic data belonging to a particular reaction.
-    More specifically, belonging to an object of type "ReactionDefinition"
+    More specifically, belonging to an object of type "ReactionDefinition".
+
+    For general thermodynamics knowledge, use the class "ThermoDynamics"
     """
     delta_H: float | None = None
     delta_S: float | None = None
@@ -291,9 +293,7 @@ class SimulationReaction:
     def reaction_quotient(self, conc, explain=False) -> np.double | tuple[np.double, str]:
         """
         Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
-        given the concentrations of chemicals involved in this reaction.
-
-        Note: this implementation only covers reactions that have "mass action" kinetics
+        given the concentrations of the species involved in this reaction.
 
         :param conc:        Dictionary with the concentrations of the species involved in the reaction.
                             The keys are the chemical labels
@@ -306,12 +306,9 @@ class SimulationReaction:
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        assert self.model.name == "mass action", \
-            "reaction_quotient(): only 'mass action' reaction models are currently supported"
-
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
-                                                          product_data=self.stoichiometry.get_product_list(),
-                                                          conc=conc, explain=explain)
+        return ThermoDynamics.compute_reaction_quotient(reactant_data=self.stoichiometry.get_reactant_list(),
+                                                        product_data=self.stoichiometry.get_product_list(),
+                                                        conc=conc, explain=explain)
 
 
 

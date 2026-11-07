@@ -191,6 +191,55 @@ def test_extract_thermodynamic_data():
 
 
 
+def test_compute_reaction_quotient():
+    # Reaction : A <-> B
+    q = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                 conc={'A': 24., 'B': 36.}, explain=False)
+    assert np.allclose(q, 1.5)
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                          conc={'A': 24., 'B': 36.}, explain=True)
+    assert np.allclose(q, 1.5)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction :  A + B <-> C
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=["A", "B"], product_data="C",
+                                                          conc={'A': 3., 'B': 4., 'C': 12.}, explain=True)
+    assert np.allclose(q, 1)
+    assert formula == '[C] / ([A][B])'
+
+
+    # Reaction :  2A <-> P
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2, "A")], product_data="P",
+                                                          conc={'A': 2., 'P': 20.}, explain=True)
+    assert np.allclose(q, 5)
+    assert formula == '[P] /  [A]^2 '
+
+
+    # Reaction : 2 A + B <-> C
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2, "A"), (1, "B")], product_data=["C"],
+                                                          conc={'A': 24., 'B': 36., 'C': 10}, explain=True)
+
+    assert np.allclose(q, 10 / (24.**2 * 36))
+    assert formula == '[C] / ( [A]^2 [B])'
+
+
+    # Reaction: R + S <-> P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), "S"],
+                                                          product_data=["P", (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
+    assert formula == '([P][Q]) / ([R][S])'
+
+    # Reaction: R + 3 S <-> 2 P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), (3,"S")],
+                                                          product_data=[(2,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
+    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
+
+
+
 def test_relative_population_states():
     # Example data about the conformations of methylcyclohexane molecules
     # State 1 : axial ; state 2 : equatorial
