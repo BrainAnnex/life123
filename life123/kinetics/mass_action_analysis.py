@@ -15,79 +15,91 @@ class MassAction_Analysis:
 
     #####################################################################################################
 
-    '''                                 ~   HALF-TIME RELAXATION   ~                                  '''
+    '''                              ~   HALF-TIME and RELAXATION TIMES   ~                           '''
 
-    def ________HALF_TIME_RELAXATION________(DIVIDER):
+    def ________HALF_TIME_RELAXATION_TIMES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
 
     @staticmethod
-    def half_time_unimolecular_irreversible(kF) -> float:
+    def half_time_unimolecular(kF :float, kR :float) -> float:
         """
-        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
-        to decrease by half (halfway to the asymptotic state, which happens to be zero)
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for reactant concentration to decrease by half
-        """
-        return 0.6931471805599 / kF     # ln 2 / kF
-
-
-
-    @staticmethod
-    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
-        """
-        Return the time taken for the reactant concentration in a reversible unimolecular reaction R <-> P
+        Return the time taken for the reactant concentration
+        in a unimolecular rearrangement/isomerization reaction R <-> P
         to decrease halfway to its asymptotic equilibrium state
 
         :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
+        :param kR:  Reverse reaction rate constant (use 0 if the reaction is irreversible)
         :return:    Reaction time taken for reactant concentration
                         to decrease halfway to its asymptotic equilibrium state
         """
-        # TODO: maybe simply combine with half_time_unimolecular_irreversible, with kR=0
         return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
 
 
     @staticmethod
-    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
+    def relaxation_time_unimolecular(kF :float, kR :float) -> float:
         """
+        The time required for a perturbation or concentration difference from equilibrium
+        to decrease to 1/e (about 37.9%) of its initial displacement value,
+        in a unimolecular rearrangement/isomerization reaction R <-> P
+
         This is the same as the half-time of relaxation, within a factor of ln 2
 
         :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :return:    A quantity named "relaxation time"
+        :param kR:  Reverse reaction rate constant (use 0 if the reaction is irreversible)
+        :return:    The reaction's "relaxation time"
         """
-        # TODO: is this method needed?
         return 1. / (kF + kR)
 
 
 
     @staticmethod
-    def half_time_to_equilibrium_irreversible_synthesis(kF, A0, B0) -> float:
+    def half_time_synthesis(kF :float, kR :float, A0 :float, B0 :float, P0: float) -> float:
         """
-        Return the time taken for the reactant concentration
-        in a synthesis reaction A + B -> P
-        to decrease halfway to their asymptotic equilibrium state.
-        The time taken for 50% of the limiting reactant to be consumed
+        Return the time taken for each of the species concentrations to
+        reach halfway to their final value,
+        in a synthesis reaction A + B <-> P
+
+        CAUTION: for reactions of the type 2 A <-> P, must use instead half_time_homodimerization()
+
+        Note:  if the initial state is already at equilibrium, there is no initial equilibrium deviation to halve.
+               In that case, this formula gives the half-time for an infinitesimal perturbation away from equilibrium.
 
         :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant.  Use 0 for irreversible synthesis
+        :param A0:  Initial concentration of the first reactant
+        :param B0:  Initial concentration of the second reactant
+        :param P0:  Initial concentration of the product.  Can simply use 0 for irreversible synthesis
+
         :return:    Reaction time taken for reactant concentration
                         to decrease halfway to its asymptotic equilibrium state
         """
-        #TODO: test
-        #equil_concs = ReactionKinetics._compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, b=1, B0=B0, p=1, P0=P0)
+        q = kF*(A0+B0) + kR
 
-        delta_conc = A0 - B0
-        if np.allclose(delta_conc, 0):
-            return 1 / (kF * A0)
+        s_squared = ( kF * (A0-B0) )**2 + 2*kF*kR*(A0+B0) + kR**2 + 4*kF*kR*P0
+        # Note that when kR=0 : s_squared = ( kF * (A0-B0) )**2
 
-        if delta_conc > 0:      # When A0 > B0
-            return math.log((2 * A0 - B0) / A0) / (kF * delta_conc)
-        else:
-            return - math.log((2 * B0 - A0) / B0) / (kF * delta_conc)   #TODO: test
+        #print("s_squared: ", s_squared)
+        if np.allclose(s_squared, 0):
+            # This case will happen if kR=0 and A0=B0
+            #print("half_time_reversible_synthesis(): going thru special branch")
+            # Note: the following value is the limit as s->0 of
+            #       ln[1 + 2s/(q+s)] / s
+            return 2. / q
 
+        s = math.sqrt(s_squared)
+        # Note that when kR=0 : s = kF * |A0-B0|
+
+        return math.log1p(2*s/(q+s)) / s    # log1p(x) is the natural logarithm of (1 + x),
+                                            # good for high numerical precision when x is close to 0
+
+
+
+    @staticmethod
+    def half_time_homodimerization():
+        # 2A ⇌ P
+        pass    # TODO
 
 
 
@@ -138,9 +150,9 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def compute_equilibrium_conc_elementary_synthesis(kF, kR, A0, P0) -> dict:
+    def compute_equilibrium_conc_elementary_synthesis(kF :float, kR :float, A0 :float, P0 :float) -> dict:
         """
-        Given a reversible reaction of the form:  2 A <-> P
+        Given a reversible homodimerization reaction of the form:  2 A <-> P
         whose kinetics follow the "mass-action" law,
         determine the equilibrium concentrations that would be eventually reached by all its species,
         given the specified initial concentrations,
@@ -162,7 +174,7 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def compute_equilibrium_conc_mass_action(kF, kR, A0, P0, B0=None, Q0=None) -> dict:
+    def compute_equilibrium_conc_mass_action(kF :float, kR :float, A0 :float, P0 :float, B0 :float=None, Q0 :float=None) -> dict:
         """
         Given a reversible reaction of the form:  A + B <-> P + Q (some terms may be missing)
         whose kinetics follow the "mass-action" law,
@@ -177,8 +189,8 @@ class MassAction_Analysis:
         :param kR:  The reaction's reverse rate constant (None will be interpreted as a zero, i.e. no reverse reaction)
         :param A0:  The initial concentration of species `A` (i.e. the 1st reactant term)
         :param P0:  The initial concentration of species `P` (i.e. the 1st product term)
-        :param B0:  Use None to indicate the absence of a `B` species (i.e. a 2nd term) among the reactants
-        :param Q0:  Use None to indicate the absence of a `Q` species (i.e. a 2nd term) among the products
+        :param B0:  Use None to indicate the absence of a `B` species (i.e. of a 2nd term) among the reactants
+        :param Q0:  Use None to indicate the absence of a `Q` species (i.e. of a 2nd term) among the products
 
         :return:    A dictionary of the equilibrium concentrations of the
                         species involved in the specified reaction;

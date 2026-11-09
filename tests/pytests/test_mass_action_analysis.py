@@ -8,10 +8,11 @@ from life123.reaction_simulator import AnalyticReactionSolver
 
 
 
-def test_half_time_unimolecular_irreversible():
-    # Reaction A -> P , with kF=5
+def test_half_time_unimolecular():
+
+    # Irreversible reaction A -> P , with kF=5
     kF=5.
-    half_time = MassAction_Analysis.half_time_unimolecular_irreversible(kF=kF)
+    half_time = MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
     assert np.allclose(half_time, math.log(2) / kF)
 
     p_halftime = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, R0=80., P0=10., t=half_time)
@@ -19,12 +20,10 @@ def test_half_time_unimolecular_irreversible():
     assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
 
 
-
-def test_half_time_relaxation_unimolecular_reversible():
     # Reaction A <-> P , with kF=8 and kR=2
     kF=8.
     kR=2.
-    half_time_relaxation = MassAction_Analysis.half_time_relaxation_unimolecular_reversible(kF=kF, kR=kR)
+    half_time_relaxation = MassAction_Analysis.half_time_unimolecular(kF=kF, kR=kR)
     assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
 
     # Simulate the reaction to t = half_time_relaxation
@@ -39,35 +38,94 @@ def test_half_time_relaxation_unimolecular_reversible():
 
 
 
-def test_relaxation_time_unimolecular_reversible():
-    relaxation_time = MassAction_Analysis.relaxation_time_unimolecular_reversible(kF=8., kR=2.)
+def test_relaxation_time_unimolecular():
+    relaxation_time = MassAction_Analysis.relaxation_time_unimolecular(kF=8., kR=2.)
     assert np.allclose(relaxation_time, 0.1)    # 1 / (8.+2.)
 
 
 
-def test_half_time_to_equilibrium_synthesis():
+def test_half_time_synthesis_1():
+    # Irreversible cases
+
     # Reaction A + B -> P
     kF=8.
 
-    half_time_relaxation = MassAction_Analysis.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=15, B0=5)
-    assert np.allclose(half_time_relaxation, 0.006385320297074884)
+    half_time = MassAction_Analysis.half_time_synthesis(kF=kF, kR=0, A0=15, B0=5, P0=0)
+    assert np.allclose(half_time, 0.006385320297074884)
 
-    #equil_concs = MassAction_Analysis._compute_equilibrium_conc_first_order(kF=kF, kR=0, a=1, A0=15., b=1, B0=5, p=1, P0=0)
-    #print(equil_concs)
-
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
+    # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time)
     assert np.allclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
-                                    # when all the limiting reagent (B) has been consumed
+                                    # when the limiting reagent (B) has been consumed
 
 
-    half_time_relaxation = MassAction_Analysis.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=20, B0=20)
-    print(half_time_relaxation)
-    assert np.allclose(half_time_relaxation, 0.00625)
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
-    print(P_t)
+    # Special case when A0 = B0
+    half_time = MassAction_Analysis.half_time_synthesis(kF=kF, kR=0, A0=20, B0=20, P0=0)
+    assert np.allclose(half_time, 0.00625)
+
+    # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time)
     assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
-                                    # when the reagents have been consumed
+                                    # when the limiting reagent (B) has been consumed
 
+
+    # Special case when A0 is very close to B0, but not so close as to trigger the special separate handling
+    B0=20.0001
+    half_time = MassAction_Analysis.half_time_synthesis(kF=kF, kR=0, A0=20, B0=B0, P0=0)
+
+    # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=B0, P0=0, t=half_time)
+    assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
+                                    # when the limiting reagent (B) has been consumed
+
+
+
+def test_half_time_synthesis_2():
+    # Reversible cases
+
+    # Reaction A + B <-> P
+    kF=8.
+    kR=2.
+    A0=15
+    B0=5
+    P0=2
+
+    half_time = MassAction_Analysis.half_time_synthesis(kF=kF, kR=kR, A0=A0, B0=5, P0=2)
+    #print(half_time)
+    assert np.allclose(half_time, 0.006172252683297086)
+
+    # Verify that at half time, the concentration of any species, for example `P`, is indeed halfway to its final value
+    d = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0)
+    #print(d)
+    P_final = d["P"]
+    P_halfway = P0 + (P_final - P0)/2
+    #print(P_halfway)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
+    #print(P_t)
+    assert np.allclose(P_t, P_halfway)
+
+
+    # Special case when A0 = B0
+    A0=20
+    B0=20
+    half_time = MassAction_Analysis.half_time_synthesis(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0)
+    #print(half_time)
+    assert np.allclose(half_time, 0.005050948495652852)
+
+    # Verify that at half time, the concentration of any species, for example `P`, is indeed halfway to its final value
+    d = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0)
+    #print(d)
+    P_final = d["P"]
+    P_halfway = P0 + (P_final - P0)/2
+    #print(P_halfway)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
+    #print(P_t)
+    assert np.allclose(P_t, P_halfway)
+
+
+
+def test_half_time_homodimerization():
+    pass
 
 
 
