@@ -97,9 +97,55 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def half_time_homodimerization():
-        # 2A ⇌ P
-        pass    # TODO
+    def half_time_homodimerization(kF :float, kR :float, A0 :float, P0: float) -> float:
+        """
+        Return the time taken for each of the species concentrations to
+        reach halfway to their final value,
+        in a synthesis reaction 2 A <-> P
+
+        Note:  if the initial state is already at equilibrium, there is no initial equilibrium deviation to halve.
+               In that case, this formula gives the half-time for an infinitesimal perturbation away from equilibrium.
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant.  Use 0 for irreversible synthesis
+        :param A0:  Initial concentration of the reactant
+        :param P0:  Initial concentration of the product.  Can simply use 0 for irreversible synthesis
+
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
+        """
+        """
+        The extent equations are:
+            [A] = A_0 -2ξ
+            [P] = P_0 +ξ
+            
+        and, from the mass-action kinetics:
+            d ξ / dt = kF [A]^2 - kR [P] = kF ( A_0 -2ξ )^2 - kR (P_0 +ξ)
+            
+        That leads to a quadratic equation:
+            d ξ / dt = 4 kF ξ^2 - (4 kF A0 + kR) ξ + (kF A02 - kR P0)
+        """
+        q = 4*kF*A0 + kR        # Note that when kR=0 : q = 4*kF*A0
+
+        s_squared = (
+            kR**2
+            + 8 * kF * kR * A0
+            + 16 * kF * kR * P0
+        )
+        # Note that when kR=0 : s_squared = 0
+
+        #print("s_squared: ", s_squared)
+        if np.allclose(s_squared, 0):
+            # This case will happen if kR=0
+            # print("half_time_reversible_synthesis(): going thru special branch")
+            # Note: the following value is the limit as s->0 of
+            #       ln[1 + 2s/(q+s)] / s
+            return 2. / q
+
+        s = math.sqrt(s_squared)
+
+        return math.log1p(2*s/(q+s)) / s    # log1p(x) is the natural logarithm of (1 + x),
+                                            # good for high numerical precision when x is close to 0
 
 
 

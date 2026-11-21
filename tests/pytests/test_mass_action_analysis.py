@@ -5,6 +5,8 @@ from life123.kinetics.mass_action_analysis import MassAction_Analysis
 from life123.thermodynamics import ThermoDynamics
 from life123.stoichiometry import Stoichiometry
 from life123.reaction_simulator import AnalyticReactionSolver
+from life123.reaction_registry import ReactionRegistry
+from life123.reaction_simulator import ReactionSimulator
 
 
 
@@ -124,8 +126,43 @@ def test_half_time_synthesis_2():
 
 
 
-def test_half_time_homodimerization():
-    pass
+def test_half_time_homodimerization_1():
+    # Irreversible cases
+
+    # Reaction 2 A -> P
+    kF=8.
+
+    half_time = MassAction_Analysis.half_time_homodimerization(kF=kF, kR=0, A0=10, P0=0)
+    assert np.allclose(half_time, 0.00625)
+    assert np.allclose(half_time, 1 / (2 * kF * 10))
+
+    # Verify that at half time, the concentration of the product is indeed 1/2 of final value of 5
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=10, B0=10, P0=0, t=half_time)
+    print(P_t)
+
+    return
+    rxns = ReactionRegistry()
+    rxns.add_reaction(reactants=[(2, "A")], products="P",
+                      reaction_model="mass action", kinetic_parameters={"kF": kF})
+
+    sim = ReactionSimulator(reaction_registry=rxns)
+    sim.set_conc(conc={"A": 10, "P": 0})
+    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
+    print(sim.system.get_system_conc())     # [4.99972272 2.50013864]
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="heun")
+    sim.set_conc(conc={"A": 10, "P": 0})
+    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
+    print(sim.system.get_system_conc())     # [5.00000002 2.49999999]
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="analytic")
+    sim.set_conc(conc={"A": 10, "P": 0})
+    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
+    print(sim.system.get_system_conc())
+
+    return
+    assert np.allclose(P_t, 3)      # 3 is halfway between P0=0 and the final value of 6,
+                                    # when the reagent has been consumed
 
 
 

@@ -106,7 +106,7 @@ class AnalyticReactionSolver:
         # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
         # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
         '''
-        Start with the ODE:
+        Start with the general ODE:
             d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
                      
         Special case - when A0 = B0, the ODE becomes:
@@ -114,7 +114,7 @@ class AnalyticReactionSolver:
             which can, for example, be plugged into Mathematica as:
             DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
         '''
-        alpha =  P0 + A0
+        alpha = P0 + A0
 
         if np.allclose(A0, B0):
             # When A0 = B0, the ODE has a special solution:
@@ -123,12 +123,14 @@ class AnalyticReactionSolver:
             P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
 
         else:
-            # When A0 != B0, the solution P(t) of the ODE must satisfy:
+            # When A0 != B0, the general ODE is:
+            # d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
+            # The solution P(t)  must satisfy:
             #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
             #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
             #   which gets solved for P(t) below
             #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
-            beta =   P0 + B0
+            beta = P0 + B0
             try:
                 # Evaluate the exponential on the right-hand size
                 eps = math.exp((B0-A0)* kF * t)
