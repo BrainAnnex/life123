@@ -411,7 +411,7 @@ def test_exact_advance_synthesis_irreversible():
     assert np.allclose(Delta_P, 0)
 
 
-    # Case A0 = B0  (equivalently, 2 A -> P)
+    # Case A0 = B0
 
     # No change at time 0
     P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=0, incremental=False)
@@ -438,7 +438,7 @@ def test_exact_advance_synthesis_irreversible():
 
 def test_exact_advance_synthesis_irreversible_2():
     # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
-    # at the middle point of 3
+    # at the middle one of 3 points
     h = 0.00001
     t_start = 0.003
     p1 = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start)
@@ -479,6 +479,93 @@ def test_exact_advance_synthesis_irreversible_3():
 
     exact_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=False)   # 28.8871974442945
     assert np.allclose(p, exact_p)
+
+
+
+def test_exact_advance_homodimerization_irreversible():
+    # Reaction 2 A -> P
+    kF=15.
+
+    # t = 0
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=12, P0=4, t=0)
+    assert np.allclose(P_t, 4)          # Nothing changed at t=0
+
+    # Very large t
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=12, P0=4, t=200)
+    assert np.allclose(P_t, 10)         # 12/2 + 4.  All reactant converted to product at sufficiently large time
+
+    # Verify that at t = half time, the concentration of the product is indeed halfway from initial value of 4 to final value of 10
+    half_time = MassAction_Analysis.half_time_homodimerization(kF=kF, kR=0, A0=12, P0=4)
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=12, P0=4, t=half_time)
+    assert np.allclose(P_t, 7)
+
+    delta_P = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=12, P0=4, t=half_time, incremental=True)
+    assert np.allclose(delta_P, 3)      # Incremental : 7 - 4
+
+
+
+    # Verify that the reaction rate computed from the concentration trajectories matches what's expected from the rate law,
+    # at the middle one of 3 points
+    h = 0.0001
+    t_start = 0.05
+    p1 = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=5., A0=10., P0=20., t=t_start)
+    p2 = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=5., A0=10., P0=20., t=t_start + h)
+    a2 = 10 - 2*(p2 - 20)    # From mass conservation   2 A -> P
+    p3 = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=5., A0=10., P0=20., t=t_start + 2 * h)
+    #print([p1, p2, p3])
+    #print(a2, p2)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 5 * a2 * a2   # kF * a2 * a2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
+
+
+
+def test_exact_advance_homodimerization_reversible():
+    # Reaction 2 A <-> P
+    kF=15.
+    kR=10.
+
+    # t = 0
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=12, P0=4, t=0)
+    assert np.allclose(P_t, 4)          # Nothing changed at t=0
+
+    # Very large t
+    eq = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=kF, kR=kR, A0=12, P0=4)
+    #print(eq)       # {'A': 2.4206957827100037, 'P': 8.789652108644997}
+    P_t_final = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=12, P0=4, t=100)
+    assert np.allclose(P_t_final, eq["P"])
+
+    # Verify that at t = half time, the concentration of the product is indeed halfway from initial value of 4 to final value of P_t_final (8.78965)
+    half_time = MassAction_Analysis.half_time_homodimerization(kF=kF, kR=kR, A0=12, P0=4)
+    #print(f"half_time: , {half_time}")      # 0.0019366402
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=12, P0=4, t=half_time)
+    #print(P_t)                              # 6.394826054322497
+    expected_P = (4 + P_t_final) / 2
+    assert np.allclose(P_t, expected_P)
+
+    delta_P = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=12, P0=4, t=half_time, incremental=True)
+    assert np.allclose(delta_P, expected_P -4)      # Incremental
+
+
+
+    # Verify that the reaction rate computed from the concentration trajectories matches what's expected from the rate law,
+    # at the middle one of 3 points
+    h = 0.0001
+    t_start = 0.05
+    p1 = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=5., kR=2, A0=10., P0=20., t=t_start)
+    p2 = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=5., kR=2, A0=10., P0=20., t=t_start + h)
+    a2 = 10 - 2*(p2 - 20)    # From mass conservation   2 A <-> P
+    p3 = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=5., kR=2, A0=10., P0=20., t=t_start + 2 * h)
+    #print([p1, p2, p3])
+    #print(a2, p2)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 5 * a2 * a2 - 2 * p2   # kF * a2 * a2 - kR * p2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
+
+    with pytest.raises(Exception):      # kR = 0 isn't handled by this function
+        AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=5., kR=0, A0=10., P0=20., t=0.05)
 
 
 

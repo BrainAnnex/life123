@@ -177,7 +177,7 @@ class MassAction_Analysis:
                         EXAMPLE:    {'A': 24.0, 'P': 1.8}
         """
         # Reverse kF and kR, to obtain the reversed reaction 2 P <-> A
-        result = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=kR, kR=kF, A0=P0, P0=A0)
+        result = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=kR, kR=kF, A0=P0, P0=A0)
 
         return {"A": result["P"], "P": result["A"]}     # Reverse `A` and `P`, because the above function
                                                         # was in terms of 2 A <-> P
@@ -196,7 +196,7 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def compute_equilibrium_conc_elementary_synthesis(kF :float, kR :float, A0 :float, P0 :float) -> dict:
+    def compute_equilibrium_conc_homodimerization(kF :float, kR :float, A0 :float, P0 :float) -> dict:
         """
         Given a reversible homodimerization reaction of the form:  2 A <-> P
         whose kinetics follow the "mass-action" law,

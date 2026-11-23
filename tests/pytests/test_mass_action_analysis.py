@@ -136,15 +136,18 @@ def test_half_time_homodimerization_1():
     assert np.allclose(half_time, 0.00625)
     assert np.allclose(half_time, 1 / (2 * kF * 10))
 
-    # Verify that at half time, the concentration of the product is indeed 1/2 of final value of 5
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=10, B0=10, P0=0, t=half_time)
-    print(P_t)
+    # Verify that at half time, the concentration of the product is indeed 1/2 of its final value of 5
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=10, P0=0, t=half_time)
+    assert np.allclose(P_t, 2.5)
+
 
     return
+    # TODO: turn the tests below into tests of single_compartment_react()
     rxns = ReactionRegistry()
     rxns.add_reaction(reactants=[(2, "A")], products="P",
                       reaction_model="mass action", kinetic_parameters={"kF": kF})
 
+    # half_time = 0.00625
     sim = ReactionSimulator(reaction_registry=rxns)
     sim.set_conc(conc={"A": 10, "P": 0})
     sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
@@ -155,15 +158,18 @@ def test_half_time_homodimerization_1():
     sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
     print(sim.system.get_system_conc())     # [5.00000002 2.49999999]
 
-    sim = ReactionSimulator(reaction_registry=rxns, method="analytic")
+    sim = ReactionSimulator(reaction_registry=rxns, method="analytic")  # TODO: FIX!
     sim.set_conc(conc={"A": 10, "P": 0})
     sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
     print(sim.system.get_system_conc())
 
-    return
-    assert np.allclose(P_t, 3)      # 3 is halfway between P0=0 and the final value of 6,
-                                    # when the reagent has been consumed
 
+
+def test_half_time_homodimerization_2():
+    # Reversible cases
+    pass    # TODO
+
+    
 
 
 ###########################################################################################
@@ -201,7 +207,7 @@ def test_compute_equilibrium_conc_elementary_decomposition():
 def test_compute_equilibrium_conc_elementary_synthesis():
 
     # 2 A <-> P
-    result = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=3., kR=2., A0=200., P0=40.)
+    result = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=3., kR=2., A0=200., P0=40.)
     assert np.allclose(result["A"], 9.49568869375716)
     assert np.allclose(result["P"], 135.2521556531214)
     assert "B" not in result
@@ -221,7 +227,7 @@ def test_compute_equilibrium_conc_elementary_synthesis():
 
     # X <-> 2 Y  , with kF = 2, kR = 3, and X0 = 200, Y0 = 40
     # Reverse, to obtain 2 Y <-> X, with kF = 3, kR = 2 (reversed rates), and X0 = 200, Y0 = 40
-    result = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=3, kR=2, A0=200., P0=40.)    # TODO: ditch
+    result = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=3, kR=2, A0=200., P0=40.)    # TODO: ditch
     assert np.allclose(result["A"], 9.49568869375716)
     assert np.allclose(result["P"], 135.2521556531214)
     assert "B" not in result

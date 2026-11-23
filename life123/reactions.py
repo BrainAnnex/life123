@@ -1429,9 +1429,9 @@ class ReactionDefinition:
 
         elif (self.analytic_solution_family == "TWO_TO_ONE") and (a == 2):
             # Reaction is of the form 2 A <-> P
-            eq_dict = MassAction_Analysis.compute_equilibrium_conc_elementary_synthesis(kF=sim_rxm.model.kF,
-                                                                                     kR=sim_rxm.model.kR,
-                                                                                     A0=A0, P0=P0)
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=sim_rxm.model.kF,
+                                                                                    kR=sim_rxm.model.kR,
+                                                                                    A0=A0, P0=P0)
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 1):
             # Reaction is of the form A <-> P + Q

@@ -1556,8 +1556,8 @@ class ReactionSimulator:
         just the concentrations of relevance for the specified reaction
 
         :param rxn:         An object of type "SimulationReaction"
-        :return:            A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+        :return:            A dict mapping species id's to their concentrations,
+                                for ALL the species involved in the given reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         """
         # Get the SET of the id's of ALL the species appearing in this reaction
@@ -1566,7 +1566,7 @@ class ReactionSimulator:
 
         
 
-    def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float):
+    def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float) -> tuple:
         """
         Dispatch to the appropriate ODE solver for this single reaction,
         based on the object variable self.method
@@ -1575,9 +1575,10 @@ class ReactionSimulator:
         for this reaction type, then fall back to "forward_euler" for this reaction
 
         :param rxn:         Object of type "SimulationReaction"
-        :param conc_init:
+        :param conc_init:   Initial concentrations of all the species involved in the given reaction
         :param delta_time:  The duration of the single time step to take
-        :return:            EXAMPLE: (  {"B": -1.3, "F": 2.9, "D": -1.6} ,
+        :return:            EXAMPLE: (
+                                        {"B": -1.3, "F": 2.9, "D": -1.6} ,
                                         35.
                                      )
         """
@@ -1602,9 +1603,10 @@ class ReactionSimulator:
 
 
     @staticmethod
-    def analytic_solver_single_rxn(rxn, conc_init, delta_time) -> dict:
+    def analytic_solver_single_rxn(rxn, conc_init :dict, delta_time :float) -> dict:
         """
-        Unpack the reaction's parameters, and dispatch to the appropriate analytic solver for its type
+        Unpack the given reaction's parameters,
+        and dispatch to the appropriate analytic solver for its (previously-determined) type and stoichiometry
 
         :param rxn:         Object of type "SimulationReaction"
         :param conc_init:   A dictionary of initial concentrations for all the species involved
@@ -1618,6 +1620,7 @@ class ReactionSimulator:
 
             case "ONE_TO_ONE":
                 # EXAMPLES:  R -> P  or  R <-> P
+
                 r = reactants[0][1]           # EXAMPLE: "R"
                 p = products[0][1]            # EXAMPLE: "P"
 
@@ -1637,83 +1640,102 @@ class ReactionSimulator:
 
 
             case "TWO_TO_ONE":
-                if len(reactants) > 1:
-                    # EXAMPLES:  A + B -> P  or  A + B <-> P
-                    a = reactants[0][1]         # EXAMPLE: "A"
-                    b = reactants[1][1]         # EXAMPLE: "B"
-                else:
-                   # EXAMPLES:  2 A -> P  or   2 A <-> P
-                    a = reactants[0][1]         # EXAMPLE: "A"
-                    b = a                       # EXAMPLE: "A"
+                # A + B <-> P,  or  2 A <-> P,  or their irreversible counterparts
 
+                a = reactants[0][1]             # EXAMPLE: "A"
                 p = products[0][1]              # EXAMPLE: "P"
-
                 a0 = conc_init[a]
-                b0 = conc_init[b]
                 p0 = conc_init[p]
 
-                # Compute the increment of P
-                if rxn.model.reversible:
-                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
-                else:
-                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
-                                                                                          A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+                if len(reactants) > 1:
+                    # A + B <-> P  or  A + B -> P
 
-                # Work out the stoichiometry for all the species
-                increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
+                    b = reactants[1][1]         # EXAMPLE: "B"
+                    b0 = conc_init[b]
+
+                    # Compute the increment of P
+                    if rxn.model.reversible:    # A + B <-> P
+                        delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+                    else:                       # Irreversible A + B -> P
+                        delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+
+                    # Work out the stoichiometry for all the species
+                    increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
+
+                else:
+                    # 2 A <-> P or 2 A -> P
+
+                    # Compute the increment of P
+                    if rxn.model.reversible:    # 2 A <-> P
+                        delta_p = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
+                                                                A0=a0, P0=p0, t=delta_time, incremental=True)
+                    else:                       # Irreversible 2 A -> P
+                        delta_p = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=rxn.model.kF,
+                                                                A0=a0, P0=p0, t=delta_time, incremental=True)
+
+                    # Work out the stoichiometry for all the species
+                    increment_dict_single_rxn = {a: -2 * delta_p, p: delta_p}
+
                 return increment_dict_single_rxn
 
 
+
             case "ONE_TO_TWO":
-                if rxn.model.reversible:
-                    if len(products) > 1:
-                        # EXAMPLE: P <-> A + B    NOTE: for convenience, we're treating the reversible version of this reaction
-                        #                               as being the same as the previous reaction (i.e. A + B <-> P),
-                        #                               with kF and kR reversed
-                        a = products[0][1]           # EXAMPLE: "A"
-                        b = products[1][1]           # EXAMPLE: "B"
-                    else:
-                        # EXAMPLE: P <-> 2A
-                        a = products[0][1]           # EXAMPLE: "A"
-                        b = a
-                    p = reactants[0][1]          # EXAMPLE: "P"
+                # X <-> Y + Z,  or  X <-> 2 Y,  or their irreversible counterparts
 
-                    a0 = conc_init[a]
-                    b0 = conc_init[b]
-                    p0 = conc_init[p]
-                    # Compute the increment of each of the REACTANT (not the product, this time - since we're actually
-                    # solving the reaction A + B <-> P)
-                    delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kR, kR=rxn.model.kF,
-                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
-                    # Work out the stoichiometry for all the species
-                    increment_dict_single_rxn = {p: delta_p, a: -delta_p, b: -delta_p}
+                x = reactants[0][1]         # EXAMPLE: "X"
+                y = products[0][1]          # EXAMPLE: "Y"
+                x0 = conc_init[x]
+                y0 = conc_init[y]
 
-                else:   # Irreversible
-                    if len(products) > 1:
-                        # EXAMPLE: R -> P + Q
+                if len(products) > 1:
+                    # X <-> Y + Z  or  X -> Y + Z
+
+                    z = products[1][1]      # EXAMPLE: "Z"
+                    z0 = conc_init[z]
+
+                    # Compute the increment of P
+                    if rxn.model.reversible:    # X <-> Y + Z
+                        # Solving the derived reaction:                                              Y + Z <-> X , with kF and kR inverted
+                        # Notation-wise, we use a solver where the reaction is expressed in the form A + B <-> P
+                        delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(
+                                                            kF=rxn.model.kR, kR=rxn.model.kF,
+                                                            A0=y0, B0=z0, P0=x0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
+
+                        # Work out the stoichiometry for all the species
+                        increment_dict_single_rxn = {x: delta_p, y: -delta_p, z: -delta_p}
+
+                    else:                       # Irreversible X -> Y + Z, kinetically treated as unimolecular reaction R -> P
+                        delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
+                                                            kF=rxn.model.kF,
+                                                            R0=x0, P0=y0, t=delta_time, incremental=True)
+
+                        # Work out the stoichiometry for all the species
+                        increment_dict_single_rxn = {x: -delta_p, y: delta_p, z: delta_p}
+
+                else:
+                    # X <-> 2 Y  or  X -> 2 Y   (Homodimer dissociation)
+
+                    # Compute the increment of P
+                    if rxn.model.reversible:    # X <-> 2 Y
+                        # Solving the derived reaction:                                              2 Y <-> X , with kF and kR inverted
+                        # Notation-wise, we use a solver where the reaction is expressed in the form 2 A <-> P
+                        delta_p = AnalyticReactionSolver.exact_advance_homodimerization_reversible(
+                                                            kF=rxn.model.kR, kR=rxn.model.kF,
+                                                            A0=y0, P0=x0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
+
+                        # Work out the stoichiometry for all the species
+                        increment_dict_single_rxn = {x: delta_p ,  y: -2 * delta_p}
+
+                    else:                       # Irreversible X -> 2 Y
                         # Note that this is a first-order reaction; so, not any different kinetically from R -> P
-                        # (and, from the stoichiometry, the concentration increment of Q will be the same as that of R)
-                        p = products[0][1]           # EXAMPLE: "P"
-                        q = products[1][1]           # EXAMPLE: "Q"
-                    else:
-                        # EXAMPLE: R -> 2 P
-                        # Note that this is a first-order reaction; so, not any different kinetically from R -> P
-                        p = products[0][1]           # EXAMPLE: "P"
-                        q = p
+                        delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
+                                                        kF=rxn.model.kF, R0=x0, P0=y0, t=delta_time, incremental=True)
 
-                    r = reactants[0][1]          # EXAMPLE: "R"
-
-                    r0 = conc_init[r]
-                    p0 = conc_init[p]
-
-                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
-                                                                                             R0=r0, P0=p0, t=delta_time, incremental=True)
-                    # Work out the stoichiometry for all the species
-                    if len(products) > 1:
-                        increment_dict_single_rxn = {r: -delta_p, p: delta_p, q: delta_p}
-                    else:
-                        increment_dict_single_rxn = {r: -delta_p, p: 2 * delta_p}
+                        # Work out the stoichiometry for all the species
+                        increment_dict_single_rxn = {x: -delta_p ,  y: 2 * delta_p}
 
                 return increment_dict_single_rxn
 
@@ -1791,11 +1813,16 @@ class ReactionSimulator:
         # So far, same as the "Forward Euler" method
         #print("Euler final_conc: ", final_conc)
 
-        min_conc = min(final_conc.values())
-        if min_conc < 0:
+        #min_conc = min(final_conc.values())
+        first_negative_species = next((k for k, v in final_conc.items() if v < 0), None)
+        # Returns the first key whose value is negative, or None if no negative values are found.
+        # Stops searching as soon as it finds one (no need to traverse the entire dictionary).
+
+        #if min_conc < 0:
+        if first_negative_species is not None:
             exception_data = {
                 "message": f"heun_single_rxn(): excessive time step ({delta_time:.6g}), "
-                           f"leading to negative concentrations",
+                           f"leading to negative concentrations, for example in species `{first_negative_species}`",
                 "function": "heun_single_rxn",
                 "delta_time": delta_time,
                 "rate": rate_initial

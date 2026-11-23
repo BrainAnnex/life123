@@ -18,6 +18,10 @@ class AnalyticReactionSolver:
         from time 0 to time t,
         with the specified parameters.
 
+        Note: this function can also handle R -> P + Q  (unimolecular decomposition),
+              as well as R -> 2 P (homodimer dissociation),
+              all equally first-order reactions
+
         :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
         :param R0:  Initial concentration of the reactant R
         :param P0:  Initial concentration of the product P
@@ -84,22 +88,97 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+    def exact_advance_homodimerization_irreversible(kF, A0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
-        in the irreversible elementary Reaction A + B -> P,
+        in the irreversible mass-action reaction 2 A -> P,
         from time 0 to time t,
         with the specified parameters.
 
-        Note: to simulate 2 A -> P, set A0 and B0 to the same value
+        :param kF:  Forward reaction rate constant
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental:
+                    [OPTIONAL] If True, the changes in concentrations are returned,
+                        rather than the final ones.  Default: False
+        :return:    The concentration of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
+        """
+        prod = kF * A0 * t
+        delta_P = prod * A0 / (1 + 2*prod)      # The reaction extent
+
+        if incremental:
+            return delta_P
+
+        return P0 + delta_P
+
+
+
+    @staticmethod
+    def exact_advance_homodimerization_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
+        """
+        Exactly advance the concentrations
+        in the reversible mass-action reaction 2 A <-> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        Note: if kR = 0, use exact_advance_homodimerization_irreversible() instead
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant.  Must be > 0, or an Exception is raised.
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental:
+                    [OPTIONAL] If True, the changes in concentrations are returned,
+                        rather than the final ones.  Default: False
+        :return:    The concentration of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
+        """
+        assert not math.isclose(kR, 0), \
+            "exact_advance_homodimerization_reversible(): cannot be used when kR=0.  " \
+            "Use exact_advance_homodimerization_irreversible() instead"
+
+        C = A0 + 2*P0
+        prod = 4*kF*C
+        delta = math.sqrt(kR**2 + 2*prod*kR)
+        #delta = math.sqrt(kR**2 + 8*kF*kR*C)
+
+        P_plus =  (prod + kR + delta) / (8*kF)
+        #P_minus = (prod + kR - delta) / (8*kF)
+        P_minus = (2*kF *C**2) / (prod + kR + delta) # For numerical robustness, this equivalent
+                                                     # avoids subtracting two potentially very similar numbers
+
+        q_t = (P0 - P_minus) / (P0 - P_plus) * math.exp(-delta * t)
+
+        P_t = (P_minus - q_t * P_plus) / (1 - q_t)
+
+        if incremental:
+            return P_t - P0
+
+        return P_t
+
+
+
+    @staticmethod
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+        """
+        Exactly advance the concentrations
+        in the irreversible mass-action reaction A + B -> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        Note: to simulate 2 A -> P, use exact_advance_homodimerization_irreversible() instead
 
         :param kF:  Forward reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
-                                rather than the final ones.  Default: False
+        :param incremental:
+                    [OPTIONAL] If True, the changes in concentrations are returned,
+                        rather than the final ones.  Default: False
         :return:    The concentration of P at time t (if `incremental` is False)
                         or its concentration change during the time interval (if `incremental` is True)
         """
@@ -118,8 +197,8 @@ class AnalyticReactionSolver:
 
         if np.allclose(A0, B0):
             # When A0 = B0, the ODE has a special solution:
-            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
-            prod = A0 * kF * t
+            #   P(t) = (P0 + alpha kF A0 t) / (1 + kF A0 t)
+            prod = kF * A0 * t
             P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
 
         else:
