@@ -12,6 +12,7 @@ from life123.uniform_compartment import UniformCompartment
 from life123.reactions import ReactionDefinition
 from life123.reaction_simulator import ExcessiveTimeStepHard
 from life123.kinetics.kinetic_models import Custom_Model
+from life123.kinetics.mass_action_analysis import MassAction_Analysis
 from life123.collections import CollectionTabular
 from life123.diagnostics import Diagnostics
 from tests.utilities.comparisons import *
@@ -251,7 +252,7 @@ def test_specify_steps():
 
 
 
-def test_single_compartment_react():
+def test_single_compartment_react_1():
 
     # TODO: test `self.number_neg_concs` and `self.number_soft_aborts`
 
@@ -342,6 +343,48 @@ def test_single_compartment_react():
     #print(sim2.diagnostics.explain_time_advance(return_times=True))
     assert sim2.diagnostics.conc_data.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.0035], [0.0005])
+
+
+
+def test_single_compartment_react_2():
+
+    species_registry = SpeciesRegistry()
+    rxns = ReactionRegistry(species_registry=species_registry)
+
+    kF=8.
+    initial_conc = {"A": 10, "P": 0}
+    time_step = 0.00005
+
+    # Unimolecular irreversible reaction 2 A -> B
+    rxns.add_reaction(reactants=[(2, "A")], products="P",
+                      reaction_model="mass action", kinetic_parameters={"kF": kF})
+
+    half_time = MassAction_Analysis.half_time_homodimerization(kF=kF, kR=0, A0=initial_conc["A"], P0=initial_conc["P"])
+    assert np.allclose(half_time, 0.00625)
+
+
+    # Contrast and compare two approximate methods with the exact analytic solution
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="forward_euler")
+    sim.set_conc(conc=initial_conc)
+    sim.single_compartment_react(initial_step=time_step, target_end_time=half_time,
+                                 variable_steps=False, silent=True)
+    #print(sim.system.get_system_conc())
+    assert np.allclose(sim.system.get_system_conc(), [4.98607973, 2.50696014])
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="heun")
+    sim.set_conc(conc=initial_conc)
+    sim.single_compartment_react(initial_step=time_step, target_end_time=half_time,
+                                 variable_steps=False, silent=True)
+    #print(sim.system.get_system_conc())
+    assert np.allclose(sim.system.get_system_conc(), [5.00004024, 2.49997988])
+
+    sim = ReactionSimulator(reaction_registry=rxns, method="analytic")
+    sim.set_conc(conc=initial_conc)
+    sim.single_compartment_react(initial_step=time_step, target_end_time=half_time,
+                                 variable_steps=False, silent=True)
+    #print(sim.system.get_system_conc())
+    assert np.allclose(sim.system.get_system_conc(), [5.,  2.5])
 
 
 
@@ -1696,8 +1739,8 @@ def test__fetch_concs_for_rxn():
 
 
 
-def test_dispatcher_single_rxn_1():
-    # Reaction: A <-> B
+def test_dispatcher_single_rxn_1_a():
+    # Reaction: A <-> B   (comparison of "forward_euler", "heun" and "analytic")
 
     species_registry = SpeciesRegistry()
 
@@ -1706,11 +1749,13 @@ def test_dispatcher_single_rxn_1():
                                   reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
     rxn_sim = rxn_defn.sim_reactions[0]
     assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+    assert rxn_sim.model.reversible
 
     sim = ReactionSimulator(method="forward_euler")
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 7, 'B': -7})
     assert math.isclose(rate, -70)
+    assert math.isclose(rate, 3. * 10 - 2. * 50)
 
     sim = ReactionSimulator(method="heun")
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
@@ -1723,7 +1768,40 @@ def test_dispatcher_single_rxn_1():
     assert math.isclose(rate, -70)
 
 
-def test_dispatcher_single_rxn_2():
+def test_dispatcher_single_rxn_1_b():
+    # Reaction: A -> B
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants="A", products="B",
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 3.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
+    assert not rxn_sim.model.reversible
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -3.0, 'B': 3.0})
+    assert math.isclose(rate, 30)
+    assert math.isclose(rate, 3. * 10)
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -2.55, 'B': 2.55})
+    assert math.isclose(rate, 30)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -2.591817793182822, 'B': 2.591817793182822}) # Decisively closer to Heun than to forward Euler!
+    assert math.isclose(rate, 30)
+
+
+
+def test_dispatcher_single_rxn_2_a():
     # Reaction: A + B <-> P
 
     species_registry = SpeciesRegistry()
@@ -1733,6 +1811,7 @@ def test_dispatcher_single_rxn_2():
                                   reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
     rxn_sim = rxn_defn.sim_reactions[0]
     assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+    assert rxn_sim.model.reversible
 
     conc_init = {"A": 10, "B": 50, "P":20}
     delta_time = 0.0001
@@ -1756,7 +1835,70 @@ def test_dispatcher_single_rxn_2():
     assert math.isclose(rate, 2460)
 
 
-def test_dispatcher_single_rxn_3():
+def test_dispatcher_single_rxn_2_b():
+    # Reaction: A + B -> P
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="P",
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 4.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "TWO_TO_ONE"
+    assert not rxn_sim.model.reversible
+
+    conc_init = {"A": 10, "B": 30, "P":20}
+    delta_time = 0.005
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -6.0, 'B': -6.0, 'P': 6.0})
+    assert math.isclose(rate, 1200)
+    assert math.isclose(rate, 4. * 10 * 30 )
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -3.96, 'B': -3.96, 'P': 3.96})
+    assert math.isclose(rate, 1200)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -4.245389415872584, 'B': -4.245389415872584, 'P': 4.245389415872584})
+                                     # A lot closer to Heun than to forward Euler!
+    assert math.isclose(rate, 1200)
+
+
+
+    # The case A0 = B0 is treated separately by the analytic solver
+    conc_init = {"A": 8, "B": 8, "P":30}
+    delta_time = 0.005
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -1.28, 'B': -1.28, 'P': 1.28})
+    assert math.isclose(rate, 256)
+    assert math.isclose(rate, 4. * 8 * 8 )
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -1.091584, 'B': -1.091584, 'P': 1.091584})
+    assert math.isclose(rate, 256)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -1.1034482758620712, 'B': -1.1034482758620712, 'P': 1.1034482758620712})
+                                     # Definitely closer to Heun than to forward Euler!
+    assert math.isclose(rate, 256)
+
+
+
+def test_dispatcher_single_rxn_3_a():
     # Reaction: 2 A <-> P
 
     species_registry = SpeciesRegistry()
@@ -1792,7 +1934,7 @@ def test_dispatcher_single_rxn_3():
     assert math.isclose(rate, 700)
 
 
-def test_dispatcher_single_rxn_4():
+def test_dispatcher_single_rxn_3_b():
     # Reaction: 2 A -> P
 
     species_registry = SpeciesRegistry()
@@ -1826,6 +1968,151 @@ def test_dispatcher_single_rxn_4():
     assert compare_dicts(delta_conc, {'A': -11.25, 'P': 5.625})
                                      # Much closer to Heun than to forward Euler!
     assert math.isclose(rate, 4500)
+
+
+
+def test_dispatcher_single_rxn_4_a():
+    # Reaction: P <-> A + B   [Note: same as reaction previously looked at, A + B <-> P, with kF and kR reversed]
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants="P", products=["A", "B"],
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    assert rxn_sim.model.reversible
+
+    conc_init = {"A": 10, "B": 50, "P":20}
+    delta_time = 0.0001
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    assert compare_dicts(delta_conc, {'A': -0.246, 'B': -0.246, 'P': 0.246})
+    assert math.isclose(rate, -2460)
+    assert math.isclose(rate, 2. * 20 - 5. * 10 * 50)   # Flipped sign (relative to reaction written as A + B <-> P)
+
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    assert compare_dicts(delta_conc, {'A': -0.242300529, 'B': -0.242300529, 'P': 0.242300529})
+    assert math.isclose(rate, -2460)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    assert compare_dicts(delta_conc, {'A': -0.24233229989273042, 'B': -0.24233229989273042, 'P': 0.24233229989273042})
+                                     # A lot closer to Heun than to forward Euler!
+    assert math.isclose(rate, -2460)
+
+
+def test_dispatcher_single_rxn_4_b():
+    # Reaction: R -> P + Q
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants="R", products=["P", "Q"],
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 7.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    assert not rxn_sim.model.reversible
+
+    conc_init = {"R": 8, "P": 30, "Q": 15}
+    delta_time = 0.05
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'R': -2.8, 'P': 2.8, 'Q': 2.8, })
+    assert math.isclose(rate, 56)
+    assert math.isclose(rate, 7. * 8 )
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'R': -2.31, 'P': 2.31, 'Q': 2.31})
+    assert math.isclose(rate, 56)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'R': -2.362495282250293, 'P': 2.362495282250293, 'Q': 2.362495282250293})
+                                     # Much closer to Heun than to forward Euler!
+    assert math.isclose(rate, 56)
+
+
+
+def test_dispatcher_single_rxn_5_a():
+    # Reaction: P <-> 2 A         [Note: same as reaction previously looked at, 2 A <-> P, with kF and kR reversed]
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants="P", products=[(2, "A")],
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 80., "kR": 3.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    assert rxn_sim.model.reversible
+
+    conc_init = {"A": 30, "P":25}
+    delta_time = 0.002
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -2.8, 'P': 1.4})
+    assert math.isclose(rate, -700)
+    assert math.isclose(rate, 80. * 25 - 3. * 30**2)    # Flipped sign from before
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -1.61504, 'P': 0.80752})
+    assert math.isclose(rate, -700)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -1.8757038368474142, 'P': 0.9378519184237071})
+                                     # Much closer to Heun than to forward Euler!
+    assert math.isclose(rate, -700)
+
+
+def test_dispatcher_single_rxn_5_b():
+    # Reaction: R -> 2 P
+
+    species_registry = SpeciesRegistry()
+
+    rxn_defn = ReactionDefinition(reactants="R", products=[(2, "P")],
+                                  species_registry=species_registry, autoregister_species=True,
+                                  reaction_model="mass action", kinetic_parameters={"kF": 7.})
+    rxn_sim = rxn_defn.sim_reactions[0]
+    assert rxn_sim.analytic_solution_family == "ONE_TO_TWO"
+    assert not rxn_sim.model.reversible
+
+    conc_init = {"R": 20, "P": 120}
+    delta_time = 0.05
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc,{'R': -7.0, 'P': 14.0})
+    assert math.isclose(rate, 140)
+    assert math.isclose(rate, 7. * 20)
+
+    sim = ReactionSimulator(method="heun")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'R': -5.775, 'P': 11.55})
+    assert math.isclose(rate, 140)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'R': -5.9062382056257325, 'P': 11.812476411251465})
+                                     # Much closer to Heun than to forward Euler!
+    assert math.isclose(rate, 140)
+
 
 
 
@@ -1878,7 +2165,6 @@ def test_analytic_solver_single_rxn_2():
     delta_conc = ReactionSimulator.analytic_solver_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=delta_time)
     assert compare_dicts(delta_conc, {'A': -0.24233229989273042, 'B': -0.24233229989273042, 'P': 0.24233229989273042})
     # Note: the above values were validated against numerical approximations in one of the test_dispatcher_single_rxn's
-
 
 
     # Fresh start with a new reaction P <-> A + B

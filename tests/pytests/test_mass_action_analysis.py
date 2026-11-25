@@ -81,7 +81,6 @@ def test_half_time_synthesis_1():
                                     # when the limiting reagent (B) has been consumed
 
 
-
 def test_half_time_synthesis_2():
     # Reversible cases
 
@@ -141,32 +140,11 @@ def test_half_time_homodimerization_1():
     assert np.allclose(P_t, 2.5)
 
 
-    return
-    # TODO: turn the tests below into tests of single_compartment_react()
-    rxns = ReactionRegistry()
-    rxns.add_reaction(reactants=[(2, "A")], products="P",
-                      reaction_model="mass action", kinetic_parameters={"kF": kF})
-
-    # half_time = 0.00625
-    sim = ReactionSimulator(reaction_registry=rxns)
-    sim.set_conc(conc={"A": 10, "P": 0})
-    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
-    print(sim.system.get_system_conc())     # [4.99972272 2.50013864]
-
-    sim = ReactionSimulator(reaction_registry=rxns, method="heun")
-    sim.set_conc(conc={"A": 10, "P": 0})
-    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
-    print(sim.system.get_system_conc())     # [5.00000002 2.49999999]
-
-    sim = ReactionSimulator(reaction_registry=rxns, method="analytic")  # TODO: FIX!
-    sim.set_conc(conc={"A": 10, "P": 0})
-    sim.single_compartment_react(initial_step=0.000001, target_end_time=half_time, variable_steps=False)
-    print(sim.system.get_system_conc())
-
-
 
 def test_half_time_homodimerization_2():
     # Reversible cases
+
+    # Reaction 2 A <-> P
     pass    # TODO
 
     
