@@ -1633,10 +1633,10 @@ class ReactionSimulator:
                 # Compute the increment of P
                 if rxn.model.reversible:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                                           A0=R0, P0=P0, t=delta_time, incremental=True)
+                                                                                           A0=R0, P0=P0, t=delta_time)
                 else:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=rxn.model.kF,
-                                                                                             R0=R0, P0=P0, t=delta_time, incremental=True)
+                                                                                             R0=R0, t=delta_time)
 
                 # Work out the stoichiometry for all the species
                 increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
@@ -1660,10 +1660,10 @@ class ReactionSimulator:
                     # Compute the increment of P
                     if rxn.model.reversible:    # A + B <-> P
                         delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time)
                     else:                       # Irreversible A + B -> P
                         delta_p = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=rxn.model.kF,
-                                                                A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
+                                                                A0=a0, B0=b0, P0=p0, t=delta_time)
 
                     # Work out the stoichiometry for all the species
                     increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
@@ -1674,17 +1674,16 @@ class ReactionSimulator:
                     # Compute the increment of P
                     if rxn.model.reversible:    # 2 A <-> P
                         delta_p = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=rxn.model.kF, kR=rxn.model.kR,
-                                                                A0=a0, P0=p0, t=delta_time, incremental=True)
+                                                                A0=a0, P0=p0, t=delta_time)
                     else:                       # Irreversible 2 A -> P
                         delta_p = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=rxn.model.kF,
-                                                                A0=a0, P0=p0, t=delta_time, incremental=True)
+                                                                A0=a0, t=delta_time)
 
                     # Work out the stoichiometry for all the species
                     increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
 
 
                 return increment_dict_single_rxn
-
 
 
             case "ONE_TO_TWO":
@@ -1711,7 +1710,7 @@ class ReactionSimulator:
 
                     else:                       # Irreversible X -> Y + Z
                         delta_y = AnalyticReactionSolver.exact_solution_decomposition_irreversible(kF=rxn.model.kF,
-                                                            X0=x0, Y0=y0, t=delta_time)
+                                                            X0=x0, t=delta_time)
                         # Work out the stoichiometry for all the species
                         increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=y, delta_conc=delta_y)
 
@@ -1728,7 +1727,7 @@ class ReactionSimulator:
 
                     else:                       # Irreversible X -> 2 Y
                         delta_y = AnalyticReactionSolver.exact_advance_homodimer_dissociation_irreversible(
-                                                            kF=rxn.model.kF, X0=x0, Y0=y0, t=delta_time)
+                                                            kF=rxn.model.kF, X0=x0, t=delta_time)
 
                         # Work out the stoichiometry for all the species
                         increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=y, delta_conc= delta_y)

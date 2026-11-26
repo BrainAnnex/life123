@@ -367,10 +367,10 @@ class SimulationReaction:
                 # Compute the respective increments of R0 and P0
                 if self.model.reversible:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=self.model.kF, kR=self.model.kR,
-                                                                                           A0=R0, P0=P0, t=delta_time, incremental=True)
+                                                                                           A0=R0, P0=P0, t=delta_time)
                 else:
                     delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=self.model.kF,
-                                                                                             R0=R0, P0=P0, t=delta_time, incremental=True)
+                                                                                             R0=R0, t=delta_time)
 
                 # Work out the stoichiometry for all the species
                 increment_dict_single_rxn = {r: -delta_p, p: delta_p}

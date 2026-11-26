@@ -11,63 +11,41 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_unimolecular_irreversible(kF, R0, P0, t, incremental=False) -> float:
+    def exact_advance_unimolecular_irreversible(kF, R0, t) -> float:
         """
-        Exactly advance the concentrations
-        in the ir-reversible 1st Order Reaction R -> P,
-        from time 0 to time t,
-        with the specified parameters.
+        Exact solution for the ir-reversible 1st Order Reaction R -> P
 
         Note: this function can also handle R -> P + Q  (unimolecular decomposition),
               as well as R -> 2 P (homodimer dissociation),
               all equally first-order reactions
 
-        :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
+        :param kF:  Forward reaction rate constant
         :param R0:  Initial concentration of the reactant R
-        :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the change in concentration is returned,
-                                rather than the final ones.  Default: False
 
-        :return:    The concentrations of P at time t (if `incremental` is False),
-                        or its concentration change during that time interval (if `incremental` is True)
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         # Formula is:  R(t) = R0 Exp(-kF t)
-        # TODO: maybe ditch the arg `P0` and just return the delta_P
 
-        if incremental:
-            R_incr = R0 * math.expm1(-kF * t)           # A more precise form for R0 * (np.exp(-kF * t) - 1)
-                                                        # when (-kF * t) is close to zero
-            P_incr = - R_incr   # From mass conservation
-            return P_incr
-
-
-        TOT = R0 + P0
-        A_t = R0 * math.exp(-kF * t)
-        P_t = TOT - A_t     # From mass conservation
-
-        return P_t
+        R_incr = R0 * math.expm1(-kF * t)           # A more precise form for R0 * (np.exp(-kF * t) - 1)
+                                                    # when (-kF * t) is close to zero
+        P_incr = - R_incr   # From mass conservation
+        return P_incr
 
 
 
     @staticmethod
-    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
+    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> float:
         """
-        Exactly advance the concentrations
-        in the reversible elementary Reaction A <-> P,
-        from time 0 to time t,
-        with the specified parameters.
+        Exact solution for the 1st Order Reaction A <-> P
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the reactant A
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations is returned,
-                                rather than the final one.  Default: False
 
-        :return:    The concentrations of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         TOT = A0 + P0
 
@@ -80,15 +58,12 @@ class AnalyticReactionSolver:
         A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
         P_t = TOT - A_t     # From mass conservation
 
-        if incremental:
-            return P_t - P0
-
-        return P_t
+        return P_t - P0
 
 
 
     @staticmethod
-    def exact_advance_homodimerization_irreversible(kF, A0, P0, t, incremental=False) -> float:
+    def exact_advance_homodimerization_irreversible(kF, A0, t) -> float:
         """
         Exactly advance the concentrations
         in the irreversible mass-action reaction 2 A -> P,
@@ -99,29 +74,22 @@ class AnalyticReactionSolver:
         :param A0:  Initial concentration of the reactant A
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental:
-                    [OPTIONAL] If True, the changes in concentrations are returned,
-                        rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         prod = kF * A0 * t
         delta_P = prod * A0 / (1 + 2*prod)      # The reaction extent
 
-        if incremental:
-            return delta_P
 
-        return P0 + delta_P
+        return delta_P
 
 
 
     @staticmethod
-    def exact_advance_homodimerization_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
+    def exact_advance_homodimerization_reversible(kF, kR, A0, P0, t) -> float:
         """
         Exactly advance the concentrations
-        in the reversible mass-action reaction 2 A <-> P,
-        from time 0 to time t,
-        with the specified parameters.
+        in the reversible mass-action reaction 2 A <-> P
 
         Note: if kR = 0, use exact_advance_homodimerization_irreversible() instead
 
@@ -130,11 +98,8 @@ class AnalyticReactionSolver:
         :param A0:  Initial concentration of the reactant A
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental:
-                    [OPTIONAL] If True, the changes in concentrations are returned,
-                        rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         assert not math.isclose(kR, 0), \
             "exact_advance_homodimerization_reversible(): cannot be used when kR=0.  " \
@@ -154,20 +119,15 @@ class AnalyticReactionSolver:
 
         P_t = (P_minus - q_t * P_plus) / (1 - q_t)
 
-        if incremental:
-            return P_t - P0
-
-        return P_t
+        return P_t - P0
 
 
 
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t) -> float:
         """
         Exactly advance the concentrations
-        in the irreversible mass-action reaction A + B -> P,
-        from time 0 to time t,
-        with the specified parameters.
+        in the irreversible mass-action reaction A + B -> P
 
         Note: to simulate 2 A -> P, use exact_advance_homodimerization_irreversible() instead
 
@@ -176,11 +136,8 @@ class AnalyticReactionSolver:
         :param B0:  Initial concentration of the 2nd reactant B
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental:
-                    [OPTIONAL] If True, the changes in concentrations are returned,
-                        rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
         # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
@@ -216,9 +173,7 @@ class AnalyticReactionSolver:
             except OverflowError:
                 # Overflow occurs if B0 > A0 and t is very large;
                 # in such a case, `A` is the limiting reagent, and fully converts to `P`
-                if incremental:
-                    return A0
-                return alpha    # P0 + A0
+                return A0
 
             ''' 
             With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
@@ -235,15 +190,12 @@ class AnalyticReactionSolver:
             P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
 
 
-        if incremental:
-            return P_t-P0
-
-        return P_t
+        return P_t-P0
 
 
 
     @staticmethod
-    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
+    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t) -> float:
         """
         Exactly advance the concentrations
         in the reversible elementary Reaction A + B <-> P,
@@ -258,11 +210,8 @@ class AnalyticReactionSolver:
         :param B0:  Initial concentration of the 2nd reactant B
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentration of P is returned,
-                                rather than the final ones.  Default: False
 
-        :return:   The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         if np.allclose(kR, 0):
             '''
@@ -279,7 +228,7 @@ class AnalyticReactionSolver:
             and the general solution cannot be used, because in it we divide by the square root of that term!       
             '''
             #print("****** Switching to IR-reversible version")
-            return  AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
+            return  AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t)
 
 
         AP_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
@@ -335,10 +284,7 @@ class AnalyticReactionSolver:
             P_t = result.real             # Drop the imaginary components (which ought to be very close to zero)
 
 
-        if incremental:
-            return P_t - P0
-
-        return P_t
+        return P_t - P0
 
 
 
@@ -360,7 +306,7 @@ class AnalyticReactionSolver:
         :param t:   The end time of the reaction that started at time zero
                         OR a Numpy array with the desired times at which the solutions are desired
 
-        :return:    A concentration value, or Numpy arrays with the concentrations,
+        :return:    Delta concentration value, or Numpy arrays with the concentrations,
                         of P at the time - or times - given by the argument `t`
         """
         assert not np.allclose(kF, 0), \
@@ -388,12 +334,12 @@ class AnalyticReactionSolver:
         A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t)     # Approximate analytical solution
         P_arr = AC_tot - A_arr
 
-        return P_arr
+        return P_arr - P0
 
 
 
     @staticmethod
-    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t, incremental:bool) -> float:
+    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t) -> float:
         """
         Provided by ChatGPT.  Not fully tested.
 
@@ -407,11 +353,10 @@ class AnalyticReactionSolver:
             Time(s) at which to evaluate p(t)
         P0, kF, kR, A0, B0 : float
             Reaction parameters
-        incremental:
 
         Returns
         -------
-        p : float or ndarray
+        DELTA_p : float or ndarray
             Value(s) of p(t)
         """
 
@@ -450,15 +395,12 @@ class AnalyticReactionSolver:
 
         P_t = numerator / denominator
 
-        if incremental:
-            return P_t - P0
-
-        return P_t
+        return P_t - P0
 
 
 
     @staticmethod
-    def exact_solution_decomposition_irreversible(kF, X0, Y0, t) -> float:
+    def exact_solution_decomposition_irreversible(kF, X0, t) -> float:
         """
         Solve irreversible reaction X -> Y + Z,
         kinetically treated as unimolecular reaction R -> P
@@ -471,7 +413,7 @@ class AnalyticReactionSolver:
         """
         return AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
                                         kF=kF,
-                                        R0=X0, P0=Y0, t=t, incremental=True)
+                                        R0=X0, t=t)
 
 
     @staticmethod
@@ -486,15 +428,14 @@ class AnalyticReactionSolver:
         """
         delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(
                                                             kF=kR, kR=kF,
-                                                            A0=Y0, B0=Z0, P0=X0, t=t, incremental=True)
+                                                            A0=Y0, B0=Z0, P0=X0, t=t)
                                                             # Notice REVERSAL of kF and kR
         return -delta_p
 
 
 
-
     @staticmethod
-    def exact_advance_homodimer_dissociation_irreversible(kF, X0, Y0, t) -> float:
+    def exact_advance_homodimer_dissociation_irreversible(kF, X0, t) -> float:
         """
         Exact solution for irreversible reaction  X -> 2 Y
 
@@ -507,7 +448,7 @@ class AnalyticReactionSolver:
         :return:    delta_Y
         """
         delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
-                                                kF=kF, R0=X0, P0=Y0, t=t, incremental=True)
+                                                kF=kF, R0=X0, t=t)
         return 2 * delta_p
 
 
@@ -515,7 +456,7 @@ class AnalyticReactionSolver:
     @staticmethod
     def exact_advance_homodimer_dissociation_reversible(kF, kR, X0, Y0, t) -> float:
         """
-        Exact solution for reaction X <-> 2 Y
+        Exact solution for the reaction X <-> 2 Y
 
         :param kF:
         :param kR:
@@ -527,6 +468,6 @@ class AnalyticReactionSolver:
         # Notation-wise, we use a solver where the reaction is expressed in the form 2 A <-> P
         delta_p = AnalyticReactionSolver.exact_advance_homodimerization_reversible(
                                             kF=kR, kR=kF,
-                                            A0=Y0, P0=X0, t=t, incremental=True)
+                                            A0=Y0, P0=X0, t=t)
                                             # Notice REVERSAL of kF and kR
         return -2 * delta_p

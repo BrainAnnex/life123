@@ -17,7 +17,8 @@ def test_half_time_unimolecular():
     half_time = MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
     assert np.allclose(half_time, math.log(2) / kF)
 
-    p_halftime = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, R0=80., P0=10., t=half_time)
+    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=kF, R0=80., t=half_time)
+    p_halftime = 10 + delta_p
     a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
     assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
 
@@ -29,7 +30,7 @@ def test_half_time_unimolecular():
     assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
 
     # Simulate the reaction to t = half_time_relaxation
-    p_halftime = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
+    p_halftime = 10. + AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
     a_halftime = 80 - (p_halftime - 10)      # From the stoichiometry
 
     # Determine the equilibrium concentrations (the other reference point for the halfway drop)
@@ -101,7 +102,7 @@ def test_half_time_synthesis_2():
     P_final = d["P"]
     P_halfway = P0 + (P_final - P0)/2
     #print(P_halfway)
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
+    P_t = P0 + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
     #print(P_t)
     assert np.allclose(P_t, P_halfway)
 
@@ -120,7 +121,7 @@ def test_half_time_synthesis_2():
     P_halfway = P0 + (P_final - P0)/2
     #print(P_halfway)
 
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
+    P_t = P0 + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
     #print(P_t)
     assert np.allclose(P_t, P_halfway)
 
@@ -137,7 +138,7 @@ def test_half_time_homodimerization_1():
     assert np.allclose(half_time, 1 / (2 * kF * 10))
 
     # Verify that at half time, the concentration of the product is indeed 1/2 of its final value of 5
-    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=10, P0=0, t=half_time)
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_irreversible(kF=kF, A0=10, t=half_time)
     assert np.allclose(P_t, 2.5)
 
 
@@ -164,7 +165,7 @@ def test_half_time_homodimerization_2():
     #print(P_halfway)
     assert math.isclose(P_halfway, 4.0625)
 
-    P_t = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=A0, P0=P0, t=half_time)
+    P_t = P0 + AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=A0, P0=P0, t=half_time)
     #print(P_t)
     assert math.isclose(P_t, P_halfway)
 
