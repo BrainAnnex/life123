@@ -37,6 +37,7 @@ class MassAction_Analysis:
         return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
 
 
+
     @staticmethod
     def half_time_decomposition_irreversible(kF :float) -> float:
         """
@@ -45,7 +46,9 @@ class MassAction_Analysis:
         :param kF:
         :return:
         """
+        #TODO: pytest
         return MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
+
 
 
     @staticmethod

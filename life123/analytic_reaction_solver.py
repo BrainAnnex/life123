@@ -32,8 +32,8 @@ class AnalyticReactionSolver:
         :return:    The concentrations of P at time t (if `incremental` is False),
                         or its concentration change during that time interval (if `incremental` is True)
         """
-
         # Formula is:  R(t) = R0 Exp(-kF t)
+        # TODO: maybe ditch the arg `P0` and just return the delta_P
 
         if incremental:
             R_incr = R0 * math.expm1(-kF * t)           # A more precise form for R0 * (np.exp(-kF * t) - 1)
@@ -352,8 +352,6 @@ class AnalyticReactionSolver:
         This approximation is relatively coarse; in the pytests, errors of up to about 2% were seen,
         with the worst errors in the mid-portion between the starting state and the final equilibrium.
 
-        Note: to simulate 2 A -> P, set A0 and B0 to the same value
-
         :param kF:  Forward reaction rate constant (cannot be zero)
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
@@ -395,7 +393,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t, incremental :bool) -> float:
+    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t, incremental:bool) -> float:
         """
         Provided by ChatGPT.  Not fully tested.
 
@@ -409,6 +407,7 @@ class AnalyticReactionSolver:
             Time(s) at which to evaluate p(t)
         P0, kF, kR, A0, B0 : float
             Reaction parameters
+        incremental:
 
         Returns
         -------
@@ -455,3 +454,79 @@ class AnalyticReactionSolver:
             return P_t - P0
 
         return P_t
+
+
+
+    @staticmethod
+    def exact_solution_decomposition_irreversible(kF, X0, Y0, t) -> float:
+        """
+        Solve irreversible reaction X -> Y + Z,
+        kinetically treated as unimolecular reaction R -> P
+
+        :param kF:
+        :param X0:
+        :param Y0:
+        :param t:
+        :return:    delta_Y
+        """
+        return AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
+                                        kF=kF,
+                                        R0=X0, P0=Y0, t=t, incremental=True)
+
+
+    @staticmethod
+    def exact_solution_decomposition_reversible(kF, kR, X0, Y0, Z0, t) -> float:
+        """
+        Exact solution for reaction X <-> Y + Z
+
+        Solving the derived reaction:                                              Y + Z <-> X , with kF and kR inverted
+        Notation-wise, we use a solver where the reaction is expressed in the form A + B <-> P
+
+        :return:    delta_Y
+        """
+        delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(
+                                                            kF=kR, kR=kF,
+                                                            A0=Y0, B0=Z0, P0=X0, t=t, incremental=True)
+                                                            # Notice REVERSAL of kF and kR
+        return -delta_p
+
+
+
+
+    @staticmethod
+    def exact_advance_homodimer_dissociation_irreversible(kF, X0, Y0, t) -> float:
+        """
+        Exact solution for irreversible reaction  X -> 2 Y
+
+        Note that this is a first-order reaction; so, not any different kinetically from R -> P
+
+        :param kF:
+        :param X0:
+        :param Y0:
+        :param t:
+        :return:    delta_Y
+        """
+        delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
+                                                kF=kF, R0=X0, P0=Y0, t=t, incremental=True)
+        return 2 * delta_p
+
+
+
+    @staticmethod
+    def exact_advance_homodimer_dissociation_reversible(kF, kR, X0, Y0, t) -> float:
+        """
+        Exact solution for reaction X <-> 2 Y
+
+        :param kF:
+        :param kR:
+        :param A0:
+        :param P0:
+        :param t:
+        :return:    delta_Y
+        """
+        # Notation-wise, we use a solver where the reaction is expressed in the form 2 A <-> P
+        delta_p = AnalyticReactionSolver.exact_advance_homodimerization_reversible(
+                                            kF=kR, kR=kF,
+                                            A0=Y0, P0=X0, t=t, incremental=True)
+                                            # Notice REVERSAL of kF and kR
+        return -2 * delta_p

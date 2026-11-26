@@ -181,7 +181,7 @@ def test_half_time_decomposition_1():
     #assert math.isclose(half_time, 0.006385320297074884)
     return
     # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
-    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time)
+    P_t = AnalyticReactionSolver.exact_advance_decomposition_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time)
     assert math.isclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
                                     # when the limiting reagent (B) has been consumed
 
