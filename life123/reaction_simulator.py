@@ -1613,8 +1613,9 @@ class ReactionSimulator:
         :param delta_time:  The duration of the single time step to take
         :return:            A dictionary of concentration increments for all the species involved
         """
-        reactants = rxn.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
-        products = rxn.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
+        stoic = rxn.stoichiometry
+        reactants = stoic.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
+        products = stoic.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
 
         match rxn.analytic_solution_family:
 
@@ -1635,7 +1636,8 @@ class ReactionSimulator:
                                                                                              R0=R0, P0=P0, t=delta_time, incremental=True)
 
                 # Work out the stoichiometry for all the species
-                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+                #increment_dict_single_rxn = {r: -delta_p, p: delta_p}
+                increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
                 return increment_dict_single_rxn
 
 
@@ -1662,7 +1664,8 @@ class ReactionSimulator:
                                                                 A0=a0, B0=b0, P0=p0, t=delta_time, incremental=True)
 
                     # Work out the stoichiometry for all the species
-                    increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
+                    increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
+                    #increment_dict_single_rxn = {a: -delta_p, b: -delta_p, p: delta_p}
 
                 else:
                     # 2 A <-> P or 2 A -> P
@@ -1676,7 +1679,8 @@ class ReactionSimulator:
                                                                 A0=a0, P0=p0, t=delta_time, incremental=True)
 
                     # Work out the stoichiometry for all the species
-                    increment_dict_single_rxn = {a: -2 * delta_p, p: delta_p}
+                    increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=p, delta_conc=delta_p)
+                    #increment_dict_single_rxn = {a: -2 * delta_p, p: delta_p}
 
                 return increment_dict_single_rxn
 
@@ -1713,7 +1717,8 @@ class ReactionSimulator:
                                                             R0=x0, P0=y0, t=delta_time, incremental=True)
 
                         # Work out the stoichiometry for all the species
-                        increment_dict_single_rxn = {x: -delta_p, y: delta_p, z: delta_p}
+                        increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=z, delta_conc=delta_p)
+                        #increment_dict_single_rxn = {x: -delta_p, y: delta_p, z: delta_p}
 
                 else:
                     # X <-> 2 Y  or  X -> 2 Y   (Homodimer dissociation)
@@ -1727,7 +1732,8 @@ class ReactionSimulator:
                                                             A0=y0, P0=x0, t=delta_time, incremental=True)  # Notice REVERSAL of kF and kR
 
                         # Work out the stoichiometry for all the species
-                        increment_dict_single_rxn = {x: delta_p ,  y: -2 * delta_p}
+                        increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=x, delta_conc=delta_p)
+                        #increment_dict_single_rxn = {x: delta_p ,  y: -2 * delta_p}
 
                     else:                       # Irreversible X -> 2 Y
                         # Note that this is a first-order reaction; so, not any different kinetically from R -> P
@@ -1735,7 +1741,8 @@ class ReactionSimulator:
                                                         kF=rxn.model.kF, R0=x0, P0=y0, t=delta_time, incremental=True)
 
                         # Work out the stoichiometry for all the species
-                        increment_dict_single_rxn = {x: -delta_p ,  y: 2 * delta_p}
+                        increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=x, delta_conc= -delta_p)
+                        #increment_dict_single_rxn = {x: -delta_p ,  y: 2 * delta_p}
 
                 return increment_dict_single_rxn
 

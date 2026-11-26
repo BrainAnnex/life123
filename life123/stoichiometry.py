@@ -469,6 +469,69 @@ class Stoichiometry:
 
 
 
+    def compute_concentration_increments(self, species_id: str, delta_conc: float) -> dict[str, float]:
+        """
+        Compute the concentration increments of ALL species participating
+        in the reaction, given the increment of one selected species.
+
+        The increments are derived from the reaction's stoichiometric vector.
+
+        EXAMPLE:
+            For reaction  2 A + B -> 2 P
+
+            If delta_conc = 16 for species P, the returned dictionary is:
+                {"A": -16, "B": -8, "P": 16}
+
+        Catalysts, if any, are included with an increment of zero.
+
+        :param species_id:      Species whose concentration increment is supplied.
+                                Must have a non-zero stoichiometric coefficient.
+        :param delta_conc:      Signed concentration increment of the selected species.
+        :return:                Dictionary mapping all reaction species id's to their
+                                respective signed concentration increments.
+
+        Raises:
+            ValueError: If the reference species is not suitable, the increment
+                        is non-finite, or the proposed update would result in
+                        a negative concentration beyond floating-point tolerance.
+        """
+
+        # Make sure the reference species has a non-zero stoichiometric coefficient
+        if species_id not in self.vector:
+            if species_id in self.catalysts:
+                raise ValueError(
+                    f'compute_concentration_increments(): species "{species_id}" '
+                    f'is a catalyst and has no net stoichiometric coefficient'
+                )
+
+            raise ValueError(
+                f'compute_concentration_increments(): species "{species_id}" '
+                f'is not part of this reaction'
+            )
+
+
+        if not np.isfinite(delta_conc):
+            raise ValueError(
+                "compute_concentration_increments(): delta_conc must be finite"
+            )
+
+        # Calculate the increment in REACTION EXTENT
+        extent_increment = delta_conc / self.vector[species_id]
+
+        # Derive the concentration increment of every species
+        increments = {
+            sp: extent_increment * coeff
+            for sp, coeff in self.vector.items()
+        }
+
+        # Catalysts have no net concentration change
+        for catalyst in self.catalysts:
+            increments[catalyst] = 0.0
+
+        return increments
+
+
+
     @classmethod
     def from_reactants_products(cls, reactants :list|str, products :list|str, species_registry=None) -> Stoichiometry:
         """

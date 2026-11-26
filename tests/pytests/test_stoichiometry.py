@@ -373,6 +373,81 @@ def test_consistency_checker():
 
 
 
+def test_compute_concentration_increments_1():
+    # Reaction: 2 A + B -> 2 P, with catalyst E
+    st = Stoichiometry(
+        vector={"A": -2, "B": -1, "P": 2},
+        catalysts=["E"]
+    )
+
+    # Forward reaction: P increases by 16
+    increments = st.compute_concentration_increments(
+        species_id="P", delta_conc=16
+    )
+
+    assert increments == {
+        "A": -16,
+        "B": -8,
+        "P": 16,
+        "E": 0.0
+    }
+
+    # Reverse reaction: A increases by 4
+    increments = st.compute_concentration_increments(
+        species_id="A", delta_conc=4
+    )
+
+    assert increments == {
+        "A": 4,
+        "B": 2,
+        "P": -4,
+        "E": 0.0
+    }
+
+    # Zero increment
+    increments = st.compute_concentration_increments(
+        species_id="P", delta_conc=0
+    )
+
+    assert increments == {
+        "A": 0,
+        "B": 0,
+        "P": 0,
+        "E": 0.0
+    }
+
+
+def test_compute_concentration_increments_2():
+    # invalid species
+    st = Stoichiometry(
+        vector={"A": -1, "B": 1},
+        catalysts=["E"]
+    )
+
+    # A species not involved in the reaction
+    with pytest.raises(ValueError, match="not part of this reaction"):
+        st.compute_concentration_increments("X", 1)
+
+    # A catalyst has no net stoichiometric coefficient
+    with pytest.raises(ValueError, match="is a catalyst"):
+        st.compute_concentration_increments("E", 1)
+
+
+
+@pytest.mark.parametrize("delta_conc", [
+    float("nan"),
+    float("inf"),
+    float("-inf")
+])
+def test_compute_concentration_increments_non_finite(delta_conc):
+
+    st = Stoichiometry(vector={"A": -1, "P": 1})
+
+    with pytest.raises(ValueError, match="must be finite"):
+        st.compute_concentration_increments("P", delta_conc)
+
+
+
 def test_from_reactants_products():
 
     st = Stoichiometry.from_reactants_products(reactants="A", products="B")
