@@ -1441,9 +1441,9 @@ class ReactionDefinition:
 
         elif (self.analytic_solution_family == "ONE_TO_TWO") and (p == 2):
             # Reaction is of the form A <-> 2 P
-            eq_dict = MassAction_Analysis.compute_equilibrium_conc_elementary_decomposition(kF=sim_rxm.model.kF,
-                                                                                         kR=sim_rxm.model.kR,
-                                                                                         A0=A0, P0=P0)
+            eq_dict = MassAction_Analysis.compute_equilibrium_conc_homodimer_dissociation(kF=sim_rxm.model.kF,
+                                                                                          kR=sim_rxm.model.kR,
+                                                                                          A0=A0, P0=P0)
 
         else:
             raise Exception(f"find_equilibrium_conc(): Not implemented for this reaction type ({self.analytic_solution_family})")

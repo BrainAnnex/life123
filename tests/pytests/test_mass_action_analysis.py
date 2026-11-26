@@ -119,6 +119,7 @@ def test_half_time_synthesis_2():
     P_final = d["P"]
     P_halfway = P0 + (P_final - P0)/2
     #print(P_halfway)
+
     P_t = AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=half_time)
     #print(P_t)
     assert np.allclose(P_t, P_halfway)
@@ -140,12 +141,51 @@ def test_half_time_homodimerization_1():
     assert np.allclose(P_t, 2.5)
 
 
-
 def test_half_time_homodimerization_2():
     # Reversible cases
 
     # Reaction 2 A <-> P
-    pass    # TODO
+    kF=8.
+    kR=4.
+    A0=10
+    P0=2
+
+    half_time = MassAction_Analysis.half_time_homodimerization(kF=kF, kR=kR, A0=A0, P0=P0)
+    #print(half_time)
+    assert math.isclose(half_time, 0.004532228591394029)
+
+    # Verify that at half time, the concentration of the product `P`, is indeed halfway to its final value
+    d = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=kF, kR=kR, A0=A0, P0=P0)
+    #print(d)
+    P_final = d["P"]
+    #print(P_final)
+    assert math.isclose(P_final, 6.125)
+    P_halfway = P0 + (P_final - P0)/2
+    #print(P_halfway)
+    assert math.isclose(P_halfway, 4.0625)
+
+    P_t = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=A0, P0=P0, t=half_time)
+    #print(P_t)
+    assert math.isclose(P_t, P_halfway)
+
+
+
+def test_half_time_decomposition_1():
+    # Irreversible cases
+
+    # Reaction R -> P + Q
+    kF=8.
+
+    half_time = MassAction_Analysis.half_time_decomposition_irreversible(kF=kF)
+    print(half_time)
+    #assert math.isclose(half_time, 0.006385320297074884)
+    return
+    # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
+    P_t = AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time)
+    assert math.isclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
+                                    # when the limiting reagent (B) has been consumed
+
+
 
     
 
@@ -154,7 +194,7 @@ def test_half_time_homodimerization_2():
 
 def test_compute_equilibrium_conc_elementary_decomposition():
     # A <-> 2 P
-    result = MassAction_Analysis.compute_equilibrium_conc_elementary_decomposition(kF=2, kR=3, A0=200., P0=40.)
+    result = MassAction_Analysis.compute_equilibrium_conc_homodimer_dissociation(kF=2, kR=3, A0=200., P0=40.)
 
     assert np.allclose(result["A"], 214.02745923365862)
     assert np.allclose(result["P"], 11.945081532682774)
@@ -168,7 +208,7 @@ def test_compute_equilibrium_conc_elementary_decomposition():
 
 
     # A <-> 2 P
-    result = MassAction_Analysis.compute_equilibrium_conc_elementary_decomposition(kF=2, kR=3, A0=40., P0=200.)
+    result = MassAction_Analysis.compute_equilibrium_conc_homodimer_dissociation(kF=2, kR=3, A0=40., P0=200.)
 
     assert np.allclose(result["A"], 135.2521556531214)
     assert np.allclose(result["P"], 9.49568869375716)

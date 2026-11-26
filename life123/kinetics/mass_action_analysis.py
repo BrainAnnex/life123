@@ -26,7 +26,7 @@ class MassAction_Analysis:
     def half_time_unimolecular(kF :float, kR :float) -> float:
         """
         Return the time taken for the reactant concentration
-        in a unimolecular rearrangement/isomerization reaction R <-> P
+        in a unimolecular rearrangement/isomerization reaction R <-> P or R -> P
         to decrease halfway to its asymptotic equilibrium state
 
         :param kF:  Forward reaction rate constant
@@ -35,6 +35,17 @@ class MassAction_Analysis:
                         to decrease halfway to its asymptotic equilibrium state
         """
         return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
+
+
+    @staticmethod
+    def half_time_decomposition_irreversible(kF :float) -> float:
+        """
+        Reaction R -> P + Q
+
+        :param kF:
+        :return:
+        """
+        return MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
 
 
     @staticmethod
@@ -101,7 +112,7 @@ class MassAction_Analysis:
         """
         Return the time taken for each of the species concentrations to
         reach halfway to their final value,
-        in a synthesis reaction 2 A <-> P
+        in a synthesis reaction 2 A <-> P or 2 A -> P
 
         Note:  if the initial state is already at equilibrium, there is no initial equilibrium deviation to halve.
                In that case, this formula gives the half-time for an infinitesimal perturbation away from equilibrium.
@@ -161,7 +172,7 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def compute_equilibrium_conc_elementary_decomposition(kF, kR, A0, P0) -> dict:
+    def compute_equilibrium_conc_homodimer_dissociation(kF, kR, A0, P0) -> dict:
         """
         Given a reversible reaction of the form:  A <-> 2P
         whose kinetics follow the "mass-action" law,
@@ -228,8 +239,8 @@ class MassAction_Analysis:
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
 
-        Note: for scenarios where one of stoichiometric coefficients is 2,
-              use compute_equilibrium_conc_elementary_synthesis() instead
+        Note: for scenarios where one of stoichiometric coefficients is 2, use instead
+              compute_equilibrium_conc_homodimerization() or compute_equilibrium_conc_homodimer_dissociation()
 
         :param kF:  The reaction's forward rate constant (None will be interpreted as a zero, i.e. no forward reaction)
         :param kR:  The reaction's reverse rate constant (None will be interpreted as a zero, i.e. no reverse reaction)

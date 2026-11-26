@@ -1640,7 +1640,7 @@ class ReactionSimulator:
 
 
             case "TWO_TO_ONE":
-                # A + B <-> P,  or  2 A <-> P,  or their irreversible counterparts
+                # Synthesis A + B <-> P,  or  2 A <-> P,  or their irreversible counterparts
 
                 a = reactants[0][1]             # EXAMPLE: "A"
                 p = products[0][1]              # EXAMPLE: "P"
@@ -1683,7 +1683,7 @@ class ReactionSimulator:
 
 
             case "ONE_TO_TWO":
-                # X <-> Y + Z,  or  X <-> 2 Y,  or their irreversible counterparts
+                # Decomposition X <-> Y + Z,  or  X <-> 2 Y,  or their irreversible counterparts
 
                 x = reactants[0][1]         # EXAMPLE: "X"
                 y = products[0][1]          # EXAMPLE: "Y"
