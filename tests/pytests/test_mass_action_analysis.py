@@ -155,17 +155,18 @@ def test_half_time_homodimerization_2():
     #print(half_time)
     assert math.isclose(half_time, 0.004532228591394029)
 
-    # Verify that at half time, the concentration of the product `P`, is indeed halfway to its final value
+    # Verify that, at half time, the concentration of the product `P`, is indeed halfway to its final value
     d = MassAction_Analysis.compute_equilibrium_conc_homodimerization(kF=kF, kR=kR, A0=A0, P0=P0)
     #print(d)
     P_final = d["P"]
     #print(P_final)
     assert math.isclose(P_final, 6.125)
-    P_halfway = P0 + (P_final - P0)/2
+    P_halfway = P0 + (P_final - P0)/2       # Halfway between the initial P0 and the final value of P_final
     #print(P_halfway)
     assert math.isclose(P_halfway, 4.0625)
 
-    P_t = P0 + AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=A0, P0=P0, t=half_time)
+    delta_P = AnalyticReactionSolver.exact_advance_homodimerization_reversible(kF=kF, kR=kR, A0=A0, P0=P0, t=half_time)
+    P_t = P0 + delta_P
     #print(P_t)
     assert math.isclose(P_t, P_halfway)
 
@@ -176,19 +177,102 @@ def test_half_time_decomposition_1():
 
     # Reaction R -> P + Q
     kF=8.
+    R0=10.
+    P0=20.
 
     half_time = MassAction_Analysis.half_time_decomposition_irreversible(kF=kF)
-    print(half_time)
-    #assert math.isclose(half_time, 0.006385320297074884)
-    return
-    # Verify that at half time, the concentration of the limiting reagent is indeed 1/2 of initial value (since its final value is 0)
-    P_t = AnalyticReactionSolver.exact_advance_decomposition_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time)
-    assert math.isclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
-                                    # when the limiting reagent (B) has been consumed
+    #print(half_time)
+    assert math.isclose(half_time, 0.0866433975699875)
+
+    # Verify that at half time, the concentration of either produc is indeed halfway between its initial and final values
+    delta_P = AnalyticReactionSolver.exact_advance_decomposition_irreversible(kF=kF, R0=R0, t=half_time)
+    P_t = delta_P + P0
+    #print(P_t)      # 25
+    assert math.isclose(P_t, P0 + 0.5 * R0)    # Halfway between the initial P0 and the final value of P0+R0
+
+
+def test_half_time_decomposition_2():
+    # Reversible cases
+
+    # Reaction R <-> P + Q
+    kF=8.
+    kR=4.
+    R0=10.
+    P0=20.
+    Q0=15.
+
+    half_time = MassAction_Analysis.half_time_decomposition_reversible(kF=kF, kR=kR,
+                                                R0=R0, P0=P0, Q0=Q0)
+    #print(half_time)
+    assert math.isclose(half_time, 0.007425972728920949)
+
+    # Verify that, at half time, the concentration of either product is indeed halfway between its initial and final values
+    d = MassAction_Analysis.compute_equilibrium_conc_mass_action(kF=kF, kR=kR, A0=R0, P0=P0, Q0=Q0)
+    #print(d)        # {'A': 20.61013308097025, 'P': 9.38986691902975, 'Q': 4.38986691902975}
+    P_final = d["P"]
+    #print(P_final)
+    assert math.isclose(P_final, 9.38986691902975)  # Notice that this reaction proceeded in reverse
+    P_halfway = P0 + (P_final - P0)/2       # Halfway between the initial P0 and the final value of P_final
+    #print(P_halfway)
+    assert math.isclose(P_halfway, 14.694933459514875)
+
+    delta_P = AnalyticReactionSolver.exact_advance_decomposition_reversible(kF=kF, kR=kR, X0=R0, Y0=P0, Z0=Q0, t=half_time)
+    P_t = P0 + delta_P
+    #print(P_t)
+    assert math.isclose(P_t, P_halfway)
 
 
 
-    
+def test_half_time_homodimer_dissociation_1():
+    # Irreversible cases
+
+    # Reaction R -> 2 P
+    kF=8.
+    R0=10.
+    P0=20.
+
+    half_time = MassAction_Analysis.half_time_homodimer_dissociation_irreversible(kF=kF)
+    #print(half_time)
+    assert math.isclose(half_time, 0.0866433975699875)
+
+    # Verify that at half time, the concentration of the product is indeed halfway between its initial and final values
+    delta_P = AnalyticReactionSolver.exact_advance_homodimer_dissociation_irreversible(kF=kF, X0=R0, t=half_time)
+    P_t = P0 + delta_P
+    #print(P_t)      # 29.99999999999955
+    assert math.isclose(P_t, P0 + R0)    # Halfway between the initial P0 and the final value of P0 + 2*R0
+
+
+def test_half_time_homodimer_dissociation_2():
+    # Reversible cases
+
+    # Reaction R <-> 2 P
+    kF=8.
+    kR=4.
+    R0=10.
+    P0=20.
+
+    half_time = MassAction_Analysis.half_time_homodimer_dissociation_reversible(kF=kF, kR=kR,
+                                                R0=R0, P0=P0)
+    #print(half_time)
+    assert math.isclose(half_time, 0.0038132652538988617)
+
+    # Verify that, at half time, the concentration of either product is indeed halfway between its initial and final values
+    d = MassAction_Analysis.compute_equilibrium_conc_homodimer_dissociation(kF=kF, kR=kR, A0=R0, P0=P0)
+    #print(d)        # {'A': 17.077855614887618, 'P': 5.844288770224761}
+    P_final = d["P"]
+    #print(P_final)
+    assert math.isclose(P_final, 5.844288770224761)  # Notice that this reaction proceeded in reverse
+    P_halfway = (P0 + P_final)/2       # Halfway between the initial P0 and the final value of P_final
+    #print(P_halfway)
+    assert math.isclose(P_halfway, 12.92214438511238)
+
+    delta_P = AnalyticReactionSolver.exact_advance_homodimer_dissociation_reversible(kF=kF, kR=kR, X0=R0, Y0=P0, t=half_time)
+    P_t = P0 + delta_P
+    #print(P_t)
+    assert math.isclose(P_t, P_halfway)
+
+
+
 
 
 ###########################################################################################

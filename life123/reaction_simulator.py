@@ -1702,15 +1702,15 @@ class ReactionSimulator:
 
                     # Compute the increment of Y
                     if rxn.model.reversible:    # X <-> Y + Z
-                        delta_y = AnalyticReactionSolver.exact_solution_decomposition_reversible(
+                        delta_y = AnalyticReactionSolver.exact_advance_decomposition_reversible(
                                                             kF=rxn.model.kF, kR=rxn.model.kR,
                                                             X0=x0, Y0=y0, Z0=z0, t=delta_time)
                         # Work out the stoichiometry for all the species
                         increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=y, delta_conc=delta_y)
 
                     else:                       # Irreversible X -> Y + Z
-                        delta_y = AnalyticReactionSolver.exact_solution_decomposition_irreversible(kF=rxn.model.kF,
-                                                            X0=x0, t=delta_time)
+                        delta_y = AnalyticReactionSolver.exact_advance_decomposition_irreversible(kF=rxn.model.kF,
+                                                                                                  R0=x0, t=delta_time)
                         # Work out the stoichiometry for all the species
                         increment_dict_single_rxn = stoic.compute_concentration_increments(species_id=y, delta_conc=delta_y)
 

@@ -400,30 +400,36 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_solution_decomposition_irreversible(kF, X0, t) -> float:
+    def exact_advance_decomposition_irreversible(kF :float, R0 :float, t :float) -> float:
         """
-        Solve irreversible reaction X -> Y + Z,
-        kinetically treated as unimolecular reaction R -> P
+        Solve the irreversible reaction R -> P + Q
+        kinetically treated as the reaction R -> P
 
-        :param kF:
-        :param X0:
-        :param Y0:
-        :param t:
-        :return:    delta_Y
+        :param kF:  Forward reaction rate constant
+        :param R0:  Initial concentration of the reactant R
+        :param t:   The end time of the reaction that started at time zero
+
+        :return:    Delta_P, the change of the product concentration after the time interval t
         """
         return AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
                                         kF=kF,
-                                        R0=X0, t=t)
+                                        R0=R0, t=t)
 
 
     @staticmethod
-    def exact_solution_decomposition_reversible(kF, kR, X0, Y0, Z0, t) -> float:
+    def exact_advance_decomposition_reversible(kF, kR, X0, Y0, Z0, t) -> float:
         """
         Exact solution for reaction X <-> Y + Z
 
         Solving the derived reaction:                                              Y + Z <-> X , with kF and kR inverted
         Notation-wise, we use a solver where the reaction is expressed in the form A + B <-> P
 
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :param X0:
+        :param Y0:
+        :param Z0:
+        :param t:   The end time of the reaction that started at time zero
         :return:    delta_Y
         """
         delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(
@@ -441,10 +447,9 @@ class AnalyticReactionSolver:
 
         Note that this is a first-order reaction; so, not any different kinetically from R -> P
 
-        :param kF:
+        :param kF:  Forward reaction rate constant
         :param X0:
-        :param Y0:
-        :param t:
+        :param t:   The end time of the reaction that started at time zero
         :return:    delta_Y
         """
         delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
@@ -458,11 +463,11 @@ class AnalyticReactionSolver:
         """
         Exact solution for the reaction X <-> 2 Y
 
-        :param kF:
-        :param kR:
-        :param A0:
-        :param P0:
-        :param t:
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :param X0:
+        :param Y0:
+        :param t:   The end time of the reaction that started at time zero
         :return:    delta_Y
         """
         # Notation-wise, we use a solver where the reaction is expressed in the form 2 A <-> P
