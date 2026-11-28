@@ -1,9 +1,12 @@
+import math
+
 import pytest
 import numpy as np
 from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
 from life123.reactions import ReactionDefinition
 from life123.kinetics.mass_action_analysis import MassAction_Analysis
+from life123.reaction_simulator import ReactionSimulator
 
 
 
@@ -52,27 +55,16 @@ def test_exact_advance_unimolecular_reversible_2():
 
 def test_exact_advance_unimolecular_reversible_3():
     # Compare the exact solution against a fine-grained forward-Euler approximation
-    sr = SpeciesRegistry()
-    rxn_defn = ReactionDefinition(reactants="A", products="P",
-                                  species_registry=sr, autoregister_species=True,
-                                  reaction_model="mass action",
-                                  kinetic_parameters={"kF": 3., "kR": 2.})
-    rxn = rxn_defn.sim_reactions[0]
 
-    t_final = 0.2
-    n_steps = 50000
-    t_step = t_final / n_steps
-    a = 80
-    p = 10
-    for i in range(n_steps):
-        increment_dict, _ = \
-            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "P": p})
-        delta_p = increment_dict["P"]
-        p += delta_p
-        a -= delta_p
+    exact_p = 10. + AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)
+    assert math.isclose(exact_p, 37.81330458845654)
 
-    exact_p = 10. + AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)   # 37.81330458845654
-    assert np.allclose(p, exact_p)
+
+    sim = ReactionSimulator(method="forward_euler", initial_conc={"A": 80., "P": 10.})
+    sim.add_reaction( reactants="A", products="P",
+                      kinetic_parameters={"kF": 3., "kR": 2.})
+    sim.single_compartment_react(duration=0.2, n_steps = 200, variable_steps=False, silent=True)
+    assert math.isclose(exact_p, sim.get_single_conc("P"), rel_tol=1e-02)
 
 
 
@@ -293,49 +285,29 @@ def test_exact_advance_synthesis_reversible_2():
 
 def test_exact_advance_synthesis_reversible_3():
     # Compare the exact solution against a fine-grained forward Euler approximation
+
     # Reaction A + B <-> P
-    sr = SpeciesRegistry()
-    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="P",
-                                  species_registry=sr, autoregister_species=True,
-                                  reaction_model="mass action",
-                                  kinetic_parameters={"kF": 5., "kR": 2.})
-    rxn = rxn_defn.sim_reactions[0]
 
-    t_final = 0.001
-    n_steps = 1800
-    t_step = t_final / n_steps
-    a = 10
-    b = 50
-    p = 20
+    time_interval = 0.001
 
-    #print(ReactionKinetics._compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=a, b=1, B0=b, p=1, P0=p))
-    #Equilibrium at {'A': 0.2948774087575341, 'B': 40.294877408757536, 'P': 29.705122591242464}
+    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=time_interval)
+    assert math.isclose(exact_p, 22.130796453845)
 
-    for i in range(n_steps):
-        increment_dict, _ = \
-            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "B": b, "P": p})
-        delta_p = increment_dict["P"]
-        p += delta_p
-        a -= delta_p
-        b -= delta_p
-
-    #print(p)    # 22.130930189693114   Value at t_final, from the fine-grained forward Euler approximation
-    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=t_final)   # 22.130796453845
-    assert np.allclose(p, exact_p)
+    sim = ReactionSimulator(method="forward_euler", initial_conc={"A": 10., "B": 50., "P": 20.})
+    sim.add_reaction( reactants=["A", "B"], products="P",
+                      kinetic_parameters={"kF": 5., "kR": 2.})
+    sim.single_compartment_react(duration=time_interval, n_steps=200, variable_steps=False, silent=True)
+    assert math.isclose(exact_p, sim.get_single_conc("P"), rel_tol=1e-04)
 
 
-    # Let's do a second identical round, to reach t_final * 2
-    for i in range(n_steps):
-        increment_dict, _ = \
-            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "B": b, "P": p})
-        delta_p = increment_dict["P"]
-        p += delta_p
-        a -= delta_p
-        b -= delta_p
+    # Let's do a second identical round, to double the time advance
 
-    #print(p)    # 23.738906198053474  Value at t_final * 2, from the fine-grained forward Euler approximation
-    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=t_final * 2)
-    assert np.allclose(p, exact_p)
+    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=time_interval * 2)
+    assert math.isclose(exact_p, 23.738708979042038)
+
+    sim.single_compartment_react(duration=time_interval, n_steps=200, variable_steps=False, silent=True)  # A second identical duration
+    assert math.isclose(sim.system_time, time_interval * 2)
+    assert math.isclose(exact_p, sim.get_single_conc("P"), rel_tol=1e-04)
 
 
 
@@ -432,30 +404,19 @@ def test_exact_advance_synthesis_irreversible_2():
 
 def test_exact_advance_synthesis_irreversible_3():
     # Compare the exact solution against a fine-grained forward Euler approximation
+
     # Reaction A + B -> P
-    sr = SpeciesRegistry()
-    rxn_defn = ReactionDefinition(reactants=["A", "B"], products="P",
-                                  species_registry= sr, autoregister_species=True,
-                                  reaction_model="mass action",
-                                  kinetic_parameters={"kF": 5., "kR": 0})
-    rxn = rxn_defn.sim_reactions[0]
 
     t_final = 0.01
-    n_steps = 10000
-    t_step = t_final / n_steps
-    a = 10
-    b = 50
-    p = 20
-    for i in range(n_steps):
-        increment_dict, _ = \
-            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "B": b, "P": p})
-        delta_p = increment_dict["P"]
-        p += delta_p
-        a -= delta_p
-        b -= delta_p
 
-    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01)   # 28.8871974442945
-    assert np.allclose(p, exact_p)
+    exact_p = 20. + AnalyticReactionSolver.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=t_final)
+    assert math.isclose(exact_p, 28.8871974442945)
+
+    sim = ReactionSimulator(method="forward_euler", initial_conc={"A": 10., "B": 50., "P": 20.})
+    sim.add_reaction( reactants=["A", "B"], products="P",
+                      kinetic_parameters={"kF": 5., "kR": 0})
+    sim.single_compartment_react(duration=t_final, n_steps=200, variable_steps=False, silent=True)
+    assert math.isclose(exact_p, sim.get_single_conc("P"), rel_tol=1e-03)
 
 
 

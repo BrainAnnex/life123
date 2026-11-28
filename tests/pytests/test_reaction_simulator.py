@@ -519,7 +519,7 @@ def test__single_compartment_react_main_loop_1():
     ind = SpeciesIndexMap({"A", "B"})
     assert ind.index_to_species == ["A", "B"]
 
-    sim = ReactionSimulator(system=np.array([10., 50.]), species_index_map=ind,
+    sim = ReactionSimulator(initial_state=np.array([10., 50.]), species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler")
     sim.system_time = 8
 
@@ -623,7 +623,7 @@ def test__single_compartment_react_main_loop_2_a():
     assert ind.index_to_species == ["A", "B"]
 
     ### First simulation
-    sim = ReactionSimulator(system=np.array([10., 50.]), species_index_map=ind,
+    sim = ReactionSimulator(initial_state=np.array([10., 50.]), species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 8
 
@@ -662,7 +662,7 @@ def test__single_compartment_react_main_loop_2_a():
 
     ### New simulation, with re-instantiated "ReactionSimulator" object, and somewhat large time step (but not so large as to cause hard errors)
     initial_system = np.array([10., 50.])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 17
 
@@ -701,7 +701,7 @@ def test__single_compartment_react_main_loop_2_a():
 
     ### New simulation, with re-instantiated "ReactionSimulator" object, and excessive large time step (so large as to cause a backtracking)
     initial_system = np.array([10., 50.])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 666
 
@@ -755,7 +755,7 @@ def test__single_compartment_react_main_loop_2_b():
     ### Repeat the simulation from previous test, this time with diagnostics enabled (excessive large time step;
     # so large as to cause a backtracking)
     initial_system = np.array([10., 50.])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind, enable_diagnostics=True,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind, enable_diagnostics=True,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
     sim.system_time = 666
 
@@ -805,7 +805,7 @@ def test_reaction_step_common_fixed_step_1():
     assert ind.index_to_species == ["A", "B"]
 
     system = np.array([10, 50])      # 10. goes to "A" and 50. to "B"
-    sim = ReactionSimulator(system=system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler")
     assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50}
 
@@ -882,7 +882,7 @@ def test_reaction_step_common_fixed_step_2():
     #ind = SpeciesIndexMap({"A", "B", "C"})     # Now automatically created
 
     system = np.array([10, 50, 20])
-    sim = ReactionSimulator(system=system,
+    sim = ReactionSimulator(initial_state=system,
                             reaction_registry=rxns, method="forward_euler")
     assert sim.system.get_conc_as_dict() == {"A": 10, "B": 50, "C": 20}
 
@@ -998,7 +998,7 @@ def test_reaction_step_common_variable_step_1():
     assert ind.index_to_species == ["A", "B"]
 
     initial_system = np.array([10, 50])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
 
     # Start with a step neither too small nor too large (in the context of the "fast" preset)
@@ -1017,7 +1017,7 @@ def test_reaction_step_common_variable_step_1():
 
     # New simulation, with somewhat large time step (but not so large as to cause hard errors)
     initial_system = np.array([10, 50])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")  # Note the preset
 
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.04)
@@ -1038,7 +1038,7 @@ def test_reaction_step_common_variable_step_1():
 
     # New simulation, with excessively small time step
     initial_system = np.array([10, 50])
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")    # Note the preset
 
     incr, step_taken, step_recommended = sim.reaction_step_common_variable_step(delta_time=0.01)    # , explain_variable_steps=[-1,1]
@@ -1071,7 +1071,7 @@ def test_reaction_step_common_variable_step_2(capsys):
 
     # New simulation, with slightly larger time step
     initial_system = [10, 50]
-    sim = ReactionSimulator(system=initial_system, species_index_map=ind,
+    sim = ReactionSimulator(initial_state=initial_system, species_index_map=ind,
                             reaction_registry=rxns, method="forward_euler", preset="fast")
 
     sim.system.set_system_state(initial_system)
@@ -1134,7 +1134,7 @@ def test_attempt_reaction_step(capsys):
     ind = SpeciesIndexMap({"A", "B"})
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler")
 
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False) # FIXED steps
     assert np.allclose(delta_conc, [7, -7])
@@ -1252,7 +1252,7 @@ def test_attempt_reaction_step_2_a():
     ind = SpeciesIndexMap({"A", "B"})
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
+    sim = ReactionSimulator(initial_state=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
                             enable_diagnostics=True)   # Diagnostics are enabled at instantiation time
     sim.system_time = 88
     delta_conc, rec_next_step = sim.attempt_reaction_step(delta_time=0.1, variable_steps=False)     # FIXED time step
@@ -1295,7 +1295,7 @@ def test_attempt_reaction_step_2_b():
     ind = SpeciesIndexMap({"A", "B"})
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(system=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
+    sim = ReactionSimulator(initial_state=system, species_index_map=ind, reaction_registry=rxns, method="forward_euler",
                             enable_diagnostics=True)   # Diagnostics are enabled at instantiation time
     sim.system_time = 99
     sim.adaptive_steps.use_adaptive_preset(preset="fast")
@@ -1339,7 +1339,7 @@ def test_single_step_all_rxns_1():
     rxns.add_reaction(reactants="A", products="B", reaction_model="mass action",
                       kinetic_parameters={"kF": 3., "kR": 2.})
 
-    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns)
+    sim = ReactionSimulator(initial_state=[10, 50], reaction_registry=rxns)
     assert np.allclose(sim.system.system_state , [10., 50.])
     assert sim.species_index_map.index_to_species == ["A", "B"]
     assert sim.species_index_map.species_to_index == {"A": 0, "B": 1}
@@ -1394,7 +1394,7 @@ def test_single_step_all_rxns_2():
     rxns.add_reaction(reactants="A", products="B",
                       reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
 
-    sim = ReactionSimulator(system=[10, 50], reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=[10, 50], reaction_registry=rxns, method="forward_euler")
     assert sim.species_index_map.index_to_species == ["A", "B"]         # Species "C" not participating in this reaction
     assert sim.species_index_map.species_to_index == {"A": 0, "B": 1}
 
@@ -1430,7 +1430,7 @@ def test_single_step_all_rxns_3():
                     reaction_model="custom",
                     kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
-    sim = ReactionSimulator(system=[4., 7., 2.], reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=[4., 7., 2.], reaction_registry=rxns, method="forward_euler")
 
     result = sim.single_step_all_rxns(delta_time=0.05)
     assert np.allclose(result, [0.4 , -0.8 , -0.4])
@@ -1448,7 +1448,7 @@ def test_single_step_all_rxns_4():
                     reaction_model="custom",
                     kinetic_parameters={"kF": 5., "kR": 2., "rate_function": Custom_Model.kinetic_rate_first_order})
 
-    sim = ReactionSimulator(system=[4., 7., 5., 2.], reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=[4., 7., 5., 2.], reaction_registry=rxns, method="forward_euler")
 
     result = sim.single_step_all_rxns(delta_time=0.001)
     assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
@@ -1466,7 +1466,7 @@ def test_single_step_all_rxns_5():
     rxns.add_reaction(reactants=[(2, "A")], products="B",
                     reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2.})
 
-    sim = ReactionSimulator(system=[3., 5.], reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=[3., 5.], reaction_registry=rxns, method="forward_euler")
 
     result = sim.single_step_all_rxns(delta_time=0.02)
     assert np.allclose(result, [-1.4 , 0.7])
@@ -1487,7 +1487,7 @@ def test_single_step_all_rxns_6():
 
     assert rxns.number_of_reactions() == 2
 
-    sim = ReactionSimulator(system=[3., 5., 1., 0.4, 0.1], reaction_registry=rxns, method="forward_euler")
+    sim = ReactionSimulator(initial_state=[3., 5., 1., 0.4, 0.1], reaction_registry=rxns, method="forward_euler")
 
     result = sim.single_step_all_rxns(delta_time=0.02)
     assert np.allclose(result, [-1.46 , -1.46  , 1.404 , -0.056 ,  0.056])
@@ -1515,7 +1515,7 @@ def test_single_step_single_rxn_1():
     ind.add_species(species_id_set)
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind)
+    sim = ReactionSimulator(method="forward_euler", initial_state=system, species_index_map=ind)
     assert sim.species_index_map.index_to_species == ['A', 'B']
     assert sim.species_index_map.species_to_index == {'A' :0, 'B' :1}
     assert np.allclose(sim.system.system_state, [10, 50])
@@ -1528,7 +1528,7 @@ def test_single_step_single_rxn_1():
 
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(method="heun", system=system, species_index_map=ind)
+    sim = ReactionSimulator(method="heun", initial_state=system, species_index_map=ind)
 
     increment_vector = np.zeros(2, dtype='d')
     result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
@@ -1539,7 +1539,7 @@ def test_single_step_single_rxn_1():
 
     system = np.array([10, 50])
     sim = ReactionSimulator(method="analytic",
-                            system=system, species_index_map=ind)
+                            initial_state=system, species_index_map=ind)
 
     increment_vector = np.zeros(2, dtype='d')
     result = sim.single_step_single_rxn(increment_vector=increment_vector, delta_time=0.1,
@@ -1569,7 +1569,7 @@ def test_single_step_single_rxn_2():
     diagnostics = Diagnostics(reactions=reaction_registry, species_index_map=ind)
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
+    sim = ReactionSimulator(method="forward_euler", initial_state=system, species_index_map=ind,
                             enable_diagnostics=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
@@ -1597,7 +1597,7 @@ def test_single_step_single_rxn_2():
     diagnostics = Diagnostics(reactions=reaction_registry, species_index_map=ind)
 
     system = np.array([10, 50])
-    sim = ReactionSimulator(method="forward_euler", system=system, species_index_map=ind,
+    sim = ReactionSimulator(method="forward_euler", initial_state=system, species_index_map=ind,
                             enable_diagnostics=True, diagnostics=diagnostics)
 
     increment_vector = np.zeros(2, dtype='d')
@@ -1650,7 +1650,7 @@ def test_validate_increment():
     rxns.add_reaction(reactants="A", products="B",
                     reaction_model="mass action", kinetic_parameters={"kF": 1., "kR": 0.2})
 
-    sim = ReactionSimulator(system=np.array([19, 3]), reaction_registry=rxns)
+    sim = ReactionSimulator(initial_state=np.array([19, 3]), reaction_registry=rxns)
     sim.reaction_step_diagnostics = ReactionStep(delta_time=0.97)
 
     r = rxns.get_reaction(0)
@@ -1685,7 +1685,7 @@ def test__fetch_concs_for_rxn():
     rxns.add_reaction(reactants="D", products="F",
                       reaction_model="mass action")
 
-    sim = ReactionSimulator(system=np.array([19, 3]), reaction_registry=rxns)
+    sim = ReactionSimulator(initial_state=np.array([19, 3]), reaction_registry=rxns)
     assert sim.species_index_map.index_to_species == ['D', 'F']
     assert sim.species_index_map.species_to_index == {'D': 0, 'F': 1}
 
@@ -1751,25 +1751,46 @@ def test_dispatcher_single_rxn_1_a():
     assert rxn_sim.analytic_solution_family == "ONE_TO_ONE"
     assert rxn_sim.model.reversible
 
+    conc_init={"A": 10, "B": 50}
+
     sim = ReactionSimulator(method="forward_euler")
-    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 7, 'B': -7})
     assert math.isclose(rate, -70)
     assert math.isclose(rate, 3. * 10 - 2. * 50)
 
     sim = ReactionSimulator(method="heun")
-    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 5.25, 'B': -5.25})
     assert math.isclose(rate, -70)
 
     sim = ReactionSimulator(method="analytic")  # EXACT solution
-    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.1)
     assert compare_dicts(delta_conc, {'A': 5.508570764023133, 'B': -5.508570764023133}) # A lot closer to Heun than to forward Euler!
     assert math.isclose(rate, -70)
 
 
+    # A large time step
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.8)
+    assert compare_dicts(delta_conc, {'A': 56, 'B': -56})   # Note: these increments would make [B] negative!
+    assert math.isclose(rate, -70)
+
+    sim = ReactionSimulator(method="heun")
+    with pytest.raises(ExcessiveTimeStepHard):
+        # Heun detects that this step is excessively large
+        sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.8)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init=conc_init, delta_time=0.8)
+    assert compare_dicts(delta_conc, {'A': 13.74358105555772, 'B': -13.74358105555772})
+    assert math.isclose(rate, -70)
+
+
+
 def test_dispatcher_single_rxn_1_b():
-    # Reaction: A -> B
+    # Reaction: A -> B   (Irreversible)
 
     species_registry = SpeciesRegistry()
 
@@ -1797,6 +1818,26 @@ def test_dispatcher_single_rxn_1_b():
     delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.1)
     #print(delta_conc)
     assert compare_dicts(delta_conc, {'A': -2.591817793182822, 'B': 2.591817793182822}) # Decisively closer to Heun than to forward Euler!
+    assert math.isclose(rate, 30)
+
+
+    # A large time step
+
+    sim = ReactionSimulator(method="forward_euler")
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.4)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -12, 'B': 12})         # Note: these increments would make [A] negative!
+    assert math.isclose(rate, 30)
+
+    sim = ReactionSimulator(method="heun")
+    with pytest.raises(ExcessiveTimeStepHard):
+        # Heun detects that this step is excessively large
+        sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.4)
+
+    sim = ReactionSimulator(method="analytic")  # EXACT solution
+    delta_conc, rate = sim.dispatcher_single_rxn(rxn=rxn_sim, conc_init={"A": 10, "B": 50}, delta_time=0.4)
+    #print(delta_conc)
+    assert compare_dicts(delta_conc, {'A': -6.98805788087798, 'B': 6.98805788087798})
     assert math.isclose(rate, 30)
 
 
@@ -2112,7 +2153,6 @@ def test_dispatcher_single_rxn_5_b():
     assert compare_dicts(delta_conc, {'R': -5.9062382056257325, 'P': 11.812476411251465})
                                      # Much closer to Heun than to forward Euler!
     assert math.isclose(rate, 140)
-
 
 
 

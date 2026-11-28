@@ -23,7 +23,7 @@ class SpeciesIndexMap:
         :param species_registry:    [OPTIONAL] Object of type "SpeciesRegistry";
                                         if passed, species id's are enforced to exist in it
         """
-        # TODO: maybe make `species_registry` required?
+        # TODO: maybe make `species_registry` required? (or, alternatively, drop it altogether?
 
         # Pair of indexes to reconcile the species id's to their index position in the system state array
         self.index_to_species: list[str] = []           # EXAMPLE: ["Species A", "Species X"]
@@ -65,9 +65,11 @@ class SpeciesIndexMap:
         associated to the given species ID.
 
         :param species_id:  A species ID
-        :param enforce:
+        :param enforce:     [OPTIONAL] If True (default), an Exception is raised
+                                if not found
         :return:
         """
+        # TODO: maybe add an option to auto-register if not found
         species_index = self.species_to_index.get(species_id, None)
 
         if enforce:
@@ -115,6 +117,32 @@ class SpeciesIndexMap:
         return list(self.index_to_species)     # The dictionary keys as a list
 
 
+    def add_single_species(self, species_id :str) -> int:
+        """
+        If already registered, an Exception is raised.
+
+        If `self.species_registry` is set, then the species MUST already be in the registry
+
+        :param species_id:
+        :return:
+        """
+        # TODO: pytest
+        assert self.species_to_index.get(species_id) is None, \
+            f"add_single_species(): species with id `{species_id}` is ALREADY registered"
+
+        if self.species_registry:
+            # TODO: maybe auto-add instead
+            assert self.species_registry.species_exists(species_id), \
+                    f"add_species(): attempting to index a species (`{species_id}`) that doesn't exist in the SpeciesRegistry; \n" \
+                    f"make sure to first add it there, with add_species()"
+
+        new_index = len(self.index_to_species)
+        self.index_to_species.append(species_id)
+        self.species_to_index[species_id] = new_index
+
+        return new_index
+
+
 
     def add_species(self, species_ids : str | set[str] | list[str] | tuple[str, ...]) -> int:
         """
@@ -126,6 +154,7 @@ class SpeciesIndexMap:
                                 If a set is passed, it will be sorted in alphabetical order;
                                 if you want a different specific order, pass a list or tuple in the order you want it
                                 (the order has only UX significance, for displays, etc)
+
         :return:            The number of newly-managed species
         """
         if type(species_ids) is str:
@@ -141,6 +170,7 @@ class SpeciesIndexMap:
                 continue        # Already indexed this species
 
             if self.species_registry:
+                # TODO: maybe auto-add instead
                 assert self.species_registry.species_exists(sp_id), \
                         f"add_species(): attempting to index a species (`{sp_id}`) that doesn't exist in the SpeciesRegistry; \n" \
                         f"make sure to first add it there, with add_species()"

@@ -279,7 +279,7 @@ np.matmul(species_enthalpy_vector.T, st_mat) - H_list
 # ## Reaction-wise analytic solution, with fixed steps
 
 # %%
-sim_analytic = ReactionSimulator(reaction_registry=rxns, method="analytic", system=init_conc)
+sim_analytic = ReactionSimulator(reaction_registry=rxns, method="analytic", initial_state=init_conc)
 
 # %%
 sim_analytic.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
@@ -295,7 +295,7 @@ sim_analytic.plot_history(show_intervals=True)
 # ## "Forward Euler" method, with fixed steps
 
 # %%
-sim_euler = ReactionSimulator(reaction_registry=rxns, method="forward_euler", system=init_conc) 
+sim_euler = ReactionSimulator(reaction_registry=rxns, method="forward_euler", initial_state=init_conc)
 
 # %%
 sim_euler.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)
@@ -311,7 +311,7 @@ sim_euler.plot_history(show_intervals=True)
 # ## "Heun" method, with fixed steps
 
 # %%
-sim_heun = ReactionSimulator(reaction_registry=rxns, method="heun", system=init_conc) 
+sim_heun = ReactionSimulator(reaction_registry=rxns, method="heun", initial_state=init_conc)
 
 # %%
 sim_heun.single_compartment_react(initial_step=0.00002, target_end_time=0.04, variable_steps=False)

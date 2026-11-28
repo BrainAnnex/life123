@@ -642,7 +642,7 @@ class ReactionRegistry:
             node_data = {'name': 'RXN', 'formula': rxn.standard_chemical_formula()}
 
             # Show the parameter of the reaction
-            rxn_properties = rxn.source_object.extract_rxn_properties()
+            rxn_properties = rxn.source_definition_object.extract_rxn_properties()
             #print(rxn_properties)
 
             for k,v in rxn_properties.items():

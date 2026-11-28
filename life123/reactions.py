@@ -147,13 +147,14 @@ class ReactionThermodynamics:
 class SimulationReaction:
     """
     The reaction object actually handed to the simulation engine.
-    Simulation level.
+
     The actual chemical reaction, as seen by the simulator.
 
     It can handle a variety of kinetic laws.
 
-    Note: at a future date, the simulation engine might have things that aren't strictly "kinetic reactions";
-    for example, transport events, membrane events, diffusion operators, binding events, etc.
+    Note: at a future date, the simulation engine might have things
+          that aren't strictly "kinetic reactions";
+          for example, transport events, membrane events, diffusion operators, binding events, etc.
     """
     def __init__(self, model, stoichiometry, source_object :ReactionDefinition, derivation=None,
                  analytic_solution_family=None):
@@ -171,7 +172,7 @@ class SimulationReaction:
         self.model = model
         self.stoichiometry: Stoichiometry|None = stoichiometry
 
-        self.source_object = source_object          # Provenance object (of type ReactionDefinition)
+        self.source_definition_object = source_object    # Provenance object (of type ReactionDefinition)
         self.derivation : str | None = derivation
 
         self.analytic_solution_family : str|None = analytic_solution_family
@@ -191,14 +192,14 @@ class SimulationReaction:
         """
         return f'Object "SimulationReaction"\n' \
                f'    To see its stoichiometry, use: get_stoichiometry()\n' \
-               f'    To see its kinetic parameters, use: get_parameters()\n' \
+               f'    To see its kinetic parameters, use: get_kinetic_parameters()\n' \
                f'    To see its thermodynamic parameters, use: get_thermodynamics()\n'
 
 
 
-    def get_parameters(self) -> dict:
+    def get_kinetic_parameters(self) -> dict:
         """
-        Get the kinetic parameters
+        Get the reaction's kinetic parameters
 
         :return:    EXAMPLE: {'kF': 10., 'kR': 2., 'K': 5., 'reversible': True}
         """
@@ -213,11 +214,14 @@ class SimulationReaction:
 
         :return:    Object of type "ReactionThermodynamics"
         """
-        return self.source_object.thermodynamics
+        return self.source_definition_object.thermodynamics
+
 
 
     def get_stoichiometry(self) -> Stoichiometry:
         """
+        Get the reaction's stoichiometry data
+
         :return:    Object of type "Stoichiometry"
         """
         return self.stoichiometry
@@ -244,7 +248,8 @@ class SimulationReaction:
         """
         This is the "SimulationReaction" version of ReactionDefinition.describe()
 
-        :param detail:  [OPTIONAL] Either of "minimal", "summary" or "full"
+        :param detail:  [OPTIONAL] Either of "minimal", "summary" or "full"'
+                            Default is "summary"
         :return:        A string with a description of this "SimulationReaction" object
         """
         reversible = getattr(self.model, 'reversible', False)    # Note: the "reversible" attribute may or may not be present
@@ -252,14 +257,15 @@ class SimulationReaction:
         rxn_description = self.stoichiometry.standard_chemical_formula(reversible=reversible)
 
         if detail != "minimal":
-            rxn_description += f'\nType: "{self.model.name}" {self.source_object.format_reaction_details(self.model.get_parameters())}'
+            rxn_description += f'\nType: "{self.model.name}" {self.source_definition_object.format_reaction_details(self.model.get_parameters())}'
 
         return rxn_description
 
 
 
-    def standard_chemical_formula(self):
+    def standard_chemical_formula(self) -> str:
         """
+        EXAMPLE: "R + S -> P"
 
         :return:
         """
@@ -272,17 +278,17 @@ class SimulationReaction:
         """
 
         :return:    The value of the forward rate constant for this reaction,
-                        IF it exists for this reaction type, and is set
+                        IF it exists for this reaction type, and if it is set
         """
         return getattr(self.model, "kF", None)  # Note: the "kF" attribute may or may not be present,
                                                 #       depending on the reaction type
 
 
-    def extract_reverse_rate_constant(self) -> float:
+    def extract_reverse_rate_constant(self) -> float | None:
         """
 
         :return:    The value of the reverse (back) rate constant for this reaction,
-                        IF it exists for this reaction type, and is set
+                        IF it exists for this reaction type, and if it is set
         """
         return getattr(self.model, "kR", None)  # Note: the "kR" attribute may or may not be present,
                                                 #       depending on the reaction type
@@ -325,89 +331,6 @@ class SimulationReaction:
         """
         return self.model.rate(conc_dict=conc_dict)
 
-
-
-    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> Tuple[dict, float]:
-        """
-        Simulate the generic reaction, over the specified time interval.
-        If exact=False, the forward Euler method is used.
-
-        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentrations won't vary significantly during this span
-        :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in this reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-        :param exact:       Only available if this reaction type has a known analytical solution
-
-        :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn     The mapping of chemical labels
-                                                                    to their concentration CHANGES
-                                                                    during this step
-                                - rxn_rate                      The reaction rate ("velocity") for this reaction
-                                EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
-        """
-        # TODO: move to new class ReactionSimulator
-        increment_dict_single_rxn = {}      # The keys are the species id's,
-                                            # and the values are their respective concentration changes as a result of this reaction
-
-        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
-
-        reactants = self.stoichiometry.get_reactant_list()     # A list of pairs of the form (stoichiometry coefficient, species id))
-        products = self.stoichiometry.get_product_list()       # A list of pairs of the form (stoichiometry coefficient, species id))
-
-
-        if exact:
-            if self.analytic_solution_family == "ONE_TO_ONE":
-                r = reactants[0][1]           # EXAMPLE: "R"
-                p = products[0][1]            # EXAMPLE: "P"
-
-                R0 = conc_dict[r]
-                P0 = conc_dict[p]
-                # Compute the respective increments of R0 and P0
-                if self.model.reversible:
-                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_reversible(kF=self.model.kF, kR=self.model.kR,
-                                                                                           A0=R0, P0=P0, t=delta_time)
-                else:
-                    delta_p = AnalyticReactionSolver.exact_advance_unimolecular_irreversible(kF=self.model.kF,
-                                                                                             R0=R0, t=delta_time)
-
-                # Work out the stoichiometry for all the species
-                increment_dict_single_rxn = {r: -delta_p, p: delta_p}
-                return (increment_dict_single_rxn, rxn_rate)
-            else:
-                raise Exception("step_simulation(): no exact analytical solution is available for this reaction type")
-
-
-
-        # If we get thus far, exact=False
-
-        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
-        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
-
-
-        """
-        Determine the concentration adjustments as a result of this reaction step, 
-        for this individual reaction being considered
-        """
-
-        # The reactants DECREASE based on the quantity delta_rxn
-        for stoichiometry, species_id in reactants:         # Unpack data from each reactant
-            delta_conc = stoichiometry * (- delta_rxn)      # Increment to this reactant from the reaction being considered
-
-            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
-
-
-        # The reaction products INCREASE based on the quantity delta_rxn
-        for stoichiometry, species_id in products:      # Unpack data from each product
-            delta_conc = stoichiometry * delta_rxn      # Increment to this reaction product from the reaction being considered
-
-            increment_dict_single_rxn[species_id] = increment_dict_single_rxn.get(species_id,0) + delta_conc
-
-
-        assert len(increment_dict_single_rxn) == len(self.stoichiometry.get_all_species_ids())  # TODO: temporary check to eventually drop
-
-        return (increment_dict_single_rxn, rxn_rate)
 
 
 

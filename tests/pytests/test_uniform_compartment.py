@@ -155,8 +155,6 @@ def test_set_single_conc():
     uc.set_single_conc(conc=123, species_id="B")
     assert np.allclose(uc.system_state, np.array([0, 123, 0]))
 
-    with pytest.raises(Exception):
-        uc.set_single_conc(conc=3.1415, species_id="UNKNOWN")
 
     with pytest.raises(Exception):
         uc.set_single_conc(conc=-1, species_id="B")     # Negative!
@@ -191,6 +189,16 @@ def test_set_single_conc():
     assert np.allclose(uc.system_state, np.array([88, 123, 1000, 0, 666]))
 
 
+    with pytest.raises(Exception):
+        uc.set_single_conc(conc=987654, species_id="UNKNOWN", allow_growth=False)
+
+    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'P', 'Q']
+
+    uc.set_single_conc(conc=17, species_id="UNKNOWN", allow_growth=True)
+    assert uc.species_index_map.index_to_species == ['A', 'B', 'C', 'P', 'Q', 'UNKNOWN']
+    assert np.allclose(uc.system_state, np.array([88, 123, 1000, 0, 666, 17]))
+
+
 
 def test_set_conc():
     ind = SpeciesIndexMap(species_ids=["A", "B", "C"])
@@ -201,7 +209,7 @@ def test_set_conc():
         uc.set_conc(conc="What's a list doing here?")
 
     with pytest.raises(Exception):
-        uc.set_conc(conc={"UNKNOWN": 666})
+        uc.set_conc(conc={"UNKNOWN": 666}, allow_growth=False)
 
     with pytest.raises(Exception):
         uc.set_conc(conc={"A": -0.01})          # Negative

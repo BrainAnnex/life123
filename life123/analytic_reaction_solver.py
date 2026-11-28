@@ -11,7 +11,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_unimolecular_irreversible(kF, R0, t) -> float:
+    def exact_advance_unimolecular_irreversible(kF, R0, t :float) -> float:
         """
         Exact solution for the ir-reversible 1st Order Reaction R -> P
 
@@ -35,7 +35,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> float:
+    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t :float) -> float:
         """
         Exact solution for the 1st Order Reaction A <-> P
 
@@ -63,7 +63,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_homodimerization_irreversible(kF, A0, t) -> float:
+    def exact_advance_homodimerization_irreversible(kF, A0, t :float) -> float:
         """
         Exactly advance the concentrations
         in the irreversible mass-action reaction 2 A -> P,
@@ -86,7 +86,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_homodimerization_reversible(kF, kR, A0, P0, t) -> float:
+    def exact_advance_homodimerization_reversible(kF, kR, A0, P0, t :float) -> float:
         """
         Exactly advance the concentrations
         in the reversible mass-action reaction 2 A <-> P
@@ -124,7 +124,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t) -> float:
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t :float) -> float:
         """
         Exactly advance the concentrations
         in the irreversible mass-action reaction A + B -> P
@@ -195,7 +195,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t) -> float:
+    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t :float) -> float:
         """
         Exactly advance the concentrations
         in the reversible elementary Reaction A + B <-> P,
@@ -339,7 +339,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t) -> float:
+    def approx_solution_synthesis_reversible_ALT(kF, kR, A0, B0, P0, t :float) -> float:
         """
         Provided by ChatGPT.  Not fully tested.
 
@@ -403,7 +403,6 @@ class AnalyticReactionSolver:
     def exact_advance_decomposition_irreversible(kF :float, R0 :float, t :float) -> float:
         """
         Solve the irreversible reaction R -> P + Q
-        kinetically treated as the reaction R -> P
 
         :param kF:  Forward reaction rate constant
         :param R0:  Initial concentration of the reactant R
@@ -411,18 +410,16 @@ class AnalyticReactionSolver:
 
         :return:    Delta_P, the change of the product concentration after the time interval t
         """
+        # Kinetically treated as the reaction R -> P
         return AnalyticReactionSolver.exact_advance_unimolecular_irreversible(
                                         kF=kF,
                                         R0=R0, t=t)
 
 
     @staticmethod
-    def exact_advance_decomposition_reversible(kF, kR, X0, Y0, Z0, t) -> float:
+    def exact_advance_decomposition_reversible(kF, kR, X0, Y0, Z0, t :float) -> float:
         """
         Exact solution for reaction X <-> Y + Z
-
-        Solving the derived reaction:                                              Y + Z <-> X , with kF and kR inverted
-        Notation-wise, we use a solver where the reaction is expressed in the form A + B <-> P
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
@@ -432,6 +429,9 @@ class AnalyticReactionSolver:
         :param t:   The end time of the reaction that started at time zero
         :return:    delta_Y
         """
+        # Solving the derived reaction:                                              Y + Z <-> X , with kF and kR inverted
+        # Notation-wise, we use a solver where the reaction is expressed in the form A + B <-> P
+
         delta_p = AnalyticReactionSolver.exact_advance_synthesis_reversible(
                                                             kF=kR, kR=kF,
                                                             A0=Y0, B0=Z0, P0=X0, t=t)
@@ -441,7 +441,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_homodimer_dissociation_irreversible(kF, X0, t) -> float:
+    def exact_advance_homodimer_dissociation_irreversible(kF, X0, t :float) -> float:
         """
         Exact solution for irreversible reaction  X -> 2 Y
 
@@ -459,7 +459,7 @@ class AnalyticReactionSolver:
 
 
     @staticmethod
-    def exact_advance_homodimer_dissociation_reversible(kF, kR, X0, Y0, t) -> float:
+    def exact_advance_homodimer_dissociation_reversible(kF, kR, X0, Y0, t :float) -> float:
         """
         Exact solution for the reaction X <-> 2 Y
 

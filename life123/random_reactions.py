@@ -664,7 +664,7 @@ class RandomReactionNetwork:
         rxn.set_parameters(parameters={"kF": kF})
 
         # This will also set kR, to be consistent with kF and the thermodynamic data
-        rxn.source_object.set_thermodynamics_and_update_kinetics()  # rxn.source_object is of type "ReactionDefinition"
+        rxn.source_definition_object.set_thermodynamics_and_update_kinetics()  # rxn.source_object is of type "ReactionDefinition"
 
 
 

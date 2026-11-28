@@ -94,7 +94,7 @@ def test_generate_random_reaction_network():
     assert r.stoichiometry.vector == {'D': -1, 'A': -1, 'C': 1}     # D + A <-> C
     assert r.stoichiometry.catalysts == []
 
-    kinetic = r.get_parameters()
+    kinetic = r.get_kinetic_parameters()
     #print(kinetic)  # {'kF': 11006.600415591303, 'kR': 0.0008985039969479825, 'K': 12249918.145025807, 'reversible': True}
     assert math.isclose(kinetic['kF'], 11006.600415591303)
     assert math.isclose(kinetic['kR'], 0.0008985039969479825)
@@ -671,11 +671,11 @@ def test_assign_kinetics():
     assert math.isclose(thermo.delta_H, -40 + net.temp * (-100)/1000)   # The 1/1000 is because delta_S in J/mol while delta_H in kJ/mol
     assert math.isclose(thermo.K_eq, math.exp(- (-40) / (ThermoDynamics.R * net.temp)))
 
-    #print("kinetic_parameters:", rxn.get_parameters())
+    #print("kinetic_parameters:", rxn.get_kinetic_parameters())
     # {'kF': None, 'kR': None, 'K': None, 'reversible': False}
 
     net.assign_kinetics(rxn=rxn)
-    kin_pars = rxn.get_parameters()
+    kin_pars = rxn.get_kinetic_parameters()
     #print("kinetic_parameters:", kin_pars)
     # {'kF': 10379.920849763035, 'kR': 0.0011264485469609188, 'K': 9214731.447581297, 'reversible': True}
     assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data
@@ -701,7 +701,7 @@ def test_assign_kinetics():
     assert math.isclose(thermo.K_eq, math.exp(- (10) / (ThermoDynamics.R * net.temp)))
 
     net.assign_kinetics(rxn=rxn)
-    kin_pars = rxn.get_parameters()
+    kin_pars = rxn.get_kinetic_parameters()
     print("kinetic_parameters:", kin_pars)
     # {'kF': 0.3768282915740335, 'kR': 20.76176026983212, 'K': 0.01815011283612517, 'reversible': True}
     assert math.isclose(kin_pars["K"], thermo.K_eq)             # Propagated from thermodynamics data

@@ -196,7 +196,7 @@ def test_add_reaction():
 
     expected_kinetics = {'kF': 3, 'kR': 2, 'K': 1.5, 'reversible': True}
     # Note:  K derived as:  3/2
-    assert compare_dicts(r.get_parameters(), expected_kinetics)
+    assert compare_dicts(r.get_kinetic_parameters(), expected_kinetics)
     assert r.model.derived_pars == {'K', 'reversible'}
 
     expected_thermo = {'K_eq':  1.5}
@@ -226,7 +226,7 @@ def test_add_reaction():
 
     expected_kinetics = {'kF': 9, 'kR': 7, 'K': 1.285714285714, 'reversible': True, 'rate_function': None}
     # Note:  K derived as:  9/7
-    assert compare_dicts(r_1.get_parameters(), expected_kinetics)
+    assert compare_dicts(r_1.get_kinetic_parameters(), expected_kinetics)
     assert r.model.derived_pars == {'K', 'reversible'}
 
     expected_thermo = {'K_eq':  1.285714285714}
@@ -254,7 +254,7 @@ def test_add_reaction():
 
     expected_kinetics = {'kF': 11, 'kR': 13, 'K': 0.84615384615, 'reversible': True}
     # Note:  K derived as:  11/13
-    assert compare_dicts(r_2.get_parameters(), expected_kinetics)
+    assert compare_dicts(r_2.get_kinetic_parameters(), expected_kinetics)
     assert r_2.model.derived_pars == {'K', 'reversible'}
 
     expected_thermo = {'K_eq':  0.84615384615, 'delta_G': 0.2777929884283404, 'temp': 200}
@@ -355,7 +355,7 @@ def test_register_reaction():
 
     expected_kinetics = {'kF': 11.0, 'kR': 13.0, 'K': 0.8461538461538461, 'reversible': True}
     # Note:  K derived as:  11. / 13.
-    assert compare_dicts(r.get_parameters(), expected_kinetics)
+    assert compare_dicts(r.get_kinetic_parameters(), expected_kinetics)
     assert r.model.derived_pars == {'K', 'reversible'}
 
 
@@ -387,7 +387,7 @@ def test_register_reaction():
 
     expected_kinetics = {'kF': 10, 'kR': 9.558998477933914, 'K': 1.0461346994754837, 'reversible': True}
     # Note -  K derived from thermodynamics;   kR derived from: 10. / 1.0461347154679432
-    assert compare_dicts(r.get_parameters(), expected_kinetics)
+    assert compare_dicts(r.get_kinetic_parameters(), expected_kinetics)
     assert r.model.derived_pars == {'K', 'kR', 'reversible'}
 
 

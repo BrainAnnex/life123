@@ -11,7 +11,7 @@ import time
 import plotly.graph_objects as pgo
 import plotly.express as px
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Tuple
 from life123.analytic_reaction_solver import AnalyticReactionSolver
 from life123.species_registry import SpeciesRegistry
 from life123.species_index_map import SpeciesIndexMap
@@ -95,18 +95,24 @@ class ReactionSimulator:
     This might be thought of as a "zero-dimensional system".
     """
     
-    def __init__(self, system=None, species_index_map=None, reaction_registry=None,
+    def __init__(self, initial_state=None, initial_conc=None,
+                 species_index_map=None, reaction_registry=None,
                  diagnostics=None, enable_diagnostics=False, history_frequency=1,
                  method="forward_euler", preset="mid",
                  uniform_compartment=None, temp=298.15, species_registry=None, species_ids=None,
                  macromolecules=None):
         """
 
-        :param system:              [OPTIONAL] A Numpy array with the initial concentrations of all species.
-                                        The significance of the array index positions will be determined by the index->species mapping
-                                        passed to the argument `species_index_map`, or
-                                        present in the object passed to `uniform_compartment`;
-                                        therefore, either of those arguments must also be present
+        :param initial_state:   [OPTIONAL] A Numpy array with the initial concentrations of all species.
+                                    The significance of the array index positions will be determined by the index->species mapping
+                                    passed to the argument `species_index_map`, or
+                                    present in the object passed to `uniform_compartment`;
+                                    therefore, either of those arguments must also be present.
+                                    If using this argument, cannot also pass `initial_conc`
+
+        :param initial_conc:    [OPTIONAL] A dictionary with the initial concentrations of some or all species.
+                                    If using this argument, cannot also pass `initial_state`
+
         :param species_index_map:   [OPTIONAL] Object of type "SpeciesIndexMap"
         :param reaction_registry:   [OPTIONAL] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
                                 If passed, cannot pass either of the args `species_data` nor `names` (those are both part of the "ReactionRegistry" object);
@@ -265,12 +271,25 @@ class ReactionSimulator:
         self._reaction_registry_version = self.reaction_registry.version    # Used for "lazy synchronization",
                                                                             # i.e. to check for changes externally made to the registry
 
-        if system is not None:
+        if initial_state is not None:
+            assert initial_conc is None, \
+                "ReactionSimulator() instantiation: Cannot pass both arguments `initial_state` and `initial_conc`"
+
             assert self.species_registry is not None, \
                 "ReactionSimulator() instantiation: in order to pass the argument `system`, " \
                 "you must also pass `species_index_map` or `uniform_compartment`"
 
-            self.system.set_system_state(conc=system)
+            self.system.set_system_state(conc=initial_state)
+
+        if initial_conc is not None:
+            assert initial_state is None, \
+                "ReactionSimulator() instantiation: Cannot pass both arguments `initial_state` and `initial_conc`"
+
+            assert type(initial_conc) is dict, \
+                "ReactionSimulator() instantiation: argument `initial_conc` must be a dictionary of numbers"
+
+            self.system.set_conc(initial_conc, allow_growth=True)
+
 
 
 
@@ -305,6 +324,17 @@ class ReactionSimulator:
         """
         self.ensure_synchronized_with_reaction_registry()
         return self.system.get_species_conc(species_id)
+
+
+
+    def get_all_conc(self) -> dict:
+        """
+        Return the current concentration of ALL the system species,
+        indexed by their id's
+
+        :return:
+        """
+        return self.system.get_conc_as_dict()
 
 
 
@@ -362,6 +392,11 @@ class ReactionSimulator:
 
     def set_system_state(self, conc : np.ndarray | list | tuple) -> None:
         """
+        A Numpy array with the initial concentrations of all species.
+        The significance of the array index positions will be determined by the index->species mapping
+        specified by the object stored in `self.species_index_map`.
+
+        Unless you're working with previously-established array indexes, use set_conc() instead.
 
         :param conc:    Numpy array or list/tuple of concentration values
         :return:        None
@@ -1566,7 +1601,7 @@ class ReactionSimulator:
 
         
 
-    def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float) -> tuple:
+    def dispatcher_single_rxn(self, rxn, conc_init :dict, delta_time :float) -> Tuple[dict, float]:
         """
         Dispatch to the appropriate ODE solver for this single reaction,
         based on the object variable self.method
@@ -1575,9 +1610,17 @@ class ReactionSimulator:
         for this reaction type, then fall back to "forward_euler" for this reaction
 
         :param rxn:         Object of type "SimulationReaction"
-        :param conc_init:   Initial concentrations of all the species involved in the given reaction
+        :param conc_init:   Initial concentrations of all the species involved in the given reaction,
+                                as a dict mapping species id's to their concentrations
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :param delta_time:  The duration of the single time step to take
-        :return:            EXAMPLE: (
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn     The mapping of chemical labels
+                                                                    to their concentration CHANGES
+                                                                    during this step
+                                - rxn_rate                      The reaction rate ("velocity") for this reaction
+                            EXAMPLE: (
                                         {"B": -1.3, "F": 2.9, "D": -1.6} ,
                                         35.
                                      )
@@ -2879,7 +2922,7 @@ class ReactionSimulator:
         """
         rxn = self.reaction_registry.get_reaction(rxn_index)                # Look up the requested reaction
         chem_labels = list(rxn.stoichiometry.get_all_species_ids())     # Set of the species ID's in the requested reaction
-        return rxn.source_object.find_equilibrium_conc(conc_dict=self.system.get_conc_as_dict(species_ids=chem_labels))
+        return rxn.source_definition_object.find_equilibrium_conc(conc_dict=self.system.get_conc_as_dict(species_ids=chem_labels))
 
 
 

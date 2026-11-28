@@ -139,9 +139,9 @@ class UniformCompartment:
 
     def get_system_conc(self) -> np.array:
         """
-        Retrieve the concentrations of ALL the chemicals as a Numpy array
+        Retrieve the concentrations of ALL the species as a Numpy array
 
-        :return:        A Numpy array with the concentrations of ALL the chemicals,
+        :return:        A Numpy array with the concentrations of ALL the species,
                         in their index order
                             EXAMPLE:  array([12.3, 4.56, 0.12])
                                       The 0-th chemical has concentration 12.3, and so on...
@@ -281,13 +281,15 @@ class UniformCompartment:
 
         :param conc:            A non-negative number with the desired concentration value
                                     of the species specified below.  (Any previous value will get over-written)
+
         :param species_id:      [OPTIONAL] The id of the species of interest.
         :param species_index:   [OPTIONAL] An integer that indexes the species of interest (numbering starts at 0)
+                                    At least one of `species_name` or `species_index` must be specified.
                                     If both `species_name` and `species_index` are provided, an Exception is raised.
-                                    At least one of `species_name` or `species_index` must be specified
 
-        :param allow_growth:    [OPTIONAL] Only applicable if `species_index` is specified.
-                                    If True (default), allow the system state to expand if species_index exceeds the system size
+        :param allow_growth:    [OPTIONAL] If True (default), it
+                                    1) automatically registers any new species id
+                                    2) allows the system state to expand if species_index exceeds the system size
         :param snapshot_funct:  [OPTIONAL] A function that accepts an argument called "caption"
         :return:                None
         """
@@ -310,9 +312,22 @@ class UniformCompartment:
 
 
         if species_id is not None:
-            species_index = self.species_index_map.index_of(species_id)
+            # SCENARIO 1 - Using Species ID
+
+            species_index = self.species_index_map.index_of(species_id, enforce=False)
+            if species_index is None:
+                if allow_growth:
+                    species_index = self.species_index_map.add_single_species(species_id)
+                    #print(f"Automatically registered species `{species_id}` and assigned index {species_index} to it")
+            else:
+                assert species_index is not None, \
+                    f"set_single_conc(): the requested species ID (`{species_id}`) " \
+                    f"must be registered prior to setting its concentration. \n" \
+                    f"For automatic registration of a new species, the set_single_conc() argument `allow_growth=True` may be used"
 
         elif species_index is not None:
+            # SCENARIO 2 - Using Species Index
+
             # Validate the value
             self.species_index_map.species_at(species_index)    # This will raise an IndexError if invalid
 
@@ -340,7 +355,7 @@ class UniformCompartment:
 
 
 
-    def set_conc(self, conc :dict, snapshot_funct=None) -> None:
+    def set_conc(self, conc :dict, snapshot_funct=None, allow_growth=True) -> None:
         """
         Set the concentrations of a group of species
 
@@ -351,6 +366,8 @@ class UniformCompartment:
 
                                 Note: any previous values will get over-written
 
+        :param allow_growth:
+
         :param snapshot_funct:  [OPTIONAL] A function that accepts an argument called "caption"
 
         :return:                None
@@ -359,8 +376,8 @@ class UniformCompartment:
             "set_conc(): argument `conc` must be a dictionary"
 
         for sp_id, conc_value in conc.items():
-            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot_funct=None)  # This function will also take care
-                                                                                    # of optional synchronization
+            self.set_single_conc(conc=conc_value, species_id=sp_id, snapshot_funct=None, allow_growth=allow_growth)
+            # This function will also take care of optional synchronization
 
         if snapshot_funct is not None:
             # Invoke a passed external function

@@ -409,6 +409,16 @@ class Stoichiometry:
 
 
 
+
+
+    #####################################################################################################
+
+    '''                              ~   CONCENTRATIONS-RELATED  ~                                    '''
+
+    def ________CONCENTRATIONS_RELATED________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     def consistency_checker(self, conc_before :dict, conc_after :dict) -> None:
         """
         Investigate the change in the concentration of the species involved in the reaction,
@@ -467,6 +477,35 @@ class Stoichiometry:
                     f"consistency_checker(): the delta concentration {delta_conc} " \
                     f"is incompatible with the reaction's stoichiometry of {self.vector}"
 
+
+
+    def concentration_increments_from_velocity(self, rate :float, delta_time :float) -> dict:
+        """
+        Compute the signed concentration changes of all species over a time interval,
+        given the reaction velocity (based on the reaction's stoichiometric coefficients.)
+
+        The method multiplies the reaction velocity by the time interval to obtain
+        the reaction progress, then scales each stoichiometric coefficient by that
+        amount.  Negative increments indicate consumption; positive increments
+        indicate production.
+
+        Catalysts are not included in the result, since they do not participate
+        in the net stoichiometric change.
+
+        :param rate:        Reaction velocity (in units of concentration per unit time).
+                                A positive value corresponds to the forward direction defined by the
+                                stoichiometric vector
+        :param delta_time:  Time interval over which to calculate the concentration changes
+
+        :return:            A dictionary mapping each species ID to its concentration
+                                increment over the specified time interval.
+                                EXAMPLE (for a reaction A->B) : {"A": -10., "B": 10.}
+        """
+        reaction_progress = rate * delta_time
+
+        delta_conc = {k: v * reaction_progress
+                         for k, v in self.vector.items()}
+        return delta_conc
 
 
     def compute_concentration_increments(self, species_id: str, delta_conc: float) -> dict[str, float]:
@@ -532,6 +571,16 @@ class Stoichiometry:
 
 
 
+
+
+    #####################################################################################################
+
+    '''                              ~   ALTERNATE CONSTRUCTOR  ~                                     '''
+
+    def ________ALTERNATE_CONSTRUCTOR________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     @classmethod
     def from_reactants_products(cls, reactants :list|str, products :list|str, species_registry=None) -> Stoichiometry:
         """
@@ -547,6 +596,8 @@ class Stoichiometry:
         :param products:    A string,
                                 or a list whose elements are either strings or pairs of the form (stoichiometry, species id);
                                 whenever strings are used, the stoichiometry coefficient is taken to be 1
+        :param species_registry:
+
         :return:            A dataclass object of type "Stoichiometry"
         """
         # TODO: also accept sets in lieu of lists

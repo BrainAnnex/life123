@@ -33,42 +33,6 @@ class MassAction_Analysis:
         return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
 
 
-
-    @staticmethod
-    def half_time_decomposition_irreversible(kF :float) -> float:
-        """
-        In a unimolecular decomposition reaction R -> P + Q,
-        return the time taken for each of the species concentrations to
-        reach halfway to its final value.
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for each species concentration
-                        to proceed halfway to its asymptotic equilibrium value
-        """
-        return MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
-
-
-    @staticmethod
-    def half_time_decomposition_reversible(kF :float, kR :float, R0 :float, P0 :float, Q0: float) -> float:
-        """
-        In a unimolecular decomposition reaction R <-> P + Q,
-        return the time taken for each of the species concentrations to
-        reach halfway to its final value.
-
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :param R0:  Initial concentration of the reactant
-        :param P0:  Initial concentration of the first product
-        :param Q0:  Initial concentration of the second product
-
-        :return:    Reaction time taken for each species concentration
-                        to proceed halfway to its asymptotic equilibrium value
-        """
-        # Regard our given reaction as P + Q <-> R , with reversed rate constants
-        return MassAction_Analysis.half_time_synthesis(kF=kR, kR=kF, A0=P0, B0=Q0, P0=R0)
-
-
-
     @staticmethod
     def relaxation_time_unimolecular(kF :float, kR :float) -> float:
         """
@@ -180,6 +144,42 @@ class MassAction_Analysis:
                                             # good for high numerical precision when x is close to 0
 
 
+
+    @staticmethod
+    def half_time_decomposition_irreversible(kF :float) -> float:
+        """
+        In a unimolecular decomposition reaction R -> P + Q,
+        return the time taken for each of the species concentrations to
+        reach halfway to its final value.
+
+        :param kF:  Forward reaction rate constant
+        :return:    Reaction time taken for each species concentration
+                        to proceed halfway to its asymptotic equilibrium value
+        """
+        return MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
+
+
+    @staticmethod
+    def half_time_decomposition_reversible(kF :float, kR :float, R0 :float, P0 :float, Q0: float) -> float:
+        """
+        In a unimolecular decomposition reaction R <-> P + Q,
+        return the time taken for each of the species concentrations to
+        reach halfway to its final value.
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :param R0:  Initial concentration of the reactant
+        :param P0:  Initial concentration of the first product
+        :param Q0:  Initial concentration of the second product
+
+        :return:    Reaction time taken for each species concentration
+                        to proceed halfway to its asymptotic equilibrium value
+        """
+        # Regard our given reaction as P + Q <-> R , with reversed rate constants
+        return MassAction_Analysis.half_time_synthesis(kF=kR, kR=kF, A0=P0, B0=Q0, P0=R0)
+
+
+
     @staticmethod
     def half_time_homodimer_dissociation_irreversible(kF :float) -> float:
         """
@@ -194,7 +194,6 @@ class MassAction_Analysis:
                         to proceed halfway to its asymptotic equilibrium value
         """
         return MassAction_Analysis.half_time_unimolecular(kF=kF, kR=0)
-
 
 
     @staticmethod
@@ -220,7 +219,6 @@ class MassAction_Analysis:
 
 
 
-
     #####################################################################################################
 
     '''                           ~   EQUILIBRIUM CONCENTRATIONS   ~                                  '''
@@ -231,7 +229,7 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def compute_equilibrium_conc_homodimer_dissociation(kF, kR, A0, P0) -> dict:
+    def compute_equilibrium_conc_homodimer_dissociation(kF :float, kR :float, A0, P0) -> dict:
         """
         Given a reversible reaction of the form:  A <-> 2P
         whose kinetics follow the "mass-action" law,
@@ -326,7 +324,7 @@ class MassAction_Analysis:
 
 
     @staticmethod
-    def _compute_equilibrium_conc_first_order(kF, kR, a, A0, p, P0, b=0, B0=None, q=0, Q0=None) -> dict:
+    def _compute_equilibrium_conc_first_order(kF :float, kR :float, a, A0, p, P0, b=0, B0=None, q=0, Q0=None) -> dict:
         """
         Determine the equilibrium concentrations that would be eventually reached
         by the chemicals participating in a reversible reaction of the form:

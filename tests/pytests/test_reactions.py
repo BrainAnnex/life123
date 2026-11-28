@@ -273,189 +273,6 @@ def test_determine_reaction_rate_3():
 
 
 
-def test_step_simulation_1():
-    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
-    species_registry = SpeciesRegistry(ids=["A", "B"])
-
-    # Reaction : A <-> B
-    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=species_registry,
-                                  reaction_model="mass action", kinetic_parameters={"kF": 3., "kR": 2.})
-    assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
-
-    sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.analytic_solution_family == "ONE_TO_ONE"
-
-    # Euler approx
-    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': 7, 'B': -7}
-    assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is in reverse
-
-    result = sim_rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': 56, 'B': -56}              # Note: these increments would make [B] negative!
-    assert result[1] == -70
-
-    # Exact solution
-    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert np.allclose(result[0]['A'],  5.508570764023133)
-    assert np.allclose(result[0]['B'], -5.508570764023133)
-    assert result[1] == -70
-
-    result = sim_rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert np.allclose(result[0]['A'],  13.74358105555772)  # Note: far more sensible than Euler method!
-    assert np.allclose(result[0]['B'], -13.74358105555772)
-    assert result[1] == -70
-
-
-    # Reaction : A -> B  (no reverse reaction)
-    rxn_defn = ReactionDefinition(reactants="A", products="B", species_registry=species_registry,
-                                  reaction_model="mass action", kinetic_parameters={"kF": 3.})
-    assert rxn_defn.analytic_solution_family == "ONE_TO_ONE"
-
-    sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.analytic_solution_family == "ONE_TO_ONE"
-
-    # Euler approx
-    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': -3, 'B': 3}
-    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
-
-    result = sim_rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50})
-    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
-    assert result[1] == 30
-
-    # Exact solution
-    result = sim_rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': -2.591817793182822, 'B': 2.591817793182822}
-    assert result[1] == 30    # Rate = 3. * 10.
-
-    result = sim_rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': -6.98805788087798, 'B': 6.98805788087798} # Note: far more sensible than Euler method!
-    assert result[1] == 30    # Rate = 3. * 10.
-
-
-    # Reaction : A + B <-> C
-    rxn_defn = ReactionDefinition(reactants=["A" , "B"], products="C", species_registry=species_registry, autoregister_species=True,
-                                  reaction_model="mass action", kinetic_parameters={"kF": 5., "kR": 2})
-
-    sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.analytic_solution_family == "TWO_TO_ONE"
-    assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": -1, "C": 1}, species_registry=species_registry)
-
-    conc_initial = {"A": 10, "B": 50, "C": 20}
-    delta, rate = sim_rxn.step_simulation(delta_time=0.002, conc_dict=conc_initial)
-    assert delta == {'A': -4.92, 'B': -4.92, 'C': 4.92}
-    assert rate == 5 * 10 * 50 - 2 * 20        # 2460 , i.e.  kF [A] [B] - kR [C]
-    for k in delta:
-        assert delta[k] == rate * 0.002 * np.sign(sim_rxn.stoichiometry.to_dict()[k])
-
-
-    # Reaction : C <-> A + B
-    rxn_defn = ReactionDefinition(reactants="C", products=["A" , "B"], species_registry=species_registry, autoregister_species=True,
-                                  reaction_model="mass action", kinetic_parameters={"kF": 2., "kR": 5.})
-
-    sim_rxn = rxn_defn.sim_reactions[0]
-    assert sim_rxn.analytic_solution_family == "ONE_TO_TWO"
-
-    result = sim_rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
-    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
-    assert result[1] == -2460
-
-
-def test_step_simulation_2():
-    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
-
-    # Reaction: # E + S <-> ES* -> E + P, with SingleSubstrateMechanism model
-    sr = SpeciesRegistry(ids=["S", "P", "E"])
-    rxn_defn = ReactionDefinition(id=85, reactants=["S", "E"], products=["P", "E"], species_registry=sr,
-                             reaction_model="single substrate mechanism",
-                             kinetic_parameters={"k1_F": 18, "k1_R": 100, "k2_F": 49})
-
-    initial_conc = {"E": 1, "S": 20, "P": 0, "ES*": 0}
-    dt = 0.002
-
-    # Look at each DERIVED reaction (as used by simulator) individually
-    rxn_sim_tuple = rxn_defn.sim_reactions
-    assert len(rxn_sim_tuple) == 2
-    rxn_sim_1, rxn_sim_2 = rxn_sim_tuple
-
-    incr_dict_1, rate_1 = rxn_sim_1.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert rate_1 == 360       # 18 * 1 * 20 - 100 * 0
-    assert incr_dict_1 == {'E': -0.72, 'S': -0.72, 'ES*': 0.72}
-
-
-    incr_dict_2, rate_2 = rxn_sim_2.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert rate_2 == 0          # 49 * 0
-    assert incr_dict_2 == {'E': 0, 'ES*': 0, 'P': 0}
-
-    
-    # Simulating by hand each of the 2 sub-reactions will give the same results
-    upstream_rxn_defn = ReactionDefinition(reactants=["E", "S"], products="ES*", species_registry=sr,
-                             reaction_model="mass action",
-                             kinetic_parameters={"kF": 18, "kR": 100})
-    upstream_rxn_sim = upstream_rxn_defn.sim_reactions[0]
-    assert upstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc) == ( {'E': -0.72, 'S': -0.72, 'ES*': 0.72} , 360 )
-
-    downstream_rxn_defn = ReactionDefinition(reactants="ES*", products=["E", "P"], species_registry=sr,
-                             reaction_model="mass action",
-                             kinetic_parameters={"kF": 49})
-    downstream_rxn_sim = downstream_rxn_defn.sim_reactions[0]
-    assert downstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc) == ( {'E': 0, 'ES*': 0, 'P': 0} , 0 )
-
-
-    # Manually advance the reaction simulation by this step, plus one more
-    conc = initial_conc
-
-    # Update the system concentrations (thus advancing the simulation)
-    update_concentrations(conc, incr_dict_1)
-    update_concentrations(conc, incr_dict_2)
-
-    assert conc == {'E': 0.28, 'S': 19.28, 'P': 0.0, 'ES*': 0.72}
-
-    incr_dict_1, rate_1 = upstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=conc)
-    assert math.isclose(rate_1, 25.1712)    # 18 * 0.28 * 19.28 - 100 * 0.72
-    expected_incr = {'E': -0.0503424, 'S': -0.0503424, 'ES*': 0.0503424}    # Delta_conc = 25.1712 * 0.002 = 0.0503424
-    compare_dicts(incr_dict_1, expected_incr)
-
-    incr_dict_2, rate_2 = downstream_rxn_sim.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert math.isclose(rate_2, 35.28)      # 49 * 0.72
-    expected_incr = {'ES*': -0.07056, 'E': 0.07056, 'P': 0.07056}           # Delta_conc = 35.28 * 0.002 = 0.07056
-    compare_dicts(incr_dict_2, expected_incr)
-
-    # Update the system concentrations (thus advancing the simulation)
-    update_concentrations(conc, incr_dict_1)
-    update_concentrations(conc, incr_dict_2)
-
-    expected = {'E': 0.3002176, 'S': 19.2296576, 'P': 0.07056, 'ES*': 0.6997824}
-    compare_dicts(conc, expected)
-
-
-def test_step_simulation_3():
-    # TODO: the non-exact parts were absorbed into test_reaction_simulator (and should later be dropped from here)
-
-    # Reaction: # A + B -> C + D , with custom reaction model
-    sr = SpeciesRegistry(ids=["A", "B", "C", "D"])
-    rxn_defn = ReactionDefinition(id=49, reactants=["A", "B"], products=["C", "D"], species_registry=sr,
-                             reaction_model="custom",
-                             kinetic_parameters={"kF": 10, "rate_function": Custom_Model.kinetic_rate_first_order})
-    #print(rxn_defn.describe(detail="full"))
-
-    sim_rxn = rxn_defn.sim_reactions[0]
-
-    initial_conc = {"A": 2, "B": 4, "C": 5, "D": 3}
-    dt = 0.1
-
-    incr_dict, rate = sim_rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert rate == 80       #  10. * 2 * 4   (no reverse reaction)
-    assert incr_dict == {'A': -8, 'B': -8, 'C': 8, 'D': 8}      # 80 * 0.1 = 8
-
-    # Make reversible
-    sim_rxn.set_parameters({"kR": 2})
-    incr_dict, rate = sim_rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
-    assert rate == 50      # 80 - 2. * 5 * 3
-    assert incr_dict == {'A': -5, 'B': -5, 'C': 5, 'D': 5}      # 50 * 0.1 = 5
-
-
-
 
 
 ############################################################################
@@ -544,7 +361,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_object.id == 942
+    assert sim_rxn.source_definition_object.id == 942
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"R": -1, "P": 1}, species_registry=sr)
     assert sim_rxn.model.get_parameters() == {'kF': 20, 'kR': 4, 'K': 5.0, 'reversible': True}
@@ -571,7 +388,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_object.id == 8
+    assert sim_rxn.source_definition_object.id == 8
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=sr)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
@@ -596,7 +413,7 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_object.id == 17
+    assert sim_rxn.source_definition_object.id == 17
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=sr)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'kM': 2, 'kcat': 5, 'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S'}
@@ -638,13 +455,13 @@ def test_CONSTRUCTOR_ReactionDefinition_2():
 
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
-    assert sim_rxn_1.source_object.id == 123
+    assert sim_rxn_1.source_definition_object.id == 123
     assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
-    assert sim_rxn_2.source_object.id == 123
+    assert sim_rxn_2.source_definition_object.id == 123
     assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
@@ -689,7 +506,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_object.id == 41
+    assert sim_rxn.source_definition_object.id == 41
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
@@ -709,7 +526,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     sim_rxn = rxn_defn.sim_reactions[0]
     assert type(sim_rxn) == SimulationReaction
     assert type(sim_rxn.model) == MassAction_Model
-    assert sim_rxn.source_object.id == 42
+    assert sim_rxn.source_definition_object.id == 42
     assert sim_rxn.derivation == "direct"
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"A": -1, "B": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn.model.get_parameters() == {'kF': 10, 'kR': 0, 'K': math.inf, 'reversible': False}
@@ -742,7 +559,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_object.id == 43
+    assert sim_rxn.source_definition_object.id == 43
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"Sub": -1, "Prod": 1}, catalysts=["Enz"], species_registry=rxn_defn.species_registry)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'Enz', 'Product': 'Prod', 'Substrate': 'Sub', 'kM': 2, 'kcat': 3}
@@ -770,7 +587,7 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
     assert len(sim_rxn_tuple) == 1
     sim_rxn = sim_rxn_tuple[0]
     assert type(sim_rxn) == SimulationReaction
-    assert sim_rxn.source_object.id == 44
+    assert sim_rxn.source_definition_object.id == 44
     assert sim_rxn.stoichiometry == Stoichiometry(vector={"S": -1, "P": 1}, catalysts=["E"], species_registry=rxn_defn.species_registry)
     assert type(sim_rxn.model) == MichaelisMenten_Model
     assert sim_rxn.model.get_parameters() == {'Enzyme': 'E', 'Product': 'P', 'Substrate': 'S', 'kM': 0.7, 'kcat': 5} # (kM = k2_F + k1_R) / k1_F  ; kcat = k2_F)
@@ -805,13 +622,13 @@ def test_CONSTRUCTOR_ReactionDefinition_3():
 
     assert type(sim_rxn_1) == SimulationReaction
     assert type(sim_rxn_1.model) == MassAction_Model
-    assert sim_rxn_1.source_object.id == 43
+    assert sim_rxn_1.source_definition_object.id == 43
     assert sim_rxn_1.stoichiometry == Stoichiometry(vector={"S": -1, "E": -1, "ES*": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_1.model.get_parameters() == {'kF': 10, 'kR': 2, 'K': 5.0, 'reversible': True}
 
     assert type(sim_rxn_2) == SimulationReaction
     assert type(sim_rxn_2.model) == MassAction_Model
-    assert sim_rxn_2.source_object.id == 43
+    assert sim_rxn_2.source_definition_object.id == 43
     assert sim_rxn_2.stoichiometry == Stoichiometry(vector={"ES*": -1, "P": 1, "E": 1}, species_registry=rxn_defn.species_registry)
     assert sim_rxn_2.model.get_parameters() == {'kF': 3, 'kR': None, 'K': None, 'reversible': False}
 
